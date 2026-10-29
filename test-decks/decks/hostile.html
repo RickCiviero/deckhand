@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Hostile</title>
+<style>.slide{padding:40px}</style></head><body>
+<div class="deck">
+<section class="slide" id="s1"><h1>Hostile deck</h1><p id="log">running</p></section>
+<section class="slide"><h1>Second</h1></section>
+</div>
+<script>
+  var r = (window.__results = {});
+  try { var wo = window.open('https://example.com'); r.open = wo ? 'OPENED' : 'blocked'; } catch (e) { r.open = 'blocked'; }
+  try { top.location = 'https://example.com/pwn'; r.top = 'attempted'; } catch (e) { r.top = 'blocked'; }
+  try { parent.document.body.innerHTML = 'PWNED'; r.parent = 'WROTE PARENT'; } catch (e) { r.parent = 'blocked'; }
+  r.api = [typeof window.deckhand, typeof window.electron, typeof require, typeof process].join(',');
+  fetch('file:///C:/Windows/win.ini').then(function (x) { r.fetchFile = 'READ ' + x.status; }).catch(function () { r.fetchFile = 'blocked'; });
+  fetch('../secret.txt').then(function (x) { return x.text(); }).then(function (t) { r.fetchDotDot = t.indexOf('TOP-SECRET') >= 0 ? 'LEAKED' : 'no-leak'; }).catch(function () { r.fetchDotDot = 'blocked'; });
+  fetch('/%2e%2e/secret.txt').then(function (x) { return x.text(); }).then(function (t) { r.fetchEnc = t.indexOf('TOP-SECRET') >= 0 ? 'LEAKED' : 'no-leak'; }).catch(function () { r.fetchEnc = 'blocked'; });
+  try { navigator.clipboard.readText().then(function () { r.clip = 'READ'; }).catch(function () { r.clip = 'blocked'; }); } catch (e) { r.clip = 'blocked'; }
+  try { parent.postMessage({ type: 'deckhand:op', op: 'save', path: 'C:/evil' }, '*'); window.postMessage({ type: 'deckhand:hello' }, '*'); } catch (e) {}
+  try { var a = []; for (var i = 0; i < 40; i++) a.push(new Array(1e6).fill(i)); r.mem = 'allocated'; } catch (e) { r.mem = 'oom caught'; }
+  setTimeout(function () { var t = Date.now(); while (Date.now() - t < 25000) {} }, 6000);
+</script>
+</body></html>

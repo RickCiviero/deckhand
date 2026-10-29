@@ -1,0 +1,3 @@
+{ "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "strict": true, "noUncheckedIndexedAccess": true,
+  "jsx": "react-jsx", "lib": ["ES2023","DOM","DOM.Iterable"], "skipLibCheck": true, "noEmit": true, "esModuleInterop": true, "types": ["node"], "isolatedModules": true },
+  "include": ["apps/*/src", "packages/*/src", "e2e", "scripts"] }

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fixed stage deck</title>
+  <style>
+    :root { --brand: #C43E1C; --ink: #222; }
+    body { margin: 0; background: #111; }
+    #stage { width: 1920px; height: 1080px; position: relative; transform-origin: 0 0; }
+    .slide { position: absolute; inset: 0; background: #fff; display: none; font-family: Georgia, serif; }
+    .slide.active { display: block; }
+    .title { position: absolute; left: 160px; top: 120px; font-size: 96px; color: var(--brand); margin: 0; }
+    .body { position: absolute; left: 160px; top: 360px; width: 1200px; font-size: 44px; color: var(--ink); }
+    .logo { position: absolute; right: 80px; top: 60px; width: 160px; height: 160px; background: var(--brand); border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <section class="slide active" data-slide="1">
+      <h1 class="title">Quarterly Review</h1>
+      <p class="body">Revenue grew <strong>12%</strong> &mdash; best quarter &amp; a record.</p>
+      <div class="logo"></div>
+    </section>
+    <section class="slide" data-slide="2">
+      <h1 class="title">Roadmap</h1>
+      <p class="body" style="color: #555; opacity: .9">Ship v1, then iterate.</p>
+    </section>
+    <section class="slide" data-slide="3">
+      <h1 class="title">Thank you</h1>
+      <p class="body">Questions?</p>
+    </section>
+  </div>
+  <script>
+    var i = 0, slides = document.querySelectorAll('.slide');
+    function fit() { var s = Math.min(innerWidth / 1920, innerHeight / 1080); document.getElementById('stage').style.transform = 'scale(' + s + ')'; }
+    addEventListener('resize', fit); fit();
+    addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { slides[i].classList.remove('active'); i = Math.min(i + 1, slides.length - 1); slides[i].classList.add('active'); }
+      if (e.key === 'ArrowLeft') { slides[i].classList.remove('active'); i = Math.max(i - 1, 0); slides[i].classList.add('active'); }
+    });
+  </script>
+</body>
+</html>

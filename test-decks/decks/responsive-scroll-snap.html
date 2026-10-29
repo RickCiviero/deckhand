@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Responsive deck</title>
+<style>
+  html { scroll-snap-type: y mandatory; }
+  body { margin: 0; font-family: system-ui, sans-serif; }
+  .page { min-height: 100vh; scroll-snap-align: start; display: flex; flex-direction: column; justify-content: center; padding: 6vw; box-sizing: border-box; }
+  .page:nth-child(even) { background: #f3efe9; }
+  h2 { font-size: clamp(32px, 5vw, 72px); margin: 0 0 2vw; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; }
+  .card { background: #fff; border: 1px solid #ddd; padding: 2vw; border-radius: 12px; font-size: 2vw; }
+</style>
+</head>
+<body>
+<main>
+  <section class="page"><h2>Product overview</h2><p>Simple, fast, and local.</p></section>
+  <section class="page"><h2>Features</h2>
+    <div class="cards"><div class="card">Fast</div><div class="card">Safe</div><div class="card">Portable</div></div>
+  </section>
+  <section class="page"><h2>Pricing</h2><p>Free for everyone.</p></section>
+</main>
+</body>
+</html>

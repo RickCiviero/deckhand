@@ -1,0 +1,194 @@
+import type { JSX } from 'react';
+import { useEffect, useState } from 'react';
+import { Button, FluentProvider, MessageBar, MessageBarActions, MessageBarBody, Tooltip, webDarkTheme, webLightTheme } from '@fluentui/react-components';
+import { t } from '@deckhand/i18n';
+import { Canvas } from './Canvas';
+import { FormatPane } from './FormatPane';
+import { align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide } from './actions';
+import { session, useStore } from './session';
+
+type Tab = 'file' | 'home' | 'insert' | 'view';
+
+function Cmd({ label, tip, onClick, disabled, on, testid }: { label: string; tip: string; onClick: () => void; disabled?: boolean; on?: boolean; testid?: string }): JSX.Element {
+  return (
+    <Tooltip content={tip} relationship="description" withArrow>
+      {/* mousedown default prevented so formatting buttons do not steal the text selection from the live view */}
+      <Button size="small" appearance={on ? 'primary' : 'subtle'} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onClick} data-testid={testid}>{label}</Button>
+    </Tooltip>
+  );
+}
+
+export async function openFromResult(r: unknown, slide?: number): Promise<void> {
+  if (!r) return;
+  await session.openResult(r as { docId: string; name: string; bytes: Uint8Array }, slide ? slide - 1 : 0);
+}
+
+export function App(): JSX.Element {
+  const s = useStore();
+  const [tab, setTab] = useState<Tab>('home');
+  const [dark, setDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const [dropping, setDropping] = useState(false);
+  const [remote, setRemote] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const h = (e: MediaQueryListEvent) => setDark(e.matches);
+    mq.addEventListener('change', h);
+    const off = installKeyboard();
+    const offOpen = window.deckhand.on('open-request', (p) => {
+      const v = p as { file: string; slide?: number };
+      void window.deckhand.openPath(v.file).then((r) => openFromResult(r, v.slide)).catch((e: Error) => session.notify('error', cleanErr(e)));
+    });
+    const offDoc = window.deckhand.on('doc-event', (p) => {
+      const ev = p as { type: string; url?: string };
+      if (ev.type === 'blocked') {
+        session.notify('warning', 'This presentation uses files outside its folder. They were blocked for your safety.');
+      } else if (ev.type === 'external-change') {
+        const id = session.notify('info', 'This file was changed by another program.', [
+          { label: 'Reload', run: () => void reloadFromDisk() },
+          { label: 'Keep my version', run: () => session.dismiss(id) },
+        ]);
+      }
+    });
+    const offCmd = window.deckhand.on('cmd', (c) => { if (c === 'save-then-close') void session.save().then((ok) => ok && window.deckhand.closeConfirmed()); });
+    const dragOver = (e: DragEvent) => { e.preventDefault(); setDropping(true); };
+    const dragLeave = () => setDropping(false);
+    const drop = (e: DragEvent) => {
+      e.preventDefault(); setDropping(false);
+      const f = e.dataTransfer?.files[0];
+      if (!f) return;
+      try {
+        const p = window.deckhand.pathForFile(f);
+        void window.deckhand.openPath(p).then((r) => openFromResult(r)).catch((err: Error) => session.notify('error', cleanErr(err)));
+      } catch (err) { session.notify('error', cleanErr(err as Error)); }
+    };
+    window.addEventListener('dragover', dragOver); window.addEventListener('dragleave', dragLeave); window.addEventListener('drop', drop);
+    return () => { mq.removeEventListener('change', h); off(); offOpen(); offDoc(); offCmd(); window.removeEventListener('dragover', dragOver); window.removeEventListener('dragleave', dragLeave); window.removeEventListener('drop', drop); };
+  }, []);
+
+  const reloadFromDisk = async () => {
+    const id = useStore.getState().docId;
+    if (!id) return;
+    const bytes = (await window.deckhand.readDisk(id)) as Uint8Array;
+    await session.openResult({ docId: id, name: useStore.getState().name, bytes }, useStore.getState().slide);
+  };
+
+  const open = async () => { try { await openFromResult(await window.deckhand.openDialog()); } catch (e) { session.notify('error', cleanErr(e as Error)); } };
+  const pathEls = s.selection[0] !== undefined && s.loaded ? session.ancestors(s.selection[0]).filter((e) => !['html', 'body'].includes(e.tag)) : [];
+
+  return (
+    <FluentProvider theme={dark ? webDarkTheme : webLightTheme}>
+      {/* layout class lives on a wrapper: Fluent copies the provider className onto every portal (tooltips) */}
+      <div className="app" data-testid="app">
+      <header className="titlebar">
+        <span className="appname">{t('app.name')}</span>
+        <span className="docname" data-testid="docname">{s.loaded ? s.name : ''}</span>
+        <span className="savestate" data-testid="savestate">{s.loaded ? (s.dirty ? 'Unsaved changes' : 'Saved') : ''}</span>
+        <div className="qat">
+          <Cmd label="💾" tip="Save (Ctrl+S)" disabled={!s.loaded} onClick={() => void session.save()} testid="qat-save" />
+          <Cmd label="↶" tip={`Undo ${s.undoLabel} (Ctrl+Z)`} disabled={!s.canUndo} onClick={() => session.undo()} testid="qat-undo" />
+          <Cmd label="↷" tip="Redo (Ctrl+Y)" disabled={!s.canRedo} onClick={() => session.redo()} testid="qat-redo" />
+        </div>
+      </header>
+
+      <nav className="ribbon">
+        <div className="tabrow" role="tablist">
+          {(['file', 'home', 'insert', 'view'] as Tab[]).map((x) => (
+            <button key={x} role="tab" aria-selected={tab === x} className={tab === x ? 'on' : ''} onClick={() => setTab(x)} data-testid={`tab-${x}`}>{t(`tab.${x}`)}</button>
+          ))}
+        </div>
+        <div className="tools">
+          {tab === 'file' && (<>
+            <Cmd label={t('file.open')} tip="Open a presentation (Ctrl+O)" onClick={() => void open()} testid="cmd-open" />
+            <Cmd label={t('file.save')} tip="Save (Ctrl+S)" disabled={!s.loaded} onClick={() => void session.save()} testid="cmd-save" />
+            <Cmd label={t('file.saveAs')} tip="Save a copy (Ctrl+Shift+S)" disabled={!s.loaded} onClick={() => void session.saveAs()} />
+          </>)}
+          {tab === 'home' && (<>
+            <Cmd label={t('home.undo')} tip="Undo (Ctrl+Z)" disabled={!s.canUndo} onClick={() => session.undo()} />
+            <Cmd label={t('home.redo')} tip="Redo (Ctrl+Y)" disabled={!s.canRedo} onClick={() => session.redo()} />
+            <span className="sep" />
+            <Cmd label="B" tip="Bold (Ctrl+B) — while editing text" disabled={s.editing === null} onClick={() => session.format('bold')} testid="fmt-bold" />
+            <Cmd label="I" tip="Italic (Ctrl+I)" disabled={s.editing === null} onClick={() => session.format('italic')} />
+            <Cmd label="U" tip="Underline (Ctrl+U)" disabled={s.editing === null} onClick={() => session.format('underline')} />
+            <span className="sep" />
+            <Cmd label={t('home.newSlide')} tip="Duplicate the current slide (Ctrl+D)" disabled={!s.loaded} onClick={duplicateSlide} testid="cmd-dup-slide" />
+            <Cmd label={t('home.deleteSlide')} tip="Delete the current slide" disabled={!s.loaded || s.slides.length <= 1} onClick={deleteSlide} testid="cmd-del-slide" />
+            <span className="sep" />
+            <Cmd label={t('home.front')} tip="Bring to Front" disabled={!s.selection.length} onClick={() => arrange('front')} />
+            <Cmd label={t('home.back')} tip="Send to Back" disabled={!s.selection.length} onClick={() => arrange('back')} />
+            <Cmd label="⇤" tip="Align Left" disabled={!s.selection.length} onClick={() => align('left')} />
+            <Cmd label="⇔" tip="Align Center" disabled={!s.selection.length} onClick={() => align('center')} />
+            <Cmd label="⇥" tip="Align Right" disabled={!s.selection.length} onClick={() => align('right')} />
+          </>)}
+          {tab === 'insert' && <Cmd label={t('insert.textBox')} tip="Insert a text box" disabled={!s.loaded} onClick={() => insertTextBox()} testid="cmd-textbox" />}
+          {tab === 'view' && (<>
+            <Cmd label={t('view.fit')} tip="Fit to window (Ctrl+0)" disabled={!s.loaded} onClick={() => useStore.setState({ fit: true })} />
+            <Cmd label={t('view.smart')} tip="Smart guides while dragging" on={s.smart} onClick={() => useStore.setState({ smart: !s.smart })} />
+            <Cmd label={t('view.scripts')} tip="Off gives a static view for decks whose scripts get in the way" on={s.scriptsOn} disabled={!s.loaded}
+              onClick={() => { useStore.setState({ scriptsOn: !s.scriptsOn }); void session.reload(); }} testid="cmd-scripts" />
+            <Cmd label={t('view.remote')} tip="Load fonts, images and scripts from the internet when the deck asks for them" on={remote} disabled={!s.loaded}
+              onClick={() => { const v = !remote; setRemote(v); void window.deckhand.setPolicy(s.docId!, v ? 'allow' : 'block').then(() => session.reload()); }} testid="cmd-remote" />
+          </>)}
+        </div>
+      </nav>
+
+      <div className="msgbars" data-testid="msgbars">
+        {s.notices.map((n) => (
+          <MessageBar key={n.id} intent={n.kind === 'error' ? 'error' : n.kind === 'warning' ? 'warning' : 'info'} data-testid="msgbar">
+            <MessageBarBody>{n.text}</MessageBarBody>
+            <MessageBarActions>
+              {n.actions?.map((a) => <Button key={a.label} size="small" onClick={() => { a.run(); session.dismiss(n.id); }}>{a.label}</Button>)}
+              <Button size="small" appearance="transparent" aria-label="Dismiss" onClick={() => session.dismiss(n.id)}>✕</Button>
+            </MessageBarActions>
+          </MessageBar>
+        ))}
+      </div>
+
+      {!s.loaded ? (
+        <main className="welcome" data-testid="welcome">
+          <h1>{t('app.name')}</h1>
+          <p>{t('app.tagline')}</p>
+          <Button appearance="primary" onClick={() => void open()} data-testid="welcome-open">{t('file.open')}…</Button>
+          <p className="hint">{t('file.drop')}</p>
+        </main>
+      ) : (
+        <main className="workspace">
+          <aside className="pane slides" data-testid="slide-pane">
+            {s.slides.map((sl, i) => (
+              <div key={sl.id} className={`thumb ${i === s.slide ? 'on' : ''} ${sl.hidden ? 'hidden' : ''}`} draggable
+                onClick={() => session.goTo(i)} data-testid={`thumb-${i}`}
+                onDragStart={(e) => e.dataTransfer.setData('text/x-slide', String(i))}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const from = Number(e.dataTransfer.getData('text/x-slide')); if (Number.isInteger(from)) moveSlide(from, i); }}>
+                <span className="num">{i + 1}</span>
+                <span className="lab">{sl.label}</span>
+              </div>
+            ))}
+          </aside>
+          <section className="center"><Canvas /></section>
+          <FormatPane />
+        </main>
+      )}
+
+      <footer className="statusbar">
+        <span data-testid="slide-counter">{s.loaded ? t('status.slide', { n: s.slide + 1, total: s.slides.length }) : ''}</span>
+        <span className="path" data-testid="path">
+          {pathEls.map((e, i) => (
+            <button key={e.id} className="crumb" onClick={() => useStore.setState({ selection: [e.id] })}>{i > 0 ? ' › ' : ''}{e.tag}{(() => { const c = (e.attrs.find((a) => a.name === 'class')?.value ?? '').split(/\s+/)[0]; return c ? `.${c}` : ''; })()}</button>
+          ))}
+        </span>
+        <span className="chip">{s.detection ? `${s.detection.adapter}` : ''}</span>
+        <label className="zoom">
+          <input type="range" min={10} max={400} value={Math.round(s.zoom * 100)} onChange={(e) => useStore.setState({ fit: false, zoom: Number(e.target.value) / 100 })} aria-label="Zoom" />
+          <span data-testid="zoom">{Math.round(s.zoom * 100)}%</span>
+        </label>
+      </footer>
+      {dropping && <div className="dropveil">{t('file.drop')}</div>}
+      </div>
+    </FluentProvider>
+  );
+}
+
+function cleanErr(e: Error): string {
+  return e.message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
+}
