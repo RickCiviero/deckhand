@@ -59,7 +59,7 @@ test('arrow keys nudge by 1px / 10px and consecutive nudges are one undo step', 
   expect(Math.round(before - after)).toBe(12);
   await c.page.keyboard.press(`${MOD}+z`);
   // undo may reload the live view (a style attribute disappears); poll until the reloaded deck has laid out again
-  await expect.poll(async () => Math.round(await deckFrame(c.page).evaluate(() => document.querySelector('.logo')?.getBoundingClientRect().left ?? -1).catch(() => -1)), { timeout: 15000 }).toBe(Math.round(before));
+  await expect.poll(async () => Math.round(await (async () => deckFrame(c.page).evaluate(() => document.querySelector('.logo')?.getBoundingClientRect().left ?? -1))().catch(() => -1)), { timeout: 15000 }).toBe(Math.round(before));
   await save(c.page).catch(() => undefined);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
 });
