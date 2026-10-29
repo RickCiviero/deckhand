@@ -9,6 +9,12 @@ test('focus diagnostic', async () => {
   c = await launch('ai-fixed-stage.html');
   await ready(c.page);
   await c.page.evaluate(`(() => { const log = (window.__plog = []); const t0 = performance.now(); const act = () => document.activeElement && (document.activeElement.tagName + '.' + (document.activeElement.getAttribute('data-testid') || '')); for (const n of ['keydown', 'focusin', 'focusout']) document.addEventListener(n, (e) => log.push(Math.round(performance.now() - t0) + 'ms ' + n + ':' + (e.key || '') + ' tgt=' + (e.target && e.target.tagName) + ' act=' + act()), true); window.addEventListener('blur', () => log.push(Math.round(performance.now() - t0) + 'ms win-blur')); window.addEventListener('focus', () => log.push(Math.round(performance.now() - t0) + 'ms win-focus')); window.__t0 = t0; window.__act = act; })()`);
+  const flog: string[] = [];
+  c.page.on('framenavigated', (f) => {
+    if (!f.url().startsWith('deckhand-doc://')) return;
+    flog.push(`[nav] ${f.url().slice(0, 40)}`);
+    void f.evaluate(`(() => { const log = (window.__flog = []); const t0 = performance.now(); const act = () => document.activeElement && document.activeElement.tagName + '.' + (document.activeElement.className || ''); const add = (m) => log.push(Math.round(performance.now() - t0) + 'ms ' + m + ' act=' + act()); for (const n of ['focusin', 'focusout', 'keydown']) document.addEventListener(n, (e) => add(n + ':' + (e.key || '') + ' tgt=' + (e.target && e.target.tagName + '.' + (e.target.className || ''))), true); new MutationObserver((ms) => ms.forEach((m) => { if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'contenteditable' || m.attributeName === 'style')) add('attr ' + m.attributeName + ' on ' + m.target.tagName + '.' + (m.target.className || '')); })).observe(document.documentElement, { attributes: true, subtree: true }); })()`).catch(() => undefined);
+  });
   await c.page.getByTestId('tab-insert').click();
   await c.page.getByTestId('cmd-textbox').click();
   await expectEditing(c.page);
@@ -17,6 +23,8 @@ test('focus diagnostic', async () => {
   for (const ch of 'Hey') { await c.page.keyboard.press(ch); await c.page.waitForTimeout(80); }
   const pl = await c.page.evaluate('window.__plog') as string[];
   const fr = await deckFrame(c.page).evaluate(() => ({ focus: document.hasFocus(), active: document.activeElement?.tagName, ed: document.querySelector('[data-deckhand-editing]')?.textContent }));
+  const fl = await deckFrame(c.page).evaluate('window.__flog').catch(() => ['no flog']) as string[];
+  console.log(`[diag ${process.platform}] FRAMELOG ${flog.join(' ')}\n${fl.join('\n')}\n[diag ${process.platform}] END FRAMELOG`);
   console.log(`[diag ${process.platform}] PARENT\n${pl.join('\n')}\n[diag ${process.platform}] frame=${JSON.stringify(fr)}`);
   expect(true).toBe(true);
 });
