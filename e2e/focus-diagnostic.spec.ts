@@ -1,31 +1,22 @@
 import { expect, test } from '@playwright/test';
-import { centreOf, deckFrame, editAt, launch, MOD, ready, type Ctx } from './helpers';
+import { deckFrame, expectEditing, launch, MOD, ready, type Ctx } from './helpers';
 
 let c: Ctx;
 test.afterEach(async () => { await c?.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined); });
 
-/** Diagnostic: which keystrokes after entering text edit mode reach the edited element, and when? (CI only; prints, never fails on values) */
+/** Diagnostic: where do keystrokes go after "Insert text box" starts editing? (CI only; prints, never fails on values) */
 test('focus diagnostic', async () => {
-  c = await launch('latin1-crlf.html');
+  c = await launch('ai-fixed-stage.html');
   await ready(c.page);
-  const t = await centreOf(c.page, 'section.slide h1');
-  await editAt(c.page, t.x, t.y);
-  const probe = `(() => {
-    const log = (window.__dlog = []); const t0 = performance.now();
-    const add = (m) => log.push(Math.round(performance.now() - t0) + 'ms ' + m + ' focus=' + document.hasFocus() + ' act=' + (document.activeElement && document.activeElement.tagName));
-    for (const n of ['keydown', 'beforeinput', 'input', 'focus', 'blur', 'selectionchange']) document.addEventListener(n, (e) => add(n + ':' + (e.key || e.data || '')), true);
-    window.addEventListener('focus', () => add('win-focus')); window.addEventListener('blur', () => add('win-blur'));
-  })()`;
-  await deckFrame(c.page).evaluate(probe);
-  await c.page.evaluate(`(() => { const log = (window.__plog = []); const t0 = performance.now(); for (const n of ['keydown', 'focusin', 'focusout']) document.addEventListener(n, (e) => log.push(Math.round(performance.now() - t0) + 'ms ' + n + ':' + (e.key || '') + ' tgt=' + (e.target && e.target.tagName)), true); window.addEventListener('blur', () => log.push('win-blur')); window.addEventListener('focus', () => log.push('win-focus')); })()`);
+  await c.page.evaluate(`(() => { const log = (window.__plog = []); const t0 = performance.now(); const act = () => document.activeElement && (document.activeElement.tagName + '.' + (document.activeElement.getAttribute('data-testid') || '')); for (const n of ['keydown', 'focusin', 'focusout']) document.addEventListener(n, (e) => log.push(Math.round(performance.now() - t0) + 'ms ' + n + ':' + (e.key || '') + ' tgt=' + (e.target && e.target.tagName) + ' act=' + act()), true); window.addEventListener('blur', () => log.push(Math.round(performance.now() - t0) + 'ms win-blur')); window.addEventListener('focus', () => log.push(Math.round(performance.now() - t0) + 'ms win-focus')); window.__t0 = t0; window.__act = act; })()`);
+  await c.page.getByTestId('tab-insert').click();
+  await c.page.getByTestId('cmd-textbox').click();
+  await expectEditing(c.page);
+  await c.page.evaluate(`window.__plog.push('--- edit visible act=' + window.__act())`);
   await c.page.keyboard.press(`${MOD}+a`);
-  for (const ch of 'Creme') { await c.page.keyboard.press(ch); await c.page.waitForTimeout(80); }
-  await c.page.waitForTimeout(1500);
-  for (const ch of 'XY') { await c.page.keyboard.press(ch); await c.page.waitForTimeout(80); }
-  const fl = await deckFrame(c.page).evaluate('window.__dlog') as string[];
+  for (const ch of 'Hey') { await c.page.keyboard.press(ch); await c.page.waitForTimeout(80); }
   const pl = await c.page.evaluate('window.__plog') as string[];
-  console.log(`[diag ${process.platform}] FRAME\n${fl.join('\n')}`);
-  console.log(`[diag ${process.platform}] PARENT\n${pl.join('\n')}`);
-  console.log(`[diag ${process.platform}] title=${await deckFrame(c.page).evaluate(() => document.querySelector('section.slide h1')!.textContent)}`);
+  const fr = await deckFrame(c.page).evaluate(() => ({ focus: document.hasFocus(), active: document.activeElement?.tagName, ed: document.querySelector('[data-deckhand-editing]')?.textContent }));
+  console.log(`[diag ${process.platform}] PARENT\n${pl.join('\n')}\n[diag ${process.platform}] frame=${JSON.stringify(fr)}`);
   expect(true).toBe(true);
 });
