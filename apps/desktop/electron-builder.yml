@@ -1,5 +1,6 @@
 appId: app.deckhand.editor
 productName: Deckhand
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 electronVersion: 45.1.0
 directories:
   output: release
