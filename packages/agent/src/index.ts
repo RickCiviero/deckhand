@@ -354,7 +354,9 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
         if (editing) {
           editing.focus({ preventScroll: true });
           const sel = win.getSelection();
-          if (sel && savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); }
+          // One-shot: a double-click starts the edit twice (mouse-up, then dblclick), so a second refocus must not
+          // overwrite what the user has already selected or typed since.
+          if (sel && savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); savedRange = null; }
           send({ t: 'edit-ready', id: idOf(editing) }); // keyboard focus is now inside the element: safe to type
         }
         break;
