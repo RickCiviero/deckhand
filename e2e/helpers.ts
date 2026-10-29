@@ -85,11 +85,17 @@ export const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 /** Double-click to enter text editing; retries because the first click can land before the agent's hit-testing is up. */
 export async function editAt(page: Page, x: number, y: number): Promise<void> {
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     await page.mouse.dblclick(x, y);
-    try { await expect(page.locator('.outline.edit')).toBeVisible({ timeout: 3000 }); return; } catch { /* try again */ }
+    try { await expectEditing(page, 3000); return; } catch { await page.waitForTimeout(500); }
   }
-  await expect(page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
+  await expectEditing(page, 5000);
+}
+
+/** Waits for the text-edit outline, then a short settle: on Linux the browser process routes keys to the frame a beat after the page reports focus. */
+export async function expectEditing(page: Page, timeout = 8000): Promise<void> {
+  await expect(page.locator('.outline.edit')).toBeVisible({ timeout });
+  await page.waitForTimeout(400);
 }
 
 export const norm =(s: string): string => s.replace(/\r\n/g, '\n');

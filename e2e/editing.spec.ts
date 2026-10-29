@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt } from './helpers';
+import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt, expectEditing } from './helpers';
 
 let c: Ctx;
 // app.close() would block on the "Save changes?" dialog for dirty documents, so force-exit
@@ -174,6 +174,7 @@ test('slides: duplicate, reorder, delete — each exact and undoable', async () 
   await c.page.keyboard.press(`${MOD}+z`);
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(3, { timeout: 8000 });
   await c.page.getByTestId('thumb-2').click();
+  await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 3 of 3', { timeout: 8000 });
   await c.page.getByTestId('cmd-del-slide').click();
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(2, { timeout: 8000 });
   await save(c.page);
@@ -189,7 +190,7 @@ test('insert a text box: Free div inside the current slide', async () => {
   await ready(c.page);
   await c.page.getByTestId('tab-insert').click();
   await c.page.getByTestId('cmd-textbox').click();
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 8000 });
+  await expectEditing(c.page);
   await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Hello box');
   await c.page.keyboard.press('Escape');
