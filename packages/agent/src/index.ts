@@ -149,6 +149,8 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   let editing: HTMLElement | null = null;
   let editDirty = false;
   let keyedSinceEdit = false;
+  let editStartedAt = 0;
+  let lastRange: Range | null = null;
   let savedRange: Range | null = null;
   const norm = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
@@ -179,7 +181,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
       return;
     }
     editing = el;
-    if (!again) { editDirty = false; keyedSinceEdit = false; }
+    if (!again) { editDirty = false; keyedSinceEdit = false; editStartedAt = Date.now(); lastRange = null; }
     el.setAttribute('contenteditable', 'true');
     el.setAttribute('spellcheck', 'false');
     el.setAttribute('data-deckhand-editing', '');
@@ -302,6 +304,22 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     N.addEventListener(t, suppress, { capture: true, passive: false } as AddEventListenerOptions);
   }
   N.addEventListener('input', () => { if (editing) editDirty = true; }, true);
+  // Handing the iframe keyboard focus is asynchronous in the browser process, and on some platforms it blurs the focused element a
+  // moment after we focused it. During the first instants of an edit (before any key), put focus and caret straight back.
+  N.addEventListener('selectionchange', () => {
+    const s = editing ? win.getSelection() : null;
+    if (editing && s && s.rangeCount && s.anchorNode && editing.contains(s.anchorNode)) lastRange = s.getRangeAt(0).cloneRange();
+  }, true);
+  N.addEventListener('focusout', (e) => {
+    const el = editing;
+    if (!el || e.target !== el || (e as FocusEvent).relatedTarget || keyedSinceEdit || Date.now() - editStartedAt > 1500) return;
+    setTimeout(() => {
+      if (editing !== el || doc.activeElement === el) return;
+      el.focus({ preventScroll: true });
+      const s = win.getSelection();
+      if (s && lastRange) { s.removeAllRanges(); s.addRange(lastRange); }
+    }, 0);
+  }, true);
   N.addEventListener('paste', (e) => {
     // Pasting is handled as plain text only; the editor sanitizes anything richer (TXT-09/11)
     if (!editing) return;
