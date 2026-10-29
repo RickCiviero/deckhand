@@ -3,15 +3,21 @@
   "private": true,
   "version": "0.1.0",
   "description": "Visual editor for HTML presentations",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "npm run dev -w @deckhand/desktop",
-    "build": "npm run build -w @deckhand/desktop",
-    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false || tsc -p tsconfig.json --noEmit",
+    "dev": "npm run build -w @deckhand/agent && npm run dev -w @deckhand/desktop",
+    "build": "npm run build -w @deckhand/agent && npm run build -w @deckhand/desktop",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "e2e": "npm run build && playwright test",
     "dist": "npm run build && npm run dist -w @deckhand/desktop",
-    "gen:decks": "node scripts/gen-test-decks.mjs"
+    "gen:decks": "node scripts/gen-test-decks.mjs",
+    "screenshot": "electron scripts/screenshot.cjs",
+    "postinstall": "node scripts/ensure-electron.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -21,5 +27,8 @@
     "@vitest/coverage-v8": "^5.0.5",
     "typescript": "^5.9.0",
     "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -169,3 +169,14 @@ export function htmlToPlainText(html: string): string {
     .replace(/&amp;/g, '&')
     .trim();
 }
+
+/** Element tag names inside an HTML fragment, in document order. Used to detect content the browser/scripts restructured. */
+export function inlineTagSequence(html: string): string[] {
+  const out: string[] = [];
+  const walkTags = (n: Node): void => {
+    if ('tagName' in n) out.push(n.tagName);
+    if ('childNodes' in n) for (const c of n.childNodes) walkTags(c);
+  };
+  for (const c of parseFragment(html).childNodes) walkTags(c);
+  return out;
+}

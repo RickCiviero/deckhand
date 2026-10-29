@@ -1,0 +1,48 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false' # unsigned builds are supported (PLT-05)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run build
+      - name: E2E (Linux needs a virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx playwright test
+      - name: E2E
+        if: runner.os != 'Linux'
+        run: npx playwright test
+      - name: Package
+        run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deckhand-${{ matrix.os }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: test-results/

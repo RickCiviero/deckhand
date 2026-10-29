@@ -1,0 +1,45 @@
+appId: app.deckhand.editor
+productName: Deckhand
+electronVersion: 45.1.0
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asar: true
+# Electron fuses (SEC-01): no Node-as-runtime, no env/CLI debugging hooks, app code only from the integrity-checked asar
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+win:
+  target:
+    - { target: nsis, arch: [x64] }
+  # unsigned builds stay possible (PLT-05); signing is enabled by CI secrets
+nsis:
+  oneClick: false
+  perMachine: false            # per-user install, no admin rights
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  # Deckhand is an optional "Open with" handler only; it never claims .html by default (PLT-08)
+mac:
+  target: [dmg, zip]
+  category: public.app-category.productivity
+  hardenedRuntime: true
+linux:
+  target: [AppImage, deb]
+  category: Office
+  maintainer: Deckhand
+fileAssociations:
+  - ext: html
+    name: HTML presentation
+    role: Editor
+    isPackage: false
+  - ext: htm
+    name: HTML presentation
+    role: Editor

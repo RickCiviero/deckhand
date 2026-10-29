@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import {
   Editor, openBytes, saveBytes, detectDeck, getAttr, moveCommand, resizeCommand, setStyleCommand, setInnerHtmlCommand, deleteElementCommand,
-  duplicateElementCommand, reorderCommand, findOutsideRefs, resetPositionCommand, styleMultiCommand, parseSource, setStyleProp, textOf, isSimpleInlineHtml, type Detection, type ElementInfo,
+  duplicateElementCommand, reorderCommand, findOutsideRefs, resetPositionCommand, styleMultiCommand, parseSource, setStyleProp, textOf, isSimpleInlineHtml, inlineTagSequence, escapeText, type Detection, type ElementInfo,
   type Patch, type SourceDoc,
 } from '@deckhand/core';
 import { z } from 'zod';
@@ -35,9 +35,10 @@ const agentMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('hit'), req: z.number(), ids: z.array(z.number().int()).max(200) }),
   z.object({ t: z.literal('children'), req: z.number(), ids: z.array(z.number().int()).max(2000) }),
   z.object({ t: z.literal('edit-started'), id: z.number().int() }),
+  z.object({ t: z.literal('edit-ready'), id: z.number().int().nullable() }),
   z.object({ t: z.literal('edit-refused'), id: z.number().int(), why: z.string().max(40) }),
   z.object({ t: z.literal('edit-outside') }),
-  z.object({ t: z.literal('edit-end'), id: z.number().int().nullable(), dirty: z.boolean(), html: z.string().max(2_000_000).nullable() }),
+  z.object({ t: z.literal('edit-end'), id: z.number().int().nullable(), dirty: z.boolean(), html: z.string().max(2_000_000).nullable(), text: z.string().max(2_000_000).nullable(), quirk: z.boolean() }),
   z.object({ t: z.literal('key'), key: z.string().max(20), shift: z.boolean().optional(), ctrl: z.boolean().optional(), alt: z.boolean().optional(), meta: z.boolean().optional(), fwd: z.boolean().optional() }),
   z.object({ t: z.literal('viewport'), w: num, h: num, sw: num, sh: num }),
 ]);
@@ -197,10 +198,13 @@ class Session {
       case 'ready': void this.afterReady(); break;
       case 'changed': this.queueRefresh(); break;
       case 'rects': case 'hit': case 'children': { const w = this.waiters.get(m.req); if (w) { this.waiters.delete(m.req); w(m); } break; }
-      case 'edit-started': set({ editing: m.id }); this.iframe?.focus(); this.iframe?.contentWindow?.focus(); this.send({ t: 'refocus' }); break;
+      case 'edit-started': this.iframe?.focus(); this.iframe?.contentWindow?.focus(); this.send({ t: 'refocus' }); break; // editing state starts once focus is confirmed
+      case 'edit-ready': set({ editing: m.id ?? get().selection[0] ?? null }); break;
       case 'edit-refused': this.notify('warning', m.why === 'transformed'
         ? "This text is changed by the presentation's scripts, so it can't be edited here. Turn off deck scripts (View) to edit it."
-        : "This text can't be edited.");
+        : m.why === 'structure'
+          ? "This text is restructured by the browser or the presentation's scripts, so it can't be edited here without changing its markup."
+          : "This text can't be edited.");
         break;
       case 'edit-outside': void this.endEdit(true); break;
       case 'edit-end':
@@ -390,14 +394,18 @@ class Session {
     }
     const text = textOf(this.doc, el).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
     const decoded = new DOMParser().parseFromString(text, 'text/html').documentElement.textContent ?? text;
-    this.send({ t: 'edit', id, text: decoded, at });
+    this.send({ t: 'edit', id, text: decoded, at, tags: inlineTagSequence(textOf(this.doc, el)) });
   }
 
   private finishEdit(r: Extract<AgentMsg, { t: 'edit-end' }>): void {
     set({ editing: null });
     this.iframe?.blur();
     window.focus(); // the live view must not keep keyboard focus after editing
-    if (r.dirty && r.html !== null && r.id !== null) this.exec(setInnerHtmlCommand(r.id, r.html), { selectAfter: [r.id] });
+    if (r.dirty && r.id !== null) {
+      // quirk mode: the live DOM had parser/script-made structure, so only the plain text is written back
+      if (r.quirk && r.text !== null) this.exec(setInnerHtmlCommand(r.id, escapeText(r.text), true), { selectAfter: [r.id] });
+      else if (r.html !== null) this.exec(setInnerHtmlCommand(r.id, r.html), { selectAfter: [r.id] });
+    }
   }
 
   async endEdit(commit: boolean): Promise<void> {

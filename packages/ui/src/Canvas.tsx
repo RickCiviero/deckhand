@@ -20,6 +20,9 @@ interface DragState {
   hitId: number | null;
   shift: boolean;
   wasSelected: boolean;
+  /** pointer released before the async hit-test came back: finish as a plain click */
+  released?: boolean;
+  hitDone?: boolean;
 }
 
 export function Canvas(): JSX.Element {
@@ -101,6 +104,7 @@ export function Canvas(): JSX.Element {
     drag.current = { kind: 'pending', x0: e.clientX, y0: e.clientY, ids: [], rects: {}, styles: {}, moved: false, hitId: null, shift: down.shift, wasSelected: false };
     const mine = drag.current;
     const { picked, all } = await hitObject(e);
+    mine.hitDone = true;
     if (drag.current !== mine) return;
     let target2 = picked;
     if (down.alt && all.length > 1) { // cycle to the object behind
@@ -113,15 +117,18 @@ export function Canvas(): JSX.Element {
     if (target2 === null) {
       if (!down.shift) useStore.setState({ selection: [] });
       mine.kind = 'marquee';
+      if (mine.released) { drag.current = null; setMarquee(null); }
       return;
     }
     if (down.shift) {
       useStore.setState({ selection: sel.includes(target2) ? sel.filter((x) => x !== target2) : [...sel, target2] });
       mine.kind = 'pending';
+      if (mine.released) drag.current = null;
       return;
     }
     mine.wasSelected = sel.includes(target2);
     if (!mine.wasSelected) useStore.setState({ selection: [target2] });
+    if (mine.released) { drag.current = null; session.queueRefresh(); return; } // quick click: selection done
     await session.refreshRects();
     const now = useStore.getState();
     mine.kind = 'move';
@@ -188,6 +195,7 @@ export function Canvas(): JSX.Element {
 
   const onPointerUp = async (e: React.PointerEvent) => {
     const d = drag.current;
+    if (d && d.kind === 'pending' && !d.hitDone) { d.released = true; return; } // finish once the hit-test resolves
     drag.current = null;
     setGuides({ v: [], h: [] });
     if (!d) return;

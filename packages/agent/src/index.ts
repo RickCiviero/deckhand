@@ -151,11 +151,24 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   let savedRange: Range | null = null;
   const norm = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
-  const startEdit = (id: number, expectedText: string, at?: { x: number; y: number; mode: string }): void => {
+  let editQuirk = false;
+  const liveTags = (el: Element): string[] => {
+    const out: string[] = [];
+    const w = (n: Element): void => { for (const c of N.from(n.children) as Element[]) { out.push(c.tagName.toLowerCase()); w(c); } };
+    w(el);
+    return out;
+  };
+  const startEdit = (id: number, expectedText: string, at?: { x: number; y: number; mode: string }, srcTags?: string[]): void => {
     const el = byId(id);
     if (!el) return send({ t: 'edit-refused', id, why: 'missing' });
     // TXT-04: live content must match the source text, otherwise scripts have transformed it
     if (norm(el.textContent || '') !== norm(expectedText)) return send({ t: 'edit-refused', id, why: 'transformed' });
+    // Same check for structure: the HTML parser (malformed markup) or deck scripts may have added/moved elements. Then only plain text is
+    // safe to write back, and only if the source had no inline tags of its own.
+    const live = liveTags(el);
+    const src = Array.isArray(srcTags) ? srcTags.map((t) => String(t).toLowerCase()) : null;
+    editQuirk = src !== null && (src.length !== live.length || src.some((t, i) => t !== live[i]));
+    if (editQuirk && src!.length > 0) return send({ t: 'edit-refused', id, why: 'structure' });
     editing = el;
     editDirty = false;
     el.setAttribute('contenteditable', 'true');
@@ -192,10 +205,13 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     el.removeAttribute('contenteditable');
     el.removeAttribute('spellcheck');
     el.removeAttribute('data-deckhand-editing');
-    send({ t: 'edit-end', id, dirty: editDirty && commit, html: editDirty && commit ? html.slice(0, MAX_HTML) : null });
+    const text = el.textContent || '';
+    send({ t: 'edit-end', id, dirty: editDirty && commit, html: editDirty && commit && !editQuirk ? html.slice(0, MAX_HTML) : null, text: editDirty && commit && editQuirk ? text.slice(0, MAX_HTML) : null, quirk: editQuirk });
+    editQuirk = false;
   };
 
   const wrapSelection = (tag: string, css?: [string, string]): void => {
+    if (editQuirk) return; // formatting would be written on top of parser-generated structure
     const sel = win.getSelection();
     if (!editing || !sel || sel.rangeCount === 0 || sel.isCollapsed) return;
     const range = sel.getRangeAt(0);
@@ -331,7 +347,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
         break;
       }
       case 'show': showSlide(Number(m.index)); send({ t: 'shown', index: m.index }); break;
-      case 'edit': startEdit(Number(m.id), String(m.text ?? ''), m.at && typeof m.at === 'object' ? { x: Number(m.at.x), y: Number(m.at.y), mode: String(m.at.mode) } : undefined); break;
+      case 'edit': startEdit(Number(m.id), String(m.text ?? ''), m.at && typeof m.at === 'object' ? { x: Number(m.at.x), y: Number(m.at.y), mode: String(m.at.mode) } : undefined, Array.isArray(m.tags) ? m.tags.slice(0, 5000) : undefined); break;
       case 'edit-end': stopEdit(m.commit !== false); break;
       case 'refocus': {
         // The editor moved focus to this frame; put the caret/selection back inside the edited element.
@@ -339,6 +355,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
           editing.focus({ preventScroll: true });
           const sel = win.getSelection();
           if (sel && savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); }
+          send({ t: 'edit-ready', id: idOf(editing) }); // keyboard focus is now inside the element: safe to type
         }
         break;
       }
