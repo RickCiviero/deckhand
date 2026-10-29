@@ -178,11 +178,17 @@ export function insertTextBox(at?: { x: number; y: number }): void {
   const text = closeIndent !== null ? `${closeIndent}  ${html}${eol}` : html;
   const at2 = closeIndent !== null ? lineStart : slide.endTagStart;
   patches.push({ start: at2, end: at2, text });
+  const nonce0 = useStore.getState().loadNonce;
   session.exec({ label: 'Insert text box', build: () => patches });
-  setTimeout(() => {
+  // Start editing only once the structural edit's reload has finished and the agent is back; otherwise the reload wipes the edit state.
+  const began = Date.now();
+  const tryEdit = (): void => {
+    const st = useStore.getState();
+    if ((st.loadNonce === nonce0 || !st.agentReady) && Date.now() - began < 15000) { setTimeout(tryEdit, 100); return; }
     const n = session.doc.elements.filter((e) => e.start >= at2 && e.start < at2 + text.length && e.tag === 'div').at(0);
-    if (n) { useStore.setState({ selection: [n.id] }); session.startEdit(n.id); }
-  }, 600);
+    if (n) { useStore.setState({ selection: [n.id] }); setTimeout(() => session.startEdit(n.id), 150); }
+  };
+  setTimeout(tryEdit, 100);
 }
 
 function styleAttrPatch(el: ElementInfo, has: boolean, value: string): Patch {

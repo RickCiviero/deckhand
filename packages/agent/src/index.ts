@@ -148,6 +148,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   // --- text editing ---------------------------------------------------------------------------------
   let editing: HTMLElement | null = null;
   let editDirty = false;
+  let keyedSinceEdit = false;
   let savedRange: Range | null = null;
   const norm = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
@@ -169,8 +170,12 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     const src = Array.isArray(srcTags) ? srcTags.map((t) => String(t).toLowerCase()) : null;
     editQuirk = src !== null && (src.length !== live.length || src.some((t, i) => t !== live[i]));
     if (editQuirk && src!.length > 0) return send({ t: 'edit-refused', id, why: 'structure' });
+    // A double-click starts the edit twice: on mouse-up (caret) and again on dblclick (word), the latter after a hit-test round
+    // trip. The second start must only place the word selection, and only while the user has not typed or selected since.
+    const again = editing === el;
+    if (again && (keyedSinceEdit || editDirty || !at || at.mode !== 'word')) return;
     editing = el;
-    editDirty = false;
+    if (!again) { editDirty = false; keyedSinceEdit = false; }
     el.setAttribute('contenteditable', 'true');
     el.setAttribute('spellcheck', 'false');
     el.setAttribute('data-deckhand-editing', '');
@@ -244,6 +249,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   // Edit-key handling must be registered BEFORE the suppress listeners: they call stopImmediatePropagation().
   N.addEventListener('keydown', (e) => {
     if (!editing) return;
+    keyedSinceEdit = true;
     const k = e as KeyboardEvent;
     if (k.key === 'Escape') { stopEdit(true); return; }
     if (k.key === 'Enter') { // TXT-08 (simplified): <br>
@@ -356,7 +362,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
           const sel = win.getSelection();
           // One-shot: a double-click starts the edit twice (mouse-up, then dblclick), so a second refocus must not
           // overwrite what the user has already selected or typed since.
-          if (sel && savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); savedRange = null; }
+          if (sel && savedRange && !keyedSinceEdit) { sel.removeAllRanges(); sel.addRange(savedRange); savedRange = null; }
           send({ t: 'edit-ready', id: idOf(editing) }); // keyboard focus is now inside the element: safe to type
         }
         break;
