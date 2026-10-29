@@ -173,7 +173,11 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     // A double-click starts the edit twice: on mouse-up (caret) and again on dblclick (word), the latter after a hit-test round
     // trip. The second start must only place the word selection, and only while the user has not typed or selected since.
     const again = editing === el;
-    if (again && (keyedSinceEdit || editDirty || !at || at.mode !== 'word')) return;
+    if (again && (keyedSinceEdit || editDirty || !at || at.mode !== 'word')) {
+      // The second mouse-down of the double-click moved keyboard focus to the editor page: ask the UI to hand it back.
+      if (!keyedSinceEdit) send({ t: 'edit-started', id });
+      return;
+    }
     editing = el;
     if (!again) { editDirty = false; keyedSinceEdit = false; }
     el.setAttribute('contenteditable', 'true');
