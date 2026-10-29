@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx } from './helpers';
+import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt } from './helpers';
 
 let c: Ctx;
 // app.close() would block on the "Save changes?" dialog for dirty documents, so force-exit
@@ -16,7 +16,7 @@ test('opens a deck, detects slides, no-op save keeps the file byte-identical', a
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(3);
   await expect(c.page.locator('[data-testid=thumb-0]')).toContainText('Quarterly Review');
   // saving without edits must not change a byte (RT-01) — even if the user presses Ctrl+S
-  await c.page.keyboard.press('Control+s');
+  await c.page.keyboard.press(`${MOD}+s`);
   await c.page.waitForTimeout(500);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
 });
@@ -57,7 +57,7 @@ test('arrow keys nudge by 1px / 10px and consecutive nudges are one undo step', 
   await c.page.waitForTimeout(500);
   const after = await deckFrame(c.page).evaluate(() => document.querySelector('.logo')!.getBoundingClientRect().left);
   expect(Math.round(before - after)).toBe(12);
-  await c.page.keyboard.press('Control+z');
+  await c.page.keyboard.press(`${MOD}+z`);
   await c.page.waitForTimeout(500);
   const undone = await deckFrame(c.page).evaluate(() => document.querySelector('.logo')!.getBoundingClientRect().left);
   expect(Math.round(undone)).toBe(Math.round(before));
@@ -71,12 +71,12 @@ test('undo / redo restores the exact original bytes', async () => {
   await clickObj(c.page, '.logo');
   await dragObj(c.page, '.logo', 60, 60);
   await expect(c.page.locator('[data-testid=savestate]')).toHaveText('Unsaved changes');
-  await c.page.keyboard.press('Control+z');
+  await c.page.keyboard.press(`${MOD}+z`);
   await c.page.waitForTimeout(400);
-  await c.page.keyboard.press('Control+s');
+  await c.page.keyboard.press(`${MOD}+s`);
   await c.page.waitForTimeout(600);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
-  await c.page.keyboard.press('Control+y');
+  await c.page.keyboard.press(`${MOD}+y`);
   await c.page.waitForTimeout(400);
   await save(c.page);
   expect(c.text()).toContain('class="logo" style="');
@@ -132,9 +132,8 @@ test('text editing: double-click, replace text, Esc commits; only the text chang
   c = await launch('ai-fixed-stage.html');
   await ready(c.page);
   const t = await centreOf(c.page, '.slide.active .title');
-  await c.page.mouse.dblclick(t.x, t.y);
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
-  await c.page.keyboard.press('Control+a');
+  await editAt(c.page, t.x, t.y);
+  await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Annual Review');
   await c.page.keyboard.press('Escape');
   await expect(c.page.locator('.outline.edit')).toHaveCount(0);
@@ -147,9 +146,8 @@ test('text editing keeps entities and untouched markup when only part of the tex
   c = await launch('ai-fixed-stage.html');
   await ready(c.page);
   const t = await centreOf(c.page, '.slide.active .body');
-  await c.page.mouse.dblclick(t.x - t.w / 2 + 30, t.y); // selects the word "Revenue"
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
-  await c.page.keyboard.press('Control+b');
+  await editAt(c.page, t.x - t.w / 2 + 30, t.y); // selects the word "Revenue"
+  await c.page.keyboard.press(`${MOD}+b`);
   await c.page.keyboard.press('Escape');
   await save(c.page);
   // Windows word-selection includes the trailing space; the untouched &mdash; and &amp; entities must survive (RT-02)
@@ -161,8 +159,7 @@ test('text edit that is a no-op does not touch the file', async () => {
   c = await launch('ai-fixed-stage.html');
   await ready(c.page);
   const t = await centreOf(c.page, '.slide.active .body');
-  await c.page.mouse.dblclick(t.x, t.y);
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
+  await editAt(c.page, t.x, t.y);
   await c.page.keyboard.press('Escape');
   await c.page.waitForTimeout(300);
   await expect(c.page.locator('[data-testid=savestate]')).toHaveText('Saved');
@@ -174,7 +171,7 @@ test('slides: duplicate, reorder, delete — each exact and undoable', async () 
   await ready(c.page);
   await c.page.getByTestId('cmd-dup-slide').click();
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(4, { timeout: 8000 });
-  await c.page.keyboard.press('Control+z');
+  await c.page.keyboard.press(`${MOD}+z`);
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(3, { timeout: 8000 });
   await c.page.getByTestId('thumb-2').click();
   await c.page.getByTestId('cmd-del-slide').click();
@@ -193,7 +190,7 @@ test('insert a text box: Free div inside the current slide', async () => {
   await c.page.getByTestId('tab-insert').click();
   await c.page.getByTestId('cmd-textbox').click();
   await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 8000 });
-  await c.page.keyboard.press('Control+a');
+  await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Hello box');
   await c.page.keyboard.press('Escape');
   await save(c.page);
@@ -214,9 +211,8 @@ test('windows-1252 + CRLF deck: edit keeps encoding and line endings', async () 
   await ready(c.page);
   await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 1 of 2');
   const t = await centreOf(c.page, 'section.slide h1');
-  await c.page.mouse.dblclick(t.x, t.y);
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
-  await c.page.keyboard.press('Control+a');
+  await editAt(c.page, t.x, t.y);
+  await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Crème brûlée 日本');
   await c.page.keyboard.press('Escape');
   await save(c.page);

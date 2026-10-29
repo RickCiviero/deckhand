@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx } from './helpers';
+import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt } from './helpers';
 
 let c: Ctx;
 test.afterEach(async () => { await c?.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined); });
@@ -13,7 +13,7 @@ test.describe('every corpus deck opens and a no-op save is byte-identical', () =
       c = await launch(`${name}.html`);
       await ready(c.page);
       await expect(c.page.locator('[data-testid=slide-counter]')).toContainText('Slide 1 of');
-      await c.page.keyboard.press('Control+s');
+      await c.page.keyboard.press(`${MOD}+s`);
       await c.page.waitForTimeout(500);
       expect(c.read().equals(original(`${name}.html`))).toBe(true);
     });
@@ -60,9 +60,8 @@ test('reveal-style deck: vertical stacks are separate slides, hidden slide is di
   await expect(c.page.getByTestId('thumb-3')).toHaveClass(/hidden/);
   await expect(c.page.locator('[data-testid=path]')).toHaveText('');
   const t = await centreOf(c.page, '.slides > section:first-child h1');
-  await c.page.mouse.dblclick(t.x, t.y);
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
-  await c.page.keyboard.press('Control+a');
+  await editAt(c.page, t.x, t.y);
+  await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Hello again');
   await c.page.keyboard.press('Escape');
   await save(c.page);
@@ -75,9 +74,8 @@ test('malformed HTML opens and is edited without being "fixed"', async () => {
   await c.page.getByTestId('thumb-1').click();
   await c.page.waitForTimeout(800);
   const t = await centreOf(c.page, '.slide:nth-of-type(2) h1');
-  await c.page.mouse.dblclick(t.x, t.y);
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
-  await c.page.keyboard.press('Control+a');
+  await editAt(c.page, t.x, t.y);
+  await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Second!');
   await c.page.keyboard.press('Escape');
   await save(c.page);
@@ -88,9 +86,8 @@ test('UTF-8 BOM deck: BOM, mixed indentation, comments and odd quoting survive a
   c = await launch('utf8-bom.html');
   await ready(c.page);
   const t = await centreOf(c.page, 'section.slide h1');
-  await c.page.mouse.dblclick(t.x, t.y);
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
-  await c.page.keyboard.press('Control+a');
+  await editAt(c.page, t.x, t.y);
+  await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Nuevo título 🎉');
   await c.page.keyboard.press('Escape');
   await save(c.page);
@@ -137,15 +134,15 @@ test('copy / paste an object onto another slide, then undo', async () => {
   c = await launch('ai-fixed-stage.html');
   await ready(c.page);
   await clickObj(c.page, '.logo');
-  await c.page.keyboard.press('Control+c');
+  await c.page.keyboard.press(`${MOD}+c`);
   await c.page.getByTestId('thumb-1').click();
   await c.page.waitForTimeout(600);
   await c.page.locator('[data-testid=overlay]').click({ position: { x: 5, y: 5 } });
-  await c.page.keyboard.press('Control+v');
+  await c.page.keyboard.press(`${MOD}+v`);
   await c.page.waitForTimeout(1200);
   await save(c.page);
   expect(c.text().match(/class="logo"/g)).toHaveLength(2);
-  await c.page.keyboard.press('Control+z');
+  await c.page.keyboard.press(`${MOD}+z`);
   await c.page.waitForTimeout(800);
   await save(c.page);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
@@ -159,7 +156,7 @@ test('delete an object and undo restores the exact bytes', async () => {
   await c.page.waitForTimeout(1000);
   await save(c.page);
   expect(c.text()).not.toContain('class="logo"');
-  await c.page.keyboard.press('Control+z');
+  await c.page.keyboard.press(`${MOD}+z`);
   await c.page.waitForTimeout(800);
   await save(c.page);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);

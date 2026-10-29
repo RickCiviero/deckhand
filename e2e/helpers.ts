@@ -76,8 +76,20 @@ export async function dragObj(page: Page, selector: string, dx: number, dy: numb
 }
 
 export async function save(page: Page): Promise<void> {
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press(`${MOD}+s`);
   await expect(page.locator('[data-testid=savestate]')).toHaveText('Saved', { timeout: 10000 });
 }
 
-export const norm = (s: string): string => s.replace(/\r\n/g, '\n');
+/** The platform's shortcut modifier (Playwright sends the literal key: Control+A is not select-all on macOS). */
+export const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+/** Double-click to enter text editing; retries because the first click can land before the agent's hit-testing is up. */
+export async function editAt(page: Page, x: number, y: number): Promise<void> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await page.mouse.dblclick(x, y);
+    try { await expect(page.locator('.outline.edit')).toBeVisible({ timeout: 3000 }); return; } catch { /* try again */ }
+  }
+  await expect(page.locator('.outline.edit')).toBeVisible({ timeout: 5000 });
+}
+
+export const norm =(s: string): string => s.replace(/\r\n/g, '\n');
