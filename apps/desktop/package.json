@@ -21,5 +21,6 @@
     "zod": "^4.6.7"
   },
   "description": "Deckhand - visual editor for HTML presentations",
-  "author": "Deckhand"
+  "author": "Deckhand <civieror@gmail.com>",
+  "homepage": "https://github.com/RickCiviero/deckhand"
 }

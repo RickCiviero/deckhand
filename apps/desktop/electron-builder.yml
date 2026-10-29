@@ -35,7 +35,7 @@ linux:
   target: [AppImage, deb]
   category: Office
   executableName: deckhand
-  maintainer: Deckhand
+  maintainer: Deckhand <civieror@gmail.com>
 fileAssociations:
   - ext: html
     name: HTML presentation
