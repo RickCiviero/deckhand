@@ -11,7 +11,7 @@ Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 | Electron shell with SEC-01 hardening, fuses | ✅ | fuse state verified from the shipped binary |
 | React + Fluent skeleton, light/dark (system) | 🟡 | native title bar; ribbon is a compact 4-tab strip (File/Home/Insert/View), not the full Office ribbon |
 | i18n scaffolding (i18next, `en.json`) | ✅ | only main labels externalised so far |
-| CI workflow for Windows/macOS/Linux | 🟡 | written, **not executed** here; macOS/Linux unverified |
+| CI workflow for Windows/macOS/Linux | ✅ | typecheck, unit, e2e (xvfb on Linux, 2 retries on CI), installers; green on all three |
 | SPIKE-1 process isolation | ✅ | ADR-002 |
 | Installers | 🟡 | unpacked Windows app built and tested; NSIS/DMG/AppImage/deb configured |
 
@@ -44,7 +44,7 @@ Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 Full ribbon & Backstage, layout gallery, pictures (insert/change), links dialog, Format Background, Slide Show & browser preview, PDF/PNG export, Code view, Selection Pane, group/distribute, shapes/tables/icons, spell-check, Protected View, Options/Trust Center UI, auto-update, signing, Marp/impress/Shower adapters.
 
 ## Risks / open questions
-- macOS/Linux behaviour (Wayland, GPU, AppImage FUSE) unverified.
+- macOS/Linux: e2e passes in CI; Wayland, GPU and AppImage FUSE not tried by hand.
 - Q1: sample decks from the owner would tune slide detection (currently verified on generated decks only).
 - Decks whose JS rewrites text or builds content at runtime are intentionally read-only (ADR-008); a source-level "edit text in a dialog" fallback (TXT-04) is not built yet.
 - Large decks (30 MB+) are untested beyond the 100-slide corpus deck.

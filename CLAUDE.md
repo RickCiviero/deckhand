@@ -35,3 +35,4 @@ Run the e2e suite against a packaged test build: `electron-builder --win --dir -
 - e2e helpers (`e2e/helpers.ts`): `launch(deck)` copies `test-decks/` to a temp dir, `ready`, `clickObj` (retries), `dragObj`, `save`.
 - Use `app.evaluate(({app}) => app.exit(0))` to close (a normal close blocks on the "Save changes?" dialog).
 - Playwright `page.evaluate` bypasses CSP (CDP), so assert CSP via the response header, not via `eval`.
+- Cross-platform text editing (learned from CI): Playwright sends literal keys, so use `MOD` (Meta on macOS) not `Control`; enter edit mode with `editAt`/`expectEditing` (retry + settle). The agent must survive a double-click starting the edit twice and the browser blurring the element right after `iframe.focus()` (see `keyedSinceEdit`, the `focusout` guard in `packages/agent`). CI runs e2e with 2 retries; a test that only passes on retry is reported "flaky" — treat that as a bug to chase, not noise.

@@ -2,7 +2,7 @@
 
 Open an HTML presentation, edit it the way you would in PowerPoint — click, drag, type — and save it back as the **same HTML file, changed only where you changed it**.
 
-> Status: early version (milestones M0–M2 of `docs/SPEC.md`). Windows is tested; macOS and Linux have CI configuration but have not been run yet.
+> Status: early version (milestones M0–M2 of `docs/SPEC.md`). CI (typecheck, unit, e2e, installers) is green on Windows, macOS and Linux; developed and manually exercised on Windows.
 
 ## What works today
 - Opens AI-generated single-file decks, reveal.js-style decks, scroll-snap decks and plain pages; detects slides automatically.
