@@ -18,7 +18,21 @@ test('focus diagnostic', async () => {
   };
   const t = await centreOf(c.page, '.slide.active .title');
   await c.page.mouse.dblclick(t.x, t.y);
-  await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 8000 });
+  try {
+    await expect(c.page.locator('.outline.edit')).toBeVisible({ timeout: 8000 });
+  } catch (err) {
+    const fr = await deckFrame(c.page).evaluate(() => ({
+      ce: document.querySelector('.slide.active .title')?.getAttribute('contenteditable'), edAttr: document.querySelector('[data-deckhand-editing]') !== null,
+      focus: document.hasFocus(), active: document.activeElement?.tagName,
+    }));
+    const ui = await c.page.evaluate(() => ({ text: document.body.innerText.slice(0, 400), outlines: [...document.querySelectorAll('.outline')].map((o) => o.className), active: document.activeElement?.tagName }));
+    console.log(`[diag ${process.platform}] EDIT NEVER READY frame=${JSON.stringify(fr)} ui=${JSON.stringify(ui)}`);
+    // is it a race? try again after the first attempt settled
+    await c.page.mouse.dblclick(t.x, t.y);
+    await c.page.waitForTimeout(3000);
+    console.log(`[diag ${process.platform}] retry outline=${await c.page.locator('.outline.edit').count()}`);
+    throw err;
+  }
   await snap('after edit-ready');
   await c.page.keyboard.press('End');
   await c.page.keyboard.type('abc');
