@@ -1,0 +1,4 @@
+* text=auto eol=lf
+# fixtures must stay byte-exact (CRLF, windows-1252, BOM): never normalise
+test-decks/** -text
+*.png binary
