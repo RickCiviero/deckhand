@@ -173,8 +173,11 @@ test('slides: duplicate, reorder, delete — each exact and undoable', async () 
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(4, { timeout: 8000 });
   await c.page.keyboard.press(`${MOD}+z`);
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(3, { timeout: 8000 });
-  await c.page.getByTestId('thumb-2').click();
-  await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 3 of 3', { timeout: 8000 });
+  // the undo above reloads the live view; a click that lands during that reload is overwritten, so retry until it sticks
+  await expect(async () => {
+    await c.page.getByTestId('thumb-2').click();
+    await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 3 of 3', { timeout: 1500 });
+  }).toPass({ timeout: 15000 });
   await c.page.getByTestId('cmd-del-slide').click();
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(2, { timeout: 8000 });
   await save(c.page);
