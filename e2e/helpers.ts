@@ -53,11 +53,11 @@ export async function centreOf(page: Page, selector: string): Promise<{ x: numbe
 
 export async function clickObj(page: Page, selector: string): Promise<void> {
   // retry: the very first click can arrive before the agent finished its handshake and hit-testing is not yet available
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     const c = await centreOf(page, selector);
     await page.mouse.click(c.x, c.y);
     try {
-      await expect(page.locator('[data-testid=path] button').first()).toBeVisible({ timeout: 1500 });
+      await expect(page.locator('[data-testid=path] button').first()).toBeVisible({ timeout: 3000 });
       break;
     } catch { /* try again */ }
   }

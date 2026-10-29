@@ -237,7 +237,7 @@ class Session {
   }
 
   async hitTest(vx: number, vy: number): Promise<number[]> {
-    const r = await this.request<Extract<AgentMsg, { t: 'hit' }>>({ t: 'hit', x: vx, y: vy });
+    const r = await this.request<Extract<AgentMsg, { t: 'hit' }>>({ t: 'hit', x: vx, y: vy }, 4000);
     return r?.ids ?? [];
   }
 

@@ -34,6 +34,7 @@ mac:
 linux:
   target: [AppImage, deb]
   category: Office
+  executableName: deckhand
   maintainer: Deckhand
 fileAssociations:
   - ext: html
