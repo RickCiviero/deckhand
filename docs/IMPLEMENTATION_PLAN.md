@@ -48,3 +48,18 @@ Full ribbon & Backstage, layout gallery, pictures (insert/change), links dialog,
 - Q1: sample decks from the owner would tune slide detection (currently verified on generated decks only).
 - Decks whose JS rewrites text or builds content at runtime are intentionally read-only (ADR-008); a source-level "edit text in a dialog" fallback (TXT-04) is not built yet.
 - Large decks (30 MB+) are untested beyond the 100-slide corpus deck.
+
+## M4 — AI Assistant (status as of spec v1.1)
+| Item | Status | Notes |
+|---|---|---|
+| `packages/ai`: AI view (AIX-03), deck tools §10.6 (all but `insert_picture`, `generate_image`), stale-write guard, sanitising (AIT-03), per-turn limits (AIT-04), Ask/Edit (AIE-01), one undo step per turn (AIE-03), checkpoints (AIE-06), change summary | ✅ | 22 unit tests with a mock provider (TST-09) |
+| Providers: OpenAI-compatible + Anthropic over fetch, streaming, friendly errors (AIC-02, AIC-11) | ✅ | contract-tested against local HTTP servers; **not run against real accounts** |
+| Connections UI, safeStorage keys in main only (AIC-08, AIS-07), https-only addresses | ✅ | one connection form; no OAuth |
+| Pane: connection picker, Ask/Edit, streamed text, steps, change card with Keep / Undo all, Stop, context chip | 🟡 | no history list (AIP-07), prompt gallery (AIQ-02), attachments (AIX-05), cost estimate (AIP-08), @-mentions |
+| Quick actions in mini toolbar / context menu (AIQ-01) | ⬜ | |
+| Continue with ChatGPT (AIC-04), GitHub Copilot SDK (AIC-05), ACP external agents (AIC-06), Azure Entra (AIC-03), MCP server mode (AIM) | ⬜ | each depends on provider terms re-check (AIG-02) |
+| Ask-before-applying (AIE-05), per-slide undo on the card (AIE-04), manual editing paused during a turn (AIE-02) | ⬜ | |
+| Admin policy (AIS-06), TST-10, TST-11 evaluation set, SPIKE-5 token/cost measurement | ⬜ | needs real accounts |
+
+## Still not started
+M3 (full ribbon, Backstage, layout gallery, pictures, links, Format Background, Slide Show, PDF export, Document Recovery UI), M1 gaps (Define Slides wizard, thumbnails, viewport presets), M5 (everything under "Not started" above), `agent` → `bridge` rename (ADR-011). Marp/impress/Shower are detected (core) but live-view slide navigation for them is not wired.
