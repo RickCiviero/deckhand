@@ -9,7 +9,7 @@ export interface SlideRef {
 }
 
 export interface Detection {
-  adapter: 'revealjs' | 'generic' | 'page';
+  adapter: 'revealjs' | 'marp' | 'impress' | 'shower' | 'generic' | 'page';
   confidence: number;
   slides: SlideRef[];
   /** Suggested CSS-like selector for the Define Slides wizard. */
@@ -38,6 +38,32 @@ function detectReveal(doc: SourceDoc): Detection | null {
     for (const u of unit) slides.push({ id: u.id, label: label(doc, u, slides.length), hidden: getAttr(u, 'data-visibility') === 'hidden' });
   }
   return slides.length ? { adapter: 'revealjs', confidence: 0.98, slides, selector: '.reveal .slides section' } : null;
+}
+
+function detectMarp(doc: SourceDoc): Detection | null {
+  const svgs = doc.elements.filter((e) => e.tag === 'svg' && e.attrs.some((a) => a.name === 'data-marpit-svg'));
+  if (!svgs.length) return null;
+  // the whole svg wrapper is the slide unit (ADP-06)
+  return { adapter: 'marp', confidence: 0.98, slides: svgs.map((s, i) => ({ id: s.id, label: marpLabel(doc, s, i) })), selector: 'svg[data-marpit-svg]' };
+}
+function marpLabel(doc: SourceDoc, svg: ElementInfo, i: number): string {
+  const h = doc.elements.find((e) => /^h[1-6]$/.test(e.tag) && e.start >= svg.start && e.end <= svg.end);
+  const text = h ? doc.text.slice(h.startTagEnd, h.endTagStart ?? h.startTagEnd).replace(/<[^>]*>/g, '').trim() : '';
+  return text ? text.slice(0, 60) : `Slide ${i + 1}`;
+}
+
+function detectImpress(doc: SourceDoc): Detection | null {
+  const root = doc.elements.find((e) => getAttr(e, 'id') === 'impress');
+  if (!root) return null;
+  const steps = root.children.map((c) => doc.byId(c)!).filter((c) => classes(c).includes('step'));
+  return steps.length ? { adapter: 'impress', confidence: 0.97, slides: steps.map((s, i) => ({ id: s.id, label: label(doc, s, i) })), selector: '#impress .step' } : null;
+}
+
+function detectShower(doc: SourceDoc): Detection | null {
+  const body = doc.elements.find((e) => e.tag === 'body');
+  if (!body || !classes(body).includes('shower')) return null;
+  const slides = doc.elements.filter((e) => e.tag === 'section' && classes(e).includes('slide'));
+  return slides.length ? { adapter: 'shower', confidence: 0.97, slides: slides.map((s, i) => ({ id: s.id, label: label(doc, s, i) })), selector: 'section.slide' } : null;
 }
 
 function detectGeneric(doc: SourceDoc): Detection | null {
@@ -78,6 +104,8 @@ function detectGeneric(doc: SourceDoc): Detection | null {
 export function detectDeck(doc: SourceDoc): Detection {
   const reveal = detectReveal(doc);
   if (reveal) return reveal;
+  const framework = detectMarp(doc) ?? detectImpress(doc) ?? detectShower(doc);
+  if (framework) return framework;
   const generic = detectGeneric(doc);
   if (generic) return generic;
   const body = doc.elements.find((e) => e.tag === 'body');

@@ -56,6 +56,26 @@ export class Editor {
     return forward;
   }
 
+  /** Start a group: every command until `end(label)` becomes one undo step (ARCH-02, AIE-03). Nothing is recorded if they changed nothing. */
+  beginGroup(): (label: string) => void {
+    const depth = this.undoStack.length;
+    const base = this.doc.text;
+    const prev = this.undoStack[depth - 1];
+    const prevBase = prev?.base;
+    if (prev) delete prev.base; // nothing in the group may coalesce into an earlier step
+    return (label) => {
+      if (this.undoStack.length > depth) {
+        this.undoStack.length = depth;
+        this.undoStack.push({ label, forward: [diffPatch(base, this.doc.text)], inverse: [diffPatch(this.doc.text, base)], at: this.now() });
+      } else if (prev && prevBase !== undefined) prev.base = prevBase;
+    };
+  }
+
+  transaction<T>(label: string, fn: () => T): T {
+    const end = this.beginGroup();
+    try { return fn(); } finally { end(label); }
+  }
+
   get canUndo(): boolean { return this.undoStack.length > 0; }
   get canRedo(): boolean { return this.redoStack.length > 0; }
   get undoLabel(): string | undefined { return this.undoStack.at(-1)?.label; }
@@ -85,7 +105,7 @@ export class Editor {
 }
 
 /** Single patch turning `from` into `to` (common prefix/suffix trimmed). */
-function diffPatch(from: string, to: string): Patch {
+export function diffPatch(from: string, to: string): Patch {
   let a = 0;
   const max = Math.min(from.length, to.length);
   while (a < max && from.charCodeAt(a) === to.charCodeAt(a)) a++;
@@ -109,6 +129,11 @@ function styleCommand(label: string, id: number, edit: (style: string) => string
       return [setAttrPatch(doc, el, 'style', next)];
     },
   };
+}
+
+/** Arbitrary patches as a command (used by tools that build their own edits). */
+export function patchCommand(label: string, build: (doc: SourceDoc) => Patch[]): Command {
+  return { label, build };
 }
 
 export interface StyleEdit { id: number; set: Record<string, string | null> }

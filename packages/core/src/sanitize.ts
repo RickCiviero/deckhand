@@ -180,3 +180,61 @@ export function inlineTagSequence(html: string): string[] {
   for (const c of parseFragment(html).childNodes) walkTags(c);
   return out;
 }
+
+const BLOCK_DROP = new Set(['script', 'iframe', 'object', 'embed', 'template', 'noscript', 'head', 'title', 'meta', 'link', 'base', 'form', 'input', 'button', 'textarea', 'select', 'math', 'frame', 'frameset', 'applet', 'html', 'body', 'style']);
+const VOID = new Set(['br', 'hr', 'img', 'wbr', 'col']);
+const BLOCK_ATTRS = new Set(['class', 'id', 'lang', 'dir', 'title', 'role', 'alt', 'width', 'height', 'colspan', 'rowspan', 'viewbox', 'fill', 'stroke', 'd', 'cx', 'cy', 'r', 'x', 'y', 'points', 'transform', 'xmlns']);
+
+export interface BlockOpts {
+  /** Keep scripts' absence but allow http(s) resources in src/href (AIS-04). */
+  allowExternal?: boolean;
+}
+
+/** Allow-list sanitizer for block markup written by the AI or inserted from outside (AIT-03): no scripts, handlers, javascript: URLs or new remote resources. */
+export function sanitizeBlockHtml(html: string, o: BlockOpts = {}): string {
+  if (html.length > 2_000_000) html = html.slice(0, 2_000_000);
+  const out: string[] = [];
+  const url = (v: string, img: boolean): string | null => {
+    const c = v.replace(/[\u0000- \u007f-\u009f]/g, '');
+    if (/^(data:image\/(png|jpe?g|gif|webp|svg\+xml)[;,])/i.test(c) && img) return v.trim();
+    if (/^(mailto:|#)/i.test(c)) return v.trim();
+    if (/^https?:/i.test(c)) return o.allowExternal ? v.trim() : null;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(c)) return null; // javascript:, data:text/html, file:, ...
+    return v.trim(); // relative path
+  };
+  const walkB = (node: Node): void => {
+    if (node.nodeName === '#text') return void out.push(escapeText((node as DefaultTreeAdapterMap['textNode']).value));
+    if (node.nodeName === '#comment') return;
+    if (!('tagName' in node)) return void ('childNodes' in node && node.childNodes.forEach(walkB));
+    const tag = node.tagName.toLowerCase();
+    if (BLOCK_DROP.has(tag)) return;
+    let attrs = '';
+    for (const a of node.attrs) {
+      const n = a.name.toLowerCase();
+      let v: string | null = null;
+      if (BLOCK_ATTRS.has(n) || /^aria-[a-z-]+$/.test(n) || /^data-(?!deckhand|ref)[a-z0-9-]+$/.test(n)) v = a.value;
+      else if (n === 'href' && (tag === 'a')) v = url(a.value, false);
+      else if (n === 'src' && tag === 'img') v = url(a.value, true);
+      else if (n === 'style') {
+        const keep: string[] = [];
+        for (const part of a.value.split(';')) {
+          const i = part.indexOf(':');
+          if (i < 0) continue;
+          const p = part.slice(0, i).trim().toLowerCase();
+          const val = part.slice(i + 1).trim();
+          const remote = /url\s*\(\s*['"]?\s*(https?:|\/\/)/i.test(val);
+          if (isSafeCssProp(p) && isSafeCssValue(val) && !(remote && !o.allowExternal)) keep.push(`${p}: ${val}`);
+        }
+        v = keep.length ? keep.join('; ') : null;
+      }
+      if (v !== null) attrs += ` ${n}="${escapeAttr(v, '"')}"`;
+    }
+    if (VOID.has(tag)) return void out.push(`<${tag}${attrs}>`);
+    out.push(`<${tag}${attrs}>`);
+    const kids = tag === 'template' ? [] : node.childNodes;
+    kids.forEach(walkB);
+    out.push(`</${tag}>`);
+  };
+  parseFragment(html).childNodes.forEach(walkB);
+  return out.join('');
+}

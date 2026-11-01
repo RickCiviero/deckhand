@@ -129,6 +129,12 @@ describe('slide detection (SPIKE-4)', () => {
     'large-100.html': ['generic', 100],
     'hostile.html': ['generic', 2],
     'plain-page.html': ['page', 1],
+    'marp-export.html': ['marp', 3],
+    'impress-style.html': ['impress', 3],
+    'shower-style.html': ['shower', 3],
+    'fade-animations.html': ['generic', 3],
+    'chart-svg-icons.html': ['generic', 2],
+    'remote-fonts-tailwind.html': ['generic', 2],
   };
   for (const [name, [adapter, n]] of Object.entries(expectN)) {
     it(`${name} → ${adapter} / ${n}`, () => {

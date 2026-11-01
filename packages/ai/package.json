@@ -1,0 +1,2 @@
+{ "name": "@deckhand/ai", "version": "0.1.0", "private": true, "type": "module", "main": "src/index.ts",
+  "dependencies": { "@deckhand/core": "*", "postcss": "^8.5.32", "zod": "^4.6.7" } }
