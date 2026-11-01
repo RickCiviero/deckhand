@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Fade deck</title>
+<style>
+  .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .6s; padding: 8vw; font-family: system-ui, sans-serif; }
+  .slide.active { opacity: 1; visibility: visible; }
+  .slide.active h1 { animation: rise .8s ease-out both; }
+  @keyframes rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .nav { position: fixed; bottom: 16px; right: 16px; }
+</style></head>
+<body>
+<section class="slide active"><h1>Animated</h1><p>Fades in.</p></section>
+<section class="slide"><h1>Second</h1><p>Also fades.</p></section>
+<section class="slide"><h1>Third</h1></section>
+<div class="nav"><button id="prev">&larr;</button><button id="next">&rarr;</button></div>
+<script>
+  var s = document.querySelectorAll('.slide'), i = 0;
+  function go(n) { s[i].classList.remove('active'); i = Math.max(0, Math.min(s.length - 1, n)); s[i].classList.add('active'); }
+  document.getElementById('next').onclick = function () { go(i + 1); };
+  document.getElementById('prev').onclick = function () { go(i - 1); };
+  addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); });
+</script></body></html>

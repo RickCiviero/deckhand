@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Charts</title>
+<style>.slide { padding: 40px; font-family: sans-serif; } svg.icon { width: 32px; height: 32px; fill: #06c; }</style></head>
+<body><div class="deck">
+<section class="slide"><h1>Sales <svg class="icon" viewBox="0 0 24 24"><path d="M3 17h2v4H3zm4-6h2v10H7zm4-4h2v14h-2zm4 8h2v6h-2z"/></svg></h1>
+<canvas id="c" width="480" height="240"></canvas></section>
+<section class="slide"><h1>Icons</h1>
+<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+<svg class="icon" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></section>
+</div>
+<script>
+  var g = document.getElementById('c').getContext('2d'); [40, 120, 80, 180].forEach(function (h, i) { g.fillStyle = '#06c'; g.fillRect(30 + i * 100, 220 - h, 60, h); });
+</script></body></html>

@@ -1,11 +1,11 @@
 # Deckhand — Visual Editor for HTML Presentations
 
-**Product & technical specification · v1.0 (draft for implementation)**
-29 October 2026 · Working title: *Deckhand* (rename freely) · Implementer: Claude Code
+**Product & technical specification · v1.1 (draft for implementation)**
+30 October 2026 · Working title: *Deckhand* (rename freely) · Implementer: Claude Code · v1.1 adds the AI Assistant (§10)
 
 > **In one sentence:** Deckhand lets anyone open an HTML presentation, edit it the way they would in PowerPoint — click, drag, type — and save it back as the same HTML file, changed only where they changed it, on **Windows, macOS and Linux**.
 
-> **For the owner — how to use this file:** create an empty folder (ideally a Git repository), save this file in it as `docs/SPEC.md`, start Claude Code in that folder and say: *"Read docs/SPEC.md and follow section 0."* Answer its questions (section 15) and give it a few of your real HTML decks if you can.
+> **For the owner — how to use this file:** create an empty folder (ideally a Git repository), save this file in it as `docs/SPEC.md`, start Claude Code in that folder and say: *"Read docs/SPEC.md and follow section 0."* Answer its questions (section 16) and give it a few of your real HTML decks if you can.
 
 ---
 
@@ -21,12 +21,13 @@
 7. User interface (Office-inspired)
 8. Editing features
 9. Files, saving, slide show and export
-10. Options and Trust Center
-11. Help and onboarding
-12. Testing and quality
-13. Later (P2) ideas
-14. Milestones
-15. Open questions and default assumptions
+10. AI Assistant
+11. Options and Trust Center
+12. Help and onboarding
+13. Testing and quality
+14. Later (P2) ideas
+15. Milestones
+16. Open questions and default assumptions
 - Appendix A — Editor metadata stored in files
 - Appendix B — Generic slide detection
 - Appendix C — References
@@ -36,7 +37,7 @@
 ## 0. Instructions for Claude Code
 
 1. Keep this file at `docs/SPEC.md` and read it fully before writing any code.
-2. Write `docs/IMPLEMENTATION_PLAN.md`: break the milestones (§14) into tasks and list risks and questions. Ask the owner the open questions in §15 before Milestone 1. For any other ambiguity, choose what best fits the design principles (§1.6) and record it in `docs/DECISIONS.md` (one short ADR per decision).
+2. Write `docs/IMPLEMENTATION_PLAN.md`: break the milestones (§15) into tasks and list risks and questions. Ask the owner the open questions in §16 before Milestone 1. For any other ambiguity, choose what best fits the design principles (§1.6) and record it in `docs/DECISIONS.md` (one short ADR per decision).
 3. Create and maintain `CLAUDE.md` with build/test/package commands, an architecture summary and conventions.
 4. Run the technical spikes (§6.12) first — they validate the riskiest assumptions.
 5. Work milestone by milestone. After each milestone the app must build, launch and pass its tests on Windows, macOS **and** Linux (CI).
@@ -63,13 +64,14 @@ More and more presentations are delivered as `.html` files: AI assistants (Claud
 | G3 | Works with as many HTML decks as possible, including unknown custom formats produced by AI. |
 | G4 | **Installs and behaves the same on Windows, macOS and Linux.** |
 | G5 | Safe: opening an untrusted HTML file can't harm the computer or leak the user's files. |
+| G6 | Users can change a deck by chatting with an AI model, through an AI account they already have (§10). |
 
 ### 1.4 Non-goals for v1
-- Real-time co-editing, user accounts, cloud services or any server component — Deckhand is a local desktop app.
+- Real-time co-editing, user accounts, or any cloud service or server run by Deckhand — it is a local desktop app. (The AI Assistant talks directly to the user's own AI provider, §10.)
 - Editable conversion to or from `.pptx`.
 - General website building (multi-page sites, responsive breakpoint authoring).
 - Visual editing of content drawn at runtime by JavaScript (e.g., Chart.js canvases, compiled single-page-app decks) beyond §5.
-- AI generation or rewriting features (see §13).
+- Generating a whole new deck from a prompt (P2, AIQ-03).
 
 ### 1.5 Users
 - **Primary — the Office user.** Comfortable with PowerPoint, knows no HTML. Receives decks from AI tools or colleagues.
@@ -82,7 +84,7 @@ More and more presentations are delivered as `.html` files: AI assistants (Claud
 3. **Progressive disclosure.** Simple controls first; HTML/CSS detail is available but out of the way (Advanced sections, Code view).
 4. **Honest limits.** If something can't be edited visually, say why and offer the next best way. Never fail silently.
 5. **Safe by default.** A deck is untrusted code.
-6. **Offline-first.** Everything works without internet, except remote resources the deck itself references.
+6. **Offline-first.** Everything works without internet, except remote resources the deck itself references and the AI Assistant (unless it uses a local model).
 
 ---
 
@@ -95,7 +97,7 @@ Functionality comes from existing visual HTML editors; the user experience comes
 | Product | What it is | What Deckhand borrows |
 |---|---|---|
 | **Decktly** | Free, proprietary visual editor for existing HTML presentations (web, Windows, Mac): edit on the page and save back to HTML; move/resize/align, charts, tables, shapes, images, slide masters, comments stored in the HTML, presentation mode. | The open → edit → save loop on real HTML files; "slide masters" (→ layouts derived from the deck, ADP-07); comments in the file (P2). Deckhand differs by being Office-like, fidelity-first and available on Linux too. |
-| **HTML Deck** (MIT) | Browser-based editor for HTML decks, reports and pages written by people or AI agents. Patches the file only where something changed, so saving without edits is byte-identical. Lets users pin notes on elements for an AI coding agent to apply. | Patch-based saving and the byte-identical guarantee (§6.3); "agent notes" for AI-assisted changes (P2, §13). |
+| **HTML Deck** (MIT) | Browser-based editor for HTML decks, reports and pages written by people or AI agents. Patches the file only where something changed, so saving without edits is byte-identical. Lets users pin notes on elements for an AI coding agent to apply. | Patch-based saving and the byte-identical guarantee (§6.3); "agent notes" for AI-assisted changes (P2, §14). |
 | **slides-grab** (MIT) | Editor for AI-generated HTML slides where each slide is its own HTML file; select a region with a bounding box, edit text directly; PDF export. | Region (marquee) selection; folder-of-slides decks (P2); export flows. |
 | **B6+ slide editor** (W3C) | Electron app for HTML slides: WYSIWYG + HTML source toggle, slide management, thumbnails, play mode, slides isolated in an iframe, opening from the command line. | Iframe isolation, visual/source toggle, thumbnails, CLI opening. |
 | **GrapesJS** (BSD-3) | Open-source web-builder framework with Blocks, Style Manager, Layer Manager, Code Viewer and Asset Manager. | Grouped style properties (→ Format pane), layer tree (→ Selection Pane), asset handling (→ Pictures), blocks (→ Insert galleries). |
@@ -117,6 +119,16 @@ Functionality comes from existing visual HTML editors; the user experience comes
 - Office **keyboard shortcuts**, enhanced tooltips (name + shortcut + description), the **Search** box (Alt+Q), KeyTips, an **Options** dialog with a **Trust Center**.
 - Fluent design language; light and dark themes.
 
+### 2.3 AI assistant — what to borrow (§10)
+
+| Product | What Deckhand borrows |
+|---|---|
+| **Copilot in PowerPoint and Word** | The assistant as a task pane on the right, opened from the end of the Home tab; prompt suggestions and a prompt library; results the user keeps or discards |
+| **Claude, ChatGPT and Gemini apps** | Composer with a + menu for attachments, model picker, conversation history, regenerate, edit a sent message, streamed answers |
+| **GitHub Copilot in VS Code, Cursor** | Ask vs Edit (agent) modes; @-mentions for context; changes applied live with Keep/Undo; checkpoints to restore an earlier state |
+| **Zed** | Running AI providers' own agents through ACP, so people can use subscriptions they already have; forwarding MCP tools to those agents |
+| **HTML Deck** | Notes pinned on elements for an AI agent to apply (P2, §14) |
+
 ---
 
 ## 3. Glossary
@@ -129,7 +141,7 @@ Functionality comes from existing visual HTML editors; the user experience comes
 | Source text | The file's exact original content. |
 | Source model | The source text parsed with exact offsets for every node and attribute — the single source of truth while editing. |
 | Live view | The deck rendered inside the canvas. Disposable; never saved. |
-| Agent | Editor script injected only into the live view: reports geometry, applies live changes, hosts text editing. Never saved. |
+| Bridge script | Editor script injected only into the live view: reports geometry, applies live changes, hosts text editing. Never saved. (Not to be confused with AI agents, §10.) |
 | Adapter | A module that understands one deck format (generic, reveal.js, Marp…). |
 | Design viewport | The virtual screen size (e.g., 1920×1080) at which the deck is rendered for editing, then scaled to fit. |
 | Editor ID | Temporary ID of a source element (`data-deckhand-id`), present only in the live view. |
@@ -137,6 +149,13 @@ Functionality comes from existing visual HTML editors; the user experience comes
 | Command | A user action (e.g., "Move object") that produces patches plus a live-view update; undoable. |
 | Free / In layout | Positioning categories of an object: absolutely positioned vs. part of the normal page flow (§8.2). |
 | Deck chrome | The deck's own controls: navigation buttons, progress bars, slide counters. |
+| AI Assistant | The optional chat pane on the right (§10). |
+| Connection | A configured way to reach AI models: an API key, an account sign-in or an external agent. |
+| External agent | An AI agent program from a provider (e.g. Codex, Claude Agent) that Deckhand runs and talks to through ACP. |
+| Deck tools | The operations the AI can call to read and change the deck (§10.6). |
+| AI view | The HTML projection the model sees: object references, asset placeholders, elided libraries (AIX-03). |
+| ACP | Agent Client Protocol: an open JSON-RPC protocol between an application and an AI agent. |
+| MCP | Model Context Protocol: an open protocol through which AI apps call tools offered by other programs. |
 
 ---
 
@@ -211,12 +230,12 @@ Functionality comes from existing visual HTML editors; the user experience comes
 ```
 ┌──────────────────────── Electron main process ─────────────────────────┐
 │ files & watchers · AutoRecover · versions · document protocol          │
-│ export windows (PDF/PNG) · menus · updates · logs                      │
+│ export windows (PDF/PNG) · menus · updates · logs · AI host            │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │ typed, validated IPC (contextBridge)
 ┌───────────────────────────────────┴────────────────────────────────────┐
 │ EDITOR WINDOW (renderer, React)                                        │
-│ Ribbon · Slide pane · Canvas · Format pane · Selection pane · Code     │
+│ Ribbon · Slides · Canvas · Format pane · Selection · AI pane · Code    │
 │           │ user actions → commands                                    │
 │ ┌─────────▼──── packages/core (framework-agnostic TypeScript) ───────┐ │
 │ │ source model (parse5 + offsets) · patch engine · undo history      │ │
@@ -227,7 +246,7 @@ Functionality comes from existing visual HTML editors; the user experience comes
 │ │ LIVE VIEW: sandboxed iframe        │  │ OVERLAY (editor UI layer)  │ │
 │ │ own origin + own process           │  │ selection & handles        │ │
 │ │ deck HTML · CSS · scripts          │  │ smart guides · rulers      │ │
-│ │ + injected Agent (never saved)     │  │ drop indicators            │ │
+│ │ + bridge script (never saved)      │  │ drop indicators            │ │
 │ └────────────────────────────────────┘  └────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -237,7 +256,7 @@ Functionality comes from existing visual HTML editors; the user experience comes
 - **ARCH-02 (P0)** Every edit is a **command** producing (a) patches on the source text and (b) the equivalent live-view operation. Commands are invertible (undo) and can be grouped into transactions (a multi-object edit is one undo step).
 - **ARCH-03 (P0)** **Editor IDs:** every source element gets an ID at parse time. The HTML served to the live view carries it as `data-deckhand-id`; saved HTML never does. An ID stays stable for the node's lifetime across edits, so selection, undo and the live view stay in sync.
 - **ARCH-04 (P0)** Live-view elements without an editor ID were created by scripts (**generated content**). They can be shown and measured but are never written to disk, and Deckhand never edits their contents.
-- **ARCH-05 (P0)** `packages/core` has no dependency on React, Electron or a browser DOM and runs under Node for tests. Anything that needs a real layout engine lives in the agent.
+- **ARCH-05 (P0)** `packages/core` has no dependency on React, Electron or a browser DOM and runs under Node for tests. Anything that needs a real layout engine lives in the bridge script.
 - **ARCH-06 (P0)** CSS inside `style` attributes and `<style>` blocks is edited with a position-preserving parser (e.g., postcss): untouched declarations, comments and formatting stay as they are.
 
 ### 6.3 Round-trip fidelity (all P0 — the most important quality attribute)
@@ -245,15 +264,15 @@ Functionality comes from existing visual HTML editors; the user experience comes
 - **RT-02** Edits produce **minimal diffs.** Editing a word changes only that text; moving an object changes only that element's `style` attribute (adding one if missing). Everything else stays byte-identical: indentation, comments, attribute order and quoting, entities (`&nbsp;` stays `&nbsp;`), `<script>` and `<style>` contents, SVG, custom elements, unknown attributes.
 - **RT-03** Inline-style edits touch only the declarations that changed; the others keep their order and formatting.
 - **RT-04** New markup (objects, slides) matches the surrounding indentation, quote style and line endings.
-- **RT-05** Editor artifacts NEVER reach the saved file: editor IDs, the agent script, editor stylesheets, `contenteditable`, `spellcheck`, selection/hover classes, temporary visibility or animation overrides. A check runs on every save in tests and as an assertion in development builds.
+- **RT-05** Editor artifacts NEVER reach the saved file: editor IDs, the bridge script, AI-view references and asset placeholders (AIX-03), editor stylesheets, `contenteditable`, `spellcheck`, selection/hover classes, temporary visibility or animation overrides. A check runs on every save in tests and as an assertion in development builds.
 - **RT-06** Persistent editor metadata (object names, locks, manual slide definition, guides) is written only when the user uses those features, as namespaced `data-deckhand-*` attributes or `<meta name="deckhand:*">` (Appendix A). P1 option: keep it in a sidecar file `<deck>.deckhand.json` instead.
 - **RT-07** Saving is atomic (write a temp file, flush, rename; keep permissions). On network drives and synced folders (OneDrive, Dropbox, Google Drive) where rename can fail, fall back to a safe in-place write after making a backup.
 - **RT-08** Golden-diff tests (TST-02) prove RT-01 … RT-05 on every deck in the test corpus.
 
-### 6.4 Live view and agent
+### 6.4 Live view and bridge script
 - **RND-01 (P0)** The live view is an `<iframe>` served from a privileged custom protocol (e.g., `deckhand-doc://<random-token>/…`) so each open document has **its own origin, distinct from the editor UI's origin**. With scripts on it uses `sandbox="allow-scripts allow-same-origin"` (safe only because the origins differ); with scripts off, `sandbox=""`. No top-navigation, popups, downloads, form submission or device permissions.
-- **RND-02 (P0)** The protocol handler serves (a) HTML generated from the source model plus editor IDs, with the agent `<script>` as the first child of `<head>`, and (b) files from the document's folder (SEC-03), with correct MIME types, CORS headers where needed (fonts) and range requests (video).
-- **RND-03 (P0)** The **agent** (`packages/agent`, bundled as one script) MUST:
+- **RND-02 (P0)** The protocol handler serves (a) HTML generated from the source model plus editor IDs, with the bridge `<script>` as the first child of `<head>`, and (b) files from the document's folder (SEC-03), with correct MIME types, CORS headers where needed (fonts) and range requests (video).
+- **RND-03 (P0)** The **bridge script** (`packages/bridge`, bundled as one script) MUST:
   - capture references to the native DOM APIs it uses before any deck script runs;
   - report element geometry — border box, full transform matrix to the viewport, containing-block box, relevant computed styles — on request and on change (ResizeObserver, MutationObserver, `document.fonts.ready`, image loads);
   - hit-test points (`elementsFromPoint`) and return candidate objects (editor IDs) following the SEL rules;
@@ -268,11 +287,11 @@ Functionality comes from existing visual HTML editors; the user experience comes
 - **RND-05 (P0)** **Design viewport.** The iframe is rendered at a virtual size — the deck's native slide size when fixed (e.g., 1280×720, 1920×1080), otherwise 1920×1080 — and scaled to fit the canvas. View › Viewport presets (1920×1080, 1366×768, 1280×800, 1024×768, custom) let users check responsive decks. Preview only; never saved.
 - **RND-06 (P0)** The canvas shows one slide at a time, like PowerPoint's Normal view.
 - **RND-07 (P0)** Animations: design mode shows objects in their **final state** (CSS animations/transitions forced to their end by the editor stylesheet; script-driven entrance effects neutralized where detectable). View › Play animations turns this off. Objects invisible in the current state (opacity 0, `visibility: hidden`) are listed in the Selection Pane and can be revealed temporarily (Show hidden objects).
-- **RND-08 (P0)** Style, text and attribute changes update the live view incrementally through the agent. Structural changes may reload the live view; a reload preserves the current slide, selection, zoom and scroll, and SHOULD finish in < 500 ms without flicker (render into a second hidden iframe, then swap).
+- **RND-08 (P0)** Style, text and attribute changes update the live view incrementally through the bridge script. Structural changes may reload the live view; a reload preserves the current slide, selection, zoom and scroll, and SHOULD finish in < 500 ms without flicker (render into a second hidden iframe, then swap).
 - **RND-09 (P0)** Thumbnails come from a hidden offscreen window (same protocol and sandbox): one cached bitmap per slide, refreshed ≤ 1 s after the slide's last edit; visible thumbnails first.
 - **RND-10 (P0)** **Deck chrome** found by the adapter (navigation buttons, progress bars, slide counters, "press → to continue" hints) is hidden in design mode by default (View › Show deck controls) and never removed from the file.
 - **RND-11 (P1)** Fonts the deck uses but can't load (not installed, offline) are listed in File › Info.
-- **RND-12 (P0)** Input routing: in design mode the editor overlay captures pointer input and resolves targets through agent hit-testing; during text editing, input inside the edited element goes to the live view. Editor shortcuts (save, undo, slide show…) work wherever focus is (forwarded by the agent or handled as application accelerators).
+- **RND-12 (P0)** Input routing: in design mode the editor overlay captures pointer input and resolves targets through bridge hit-testing; during text editing, input inside the edited element goes to the live view. Editor shortcuts (save, undo, slide show…) work wherever focus is (forwarded by the bridge script or handled as application accelerators).
 
 ### 6.5 Deck adapters and slide detection
 - **ADP-01 (P0)** Adapter interface (sketch):
@@ -306,7 +325,7 @@ interface DeckAdapter {
 - **ADP-08 (P1)** Static slide numbers inside slide content (e.g., "3 / 12"): detect the pattern and offer "Update slide numbers" after slides are added, deleted or reordered.
 
 ### 6.6 Geometry
-- **GEO-01 (P0)** Screen ↔ design viewport ↔ element containing-block conversions use the full transform matrices reported by the agent, accounting for canvas zoom, decks that scale a fixed stage to the window (CSS `transform` or `zoom`) and nested transforms. Dragging must track the pointer exactly at any zoom.
+- **GEO-01 (P0)** Screen ↔ design viewport ↔ element containing-block conversions use the full transform matrices reported by the bridge script, accounting for canvas zoom, decks that scale a fixed stage to the window (CSS `transform` or `zoom`) and nested transforms. Dragging must track the pointer exactly at any zoom.
 - **GEO-02 (P0)** Rotated or transformed objects get oriented handles; resizing follows the object's own axes.
 - **GEO-03 (P0)** Overlays stay in sync (≤ 1 frame lag) while dragging, scrolling, zooming and resizing the window, and after asynchronous layout changes (fonts, images).
 
@@ -318,9 +337,10 @@ interface DeckAdapter {
 - **SEC-05** Remote resources (fonts, images, CDN scripts/styles): Allow (default) / Ask / Block, set in the Trust Center. When blocked, a message bar offers "Load external content". File › Info lists every external domain the deck uses.
 - **SEC-06** Deck scripts: On (default, always sandboxed) / Off. P1 — **Protected View** for files downloaded from the internet (Windows Mark-of-the-Web, macOS quarantine attribute): open with scripts and remote content off and a yellow bar "This file came from the internet. [Enable content]". P2 — Trusted Locations.
 - **SEC-07** The editor UI loads no remote code; strict Content-Security-Policy; no `eval`.
-- **SEC-08** Messages from the agent are untrusted (deck scripts share its context): schema validation and size limits; they never trigger code execution, file access or IPC beyond the documented operations.
+- **SEC-08** Messages from the bridge script are untrusted (deck scripts share its context): schema validation and size limits; they never trigger code execution, file access or IPC beyond the documented operations.
 - **SEC-09** Pasted HTML is sanitized (TXT-11). Custom HTML the user inserts deliberately (INS-05) is exempt.
-- **SEC-10** Privacy: no telemetry. P2: opt-in crash reports. Deckhand's own network traffic is limited to update checks (if enabled); everything else is requested by the deck itself.
+- **SEC-10** Privacy: no telemetry. P2: opt-in crash reports. Deckhand's own network traffic is limited to update checks (if enabled); everything else is requested by the deck itself or by AI Assistant features the user set up (§10).
+- **SEC-11 (P1)** AI-specific security and privacy requirements are in §10.10.
 
 ### 6.8 Performance
 Reference machine: 4-core laptop from 2021, 8 GB RAM, SSD.
@@ -337,7 +357,7 @@ Reference machine: 4-core laptop from 2021, 8 GB RAM, SSD.
 
 ### 6.9 Reliability
 - **REL-01 (P0)** A crashing or hung deck never freezes or crashes the editor UI: the live view runs in a separate process (see SPIKE-1).
-- **REL-02 (P0)** If the agent's heartbeat stops for 5 s: message bar "The presentation's scripts aren't responding. [Reload] [Reload with scripts off]".
+- **REL-02 (P0)** If the bridge script's heartbeat stops for 5 s: message bar "The presentation's scripts aren't responding. [Reload] [Reload with scripts off]".
 - **REL-03 (P0)** UI errors are caught by error boundaries, shown as non-blocking notices, and trigger an immediate AutoRecover snapshot.
 - **REL-04 (P1)** Rotating log files in the OS app-data folder; Help › Open Log Folder and Copy Diagnostic Info.
 
@@ -361,6 +381,9 @@ Claude Code MAY propose alternatives, justified in `DECISIONS.md`.
 | PDF assembly | pdf-lib (image-based PDFs) | |
 | PPTX export (P2) | PptxGenJS | |
 | Icon set for Insert › Icons | Lucide (ISC) or Fluent icons, bundled offline | |
+| AI providers | Vercel AI SDK (`ai` + `@ai-sdk/*` provider packages) | One API for streaming and tool calling across Anthropic, OpenAI, Google, Azure, Bedrock, Vertex and OpenAI-compatible endpoints (§10.11) |
+| AI agents and tools | `@agentclientprotocol/sdk`, `@modelcontextprotocol/sdk`, GitHub Copilot SDK | External agents, MCP server mode, Copilot connection |
+| Credentials | Electron `safeStorage` | OS keychain on every platform (AIC-08) |
 
 - **TECH-01 (P0)** Avoid native Node modules; any unavoidable one must ship prebuilt binaries for every target.
 - **TECH-02 (P0)** Only permissive licenses (MIT, BSD, Apache-2.0, ISC; OFL for fonts). Generate a third-party notices file shown in About.
@@ -371,23 +394,26 @@ Claude Code MAY propose alternatives, justified in `DECISIONS.md`.
 ```
 deckhand/
 ├── apps/desktop/        Electron main + preload, packaging config, icons
-│   ├── src/main/        windows, menus, IPC, document protocol, files, export, updates
+│   ├── src/main/        windows, menus, IPC, document protocol, files, export, updates,
+│   │                    ai/ (connections, credentials, AI host, ACP client, MCP server)
 │   └── src/preload/     typed contextBridge API
 ├── packages/core/       source model, patches, commands, history, adapters, CSS utilities
-├── packages/agent/      script injected into the live view (single bundle)
+├── packages/bridge/     script injected into the live view (single bundle)
+├── packages/ai/         AI Assistant runtime: context, AI view, deck tools, agent loop
 ├── packages/ui/         React editor UI: ribbon, panes, canvas overlay, dialogs
 ├── packages/i18n/       translation files (en.json, …)
 ├── test-decks/          test corpus (TST-01)
 ├── e2e/                 Playwright tests
 └── docs/                SPEC.md, IMPLEMENTATION_PLAN.md, DECISIONS.md,
-                         USER_GUIDE.md, QA_CHECKLIST.md
+                         USER_GUIDE.md, QA_CHECKLIST.md, AI_EVALS.md
 ```
 
 ### 6.12 Technical spikes (do these first; record results in DECISIONS.md)
-- **SPIKE-1 — Process isolation.** Confirm that a cross-origin sandboxed iframe served from the custom protocol runs in its own renderer process in Electron, so a deck running `while (true) {}` doesn't freeze the UI. If that can't be achieved, host the live view in a separate `WebContentsView` and draw the overlay inside it (agent-owned closed shadow root) or in a transparent view on top.
+- **SPIKE-1 — Process isolation.** Confirm that a cross-origin sandboxed iframe served from the custom protocol runs in its own renderer process in Electron, so a deck running `while (true) {}` doesn't freeze the UI. If that can't be achieved, host the live view in a separate `WebContentsView` and draw the overlay inside it (bridge-owned closed shadow root) or in a transparent view on top.
 - **SPIKE-2 — Fidelity.** Prototype offset-based patching; prove RT-01/RT-02 on five corpus decks, including windows-1252 + CRLF.
 - **SPIKE-3 — Positioning.** Prototype move/resize on (a) Free objects inside a JS-scaled 1920×1080 stage and (b) flex/grid children in a responsive Tailwind deck using the `translate` property; verify at three viewport sizes.
 - **SPIKE-4 — Detection.** Run the Appendix B heuristics on the corpus and the owner's sample decks; target ≥ 90 % correct automatic detection.
+- **SPIKE-5 — AI editing** (run at the start of M4, not first). Prototype the agent loop (§10.11) with one provider, a handful of deck tools and three corpus decks — fix spelling, add a slide from an attachment, restyle with a darker theme; confirm minimal diffs and measure tokens and cost per request.
 
 ---
 
@@ -404,11 +430,11 @@ deckhand/
 ├────────────────────────────────────────────────────────────────────┤
 │ Message bar (only when needed: security, file changed, recovery)   │
 ├──────────┬──────────────────────────────────────┬──────────────────┤
-│ Slide    │                                      │ Format pane      │
-│ pane     │             Slide canvas             │ (contextual:     │
-│ (thumb-  │  (gray workspace, one slide shown)   │ shape, picture,  │
-│ nails)   │                                      │ text, table,     │
-│          │                                      │ background)      │
+│ Slide    │                                      │ Task panes:      │
+│ pane     │             Slide canvas             │ · Format         │
+│ (thumb-  │  (gray workspace, one slide shown)   │ · AI Assistant   │
+│ nails)   │                                      │ · Selection      │
+│          │                                      │ (tabs)           │
 │          ├──────────────────────────────────────┤                  │
 │          │ Notes pane (collapsible)             │                  │
 ├──────────┴──────────────────────────────────────┴──────────────────┤
@@ -418,6 +444,7 @@ deckhand/
 
 - **UI-01 (P0)** Panes are resizable and collapsible; the layout is remembered per user.
 - **UI-02 (P0)** Minimum supported window size: 1024×640 (the ribbon adapts, RIB-04).
+- **UI-03 (P0)** The right dock holds task panes as tabs: Format pane (P0), Selection Pane (P1) and AI Assistant (P1, §10.4).
 
 ### 7.2 Title bar and Quick Access Toolbar
 - **QAT-01 (P0)** Save, Undo (with history dropdown, UND-03), Redo, Start Slide Show. P2: customizable, optionally shown below the ribbon.
@@ -446,6 +473,7 @@ Tab content (priority per command):
 | Paragraph | Align Left/Center/Right/Justify — P0 · Bullets, Numbering, List level ±, Line Spacing ▾ — P1 |
 | Drawing | Arrange ▾ (order, align — P0; distribute, group, rotate, Selection Pane — P1) · Shape Fill, Shape Outline, Shape Effects — P1 |
 | Editing | Select ▾ (Select All — P0, Selection Pane — P1) · Find, Replace ▾ (Replace, Replace Fonts) — P1 |
+| AI | AI Assistant ▾ — opens the pane; quick actions (AIQ-01) — P1 |
 
 **Insert**
 
@@ -480,14 +508,14 @@ Tab content (priority per command):
 | Proofing | Spelling, Language — P1 |
 | Accessibility | Alt Text — P1 · Check Accessibility — P2 |
 | Compare | Compare with file on disk — P2 |
-| Comments | P2 (§13) |
+| Comments | P2 (§14) |
 
 **View**
 
 | Group | Commands |
 |---|---|
 | Presentation Views | Normal — P0 · Slide Sorter, Code, Split — P1 |
-| Show | Smart Guides, Hover Outlines — P0 · Ruler, Gridlines, Guides, Notes, Selection Pane, Show hidden objects, Show deck controls — P1 |
+| Show | Smart Guides, Hover Outlines — P0 · Ruler, Gridlines, Guides, Notes, Selection Pane, AI Assistant, Show hidden objects, Show deck controls — P1 |
 | Zoom | Zoom…, Fit to Window — P0 |
 | Preview | Run deck scripts, Play animations — P0 · Viewport ▾ — P1 |
 | Window | App theme (System/Light/Dark) — P1 · New Window — P2 |
@@ -550,12 +578,12 @@ Tab content (priority per command):
 - **STB-01 (P0)** Status bar: "Slide 3 of 12" (click → Go to Slide); clickable element path, e.g. `section.slide › div.hero › h1` (click selects that ancestor); detected-format chip (→ Info); spell-check language (P1); Notes toggle (P1); view buttons (Normal, Slide Sorter, Slide Show); zoom slider with % (click → Zoom dialog) and Fit to Window.
 
 ### 7.9 Mini toolbar and context menus
-- **MIN-01 (P1)** Mini toolbar near a text selection and above context menus: font, size, grow/shrink, B/I/U, color, highlight, align, bullets, Format Painter.
+- **MIN-01 (P1)** Mini toolbar near a text selection and above context menus: font, size, grow/shrink, B/I/U, color, highlight, align, bullets, Format Painter, AI ▸ (AIQ-01).
 - **CTX-01 (P0)** Context menus (right-click, Shift+F10, Menu key):
-  - *Object:* Cut, Copy, Paste Options, Edit Text, Group ▸, Bring to Front ▸, Send to Back ▸, Align ▸, Position ▸ (In layout / Free / Reset), Lock, Hide, Edit HTML…, Format…
+  - *Object:* Cut, Copy, Paste Options, Edit Text, Group ▸, Bring to Front ▸, Send to Back ▸, Align ▸, Position ▸ (In layout / Free / Reset), Lock, Hide, Edit HTML…, Format…, Ask AI… (P1)
   - *Picture:* adds Change Picture ▸ (from file / clipboard), Crop, Alt Text…
   - *Slide background:* Paste, New Slide, Format Background…, Grid and Guides… (P1)
-  - *Text being edited:* spelling suggestions, Cut/Copy/Paste Options, Font…, Paragraph…, Link…
+  - *Text being edited:* spelling suggestions, Cut/Copy/Paste Options, Font…, Paragraph…, Link…, AI ▸ (P1, AIQ-01)
 
 ### 7.10 Message bars and dialogs
 - **MSG-01 (P0)** Non-modal message bars under the ribbon (info / warning / error) with action buttons and a close button. Used for: Protected View; external content blocked; files outside the folder blocked; file changed on disk; scripts not responding; recovered changes; slide-detection confirmation; read-only or unsupported deck.
@@ -606,6 +634,7 @@ macOS follows PowerPoint for Mac where it differs. P2: user-customizable.
 | Search commands (P1) | Alt+Q | ⌘⇧P |
 | Spelling (P1) | F7 | ⌥⌘L |
 | Selection Pane (P1) | Alt+F10 | via menu |
+| AI Assistant pane (P1) | Ctrl+Alt+I | ⌃⌘I |
 | Collapse ribbon (P1) | Ctrl+F1 | ⌘⌥R |
 | Move between window regions | F6 / Shift+F6 | F6 / ⇧F6 |
 | Help (P1) | F1 | ⌘? |
@@ -803,7 +832,164 @@ This is the heart of "change positions": HTML has several layout systems, and th
 
 ---
 
-## 10. Options and Trust Center
+## 10. AI Assistant
+
+An optional task pane on the right where the user chats with an AI model **through an AI account they already have** — Claude, ChatGPT, Gemini, Copilot and others. The open presentation is the conversation's context. The assistant can answer questions about the deck or change it, from fixing one word to adding slides or restyling the whole deck. Every change goes through the same command system as manual edits (ARCH-02): it keeps the fidelity guarantees (§6.3), appears in undo and can be reviewed.
+
+### 10.1 Principles
+- **AIG-01 (P1) Bring your own AI.** Deckhand runs no AI service of its own. Requests go from the user's computer straight to the provider the user chose — or through that provider's own app or agent — and are paid by the user's account: API credits or plan allowance. Deckhand never proxies, stores or resells AI traffic.
+- **AIG-02 (P1) Official access only.** Use only access methods a provider documents for third-party apps. Never scrape web chat sessions, reuse tokens taken from other apps, or impersonate an official client. Provider rules change often: before each release, re-check every connection type against the provider's current terms, record the result in `DECISIONS.md`, and keep connection types that depend on a provider's approval behind build-time flags.
+- **AIG-03 (P1) The user stays in control.** The AI changes the deck only in Edit mode; each turn's changes can be reviewed and undone in one step; nothing reaches the disk until the user saves.
+- **AIG-04 (P1) Least privilege.** The AI can only use the deck tools of §10.6 — no shell, no file system, no settings, no saving or exporting.
+- **AIG-05 (P1) Transparency.** The user always sees which connection and model are in use, what context is sent, which account pays and, where known, tokens and estimated cost.
+- **AIG-06 (P1) Optional.** AI features stay inactive until the user adds a connection, and can be switched off by the user or by an administrator policy (AIS-06).
+
+### 10.2 Using the AI accounts people already have
+AI access comes in two kinds, and providers treat them differently:
+
+| Kind | Examples | Usable from a third-party app such as Deckhand? |
+|---|---|---|
+| **API credits** — pay-as-you-go developer accounts | Claude Console, OpenAI Platform, Google AI Studio, Azure, AWS, Google Cloud, OpenRouter | Yes — the standard route, through an API key or a cloud sign-in |
+| **Plan allowance** — chat subscriptions | Claude Pro/Max/Team, ChatGPT Plus/Pro, Google AI Pro/Ultra, GitHub Copilot, Microsoft 365 Copilot | Only through a route the provider offers to third-party apps (below); otherwise only inside the provider's own apps |
+
+Status as researched on 30 October 2026 — re-check at implementation time (AIG-02):
+
+| Provider | With API credits | With the plan the user already pays for |
+|---|---|---|
+| **Claude** (Anthropic) | API key from the Claude Console. Since 7 October 2026, Max and Team plans (not Pro) include monthly API credits, claimed into a Console organization and spent through such a key. Also Amazon Bedrock, Google Vertex AI, Microsoft Foundry. | Anthropic's Agent SDK documentation says that, unless previously approved, third-party developers may not offer claude.ai login in their products — so Deckhand never handles Claude account credentials. Two routes remain: an **external agent** (AIC-06), where Claude's own agent software runs on the user's computer and signs in by itself (enabled only if Anthropic's terms allow this use at release time), and **MCP server mode** (§10.9), where the user chats in Claude's own apps and they edit the deck open in Deckhand. |
+| **ChatGPT** (OpenAI) | OpenAI API key; Azure OpenAI / Microsoft Foundry | **Continue with ChatGPT** (AIC-04): OpenAI's "Sign in with ChatGPT" plan usage (preview, Plus and Pro plans). OpenAI offers it to open-source and local personal apps; other private or paid apps must join its waitlist (Q3). Also Codex, OpenAI's agent, as an external agent (AIC-06). |
+| **Gemini** (Google) | Gemini API key from Google AI Studio (free tier available, with lower limits); Vertex AI | No sanctioned route for third-party apps found. Google's Gemini CLI terms say that accessing the services behind it through third-party software violates its terms. Use API keys; MCP server mode (§10.9) works with Google's own agent apps that support local MCP servers. |
+| **GitHub Copilot** | — (the SDK can also use the user's own API keys) | **GitHub Copilot SDK** (AIC-05), generally available: the user signs in with GitHub, each prompt counts toward their Copilot allowance, and apps can add their own tools. |
+| **Microsoft 365 Copilot** | Microsoft-based companies usually provide Azure OpenAI / Microsoft Foundry instead (AIC-03) | **Microsoft 365 Copilot Chat API** (AIC-09), in preview: needs a Microsoft 365 Copilot licence, a work account and broad Microsoft Graph permissions (typically with administrator consent); it answers in text only and offers no custom tools. |
+| **Others** | OpenAI-compatible endpoints (company gateways such as LiteLLM), OpenRouter (one account for many providers' models), local models through Ollama or LM Studio — free, offline and private | OpenRouter sign-in (AIC-07) returns a key billed to the user's own OpenRouter credits |
+
+### 10.3 Connections
+- **AIC-01 (P1)** Options › AI › Connections, also reachable from the pane's connection menu: add, test, rename, set as default, sign out, remove. Several connections can coexist (e.g. a personal Claude key and the company's Azure OpenAI). Each shows provider, account (when known), status and who pays ("API credits", "ChatGPT plan", "Copilot plan"…).
+- **AIC-02 (P1) API keys:** Anthropic, OpenAI, Google Gemini, and OpenAI-compatible endpoints (base URL plus optional key — company gateways, OpenRouter, Ollama, LM Studio). A "Get a key" link opens the provider's key page; "Test" lists the available models.
+- **AIC-03 (P1) Cloud accounts:** Azure OpenAI / Microsoft Foundry (key or Microsoft Entra ID sign-in). P2: Amazon Bedrock (AWS profile or SSO) and Google Vertex AI (gcloud credentials).
+- **AIC-04 (P1) Continue with ChatGPT** — only if Deckhand is eligible (AIG-02, Q3). Follow OpenAI's "Sign in with ChatGPT" plan-usage documentation:
+  - OpenID Connect with PKCE in the system browser, with a loopback callback on `127.0.0.1` (not `localhost`), requesting `openid profile email offline_access resource.invoke chatgpt.tokens.use.direct`, and a persistent `ext_agent_host_id` per installation;
+  - model requests to the Responses API with `store: false` and `stream: true`, the needed history sent every turn (no `previous_response_id`), Deckhand's instructions in `instructions` rather than system-role messages; function tools, images and files work when the model supports them;
+  - OpenAI's UI guidelines: a "Continue with ChatGPT" button, a one-time "You're using your ChatGPT plan" notice, "Using ChatGPT plan · Manage usage" near the composer, and **Manage usage** as the main action when the plan's limit is reached (`subscription_sharing_usage_limit_exceeded`, `subscription_sharing_usage_unavailable`).
+- **AIC-05 (P1) GitHub Copilot** through the official GitHub Copilot SDK (its Node package bundles the Copilot CLI): Sign in with GitHub through Deckhand's own GitHub OAuth app; models listed by the SDK; Deckhand's deck tools registered as custom tools; the SDK's built-in shell and file tools disabled.
+- **AIC-06 (P1) External agents (ACP).** Deckhand is an Agent Client Protocol client: it can run agent programs from AI providers — e.g. Claude Agent, Codex, Copilot, Google's agents — which handle their own sign-in, models and billing. Offer agents found on the computer and in the ACP Registry (`https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json`), and install one only after the user confirms. When running an agent, Deckhand:
+  - starts it in an empty working folder managed by Deckhand (never the deck's folder) and passes its deck tools as an MCP server in `session/new` (the `deckhand mcp` stdio command for agents that only support stdio, AIM-01);
+  - advertises no client file-system or terminal capabilities, refuses every `session/request_permission` except calls to its deck tools, and picks the agent's most restrictive mode that still allows them;
+  - shows the agent's messages, reasoning, tool calls and plans in the pane; maps its session config options (model, mode, reasoning level) to the pane's pickers; shows `usage_update` in the context meter; Stop sends `session/cancel`;
+  - enables each agent only where its vendor's terms allow this use (AIG-02).
+- **AIC-07 (P2) OpenRouter sign-in** (OAuth PKCE with a localhost callback) returns a key billed to the user's OpenRouter credits.
+- **AIC-08 (P1) Credentials** (keys, refresh tokens) are stored with Electron `safeStorage` — Keychain on macOS, DPAPI on Windows, Secret Service or KWallet on Linux — never in settings files, logs or crash reports, and never sent to the renderer. Without a Linux secret store, warn and offer "Remember for this session only". Rotate refresh tokens as each provider requires.
+- **AIC-09 (P2) Microsoft 365 Copilot** through the Microsoft 365 Copilot Chat API (Entra ID sign-in, delegated permissions): Ask mode, plus proposals in the edit-block format (AIT-06) that the user applies with a button.
+- **AIC-10 (P1) Models:** list each connection's models from the provider's models API, the SDK or the agent's config options; capability flags (tool calling, vision, PDF input, reasoning, context size) come from the API or a bundled, updatable table. Models without tool calling are offered for Ask mode only (P2: also the edit-block format, AIT-06). No model names are hard-coded beyond replaceable defaults; the last model used per connection is remembered.
+- **AIC-11 (P1) Networking:** system proxy (PLT-10); streaming; retry with backoff on rate limits and server errors; clear messages for an invalid key, exhausted credits or plan limit (with a link to the provider's billing or usage page), an unavailable model, no internet, and a request that is too large.
+
+### 10.4 The AI Assistant pane
+
+```
+┌─ AI Assistant ──────────────────────────┐
+│ Connection ▾   Model ▾    New   History │
+├─────────────────────────────────────────┤
+│ Suggested prompts (empty chat)          │
+│ Messages · steps · change cards         │
+│                                         │
+├─────────────────────────────────────────┤
+│ Context: Deck · Slide 3 · "Logo" (x)    │
+│ ┌─────────────────────────────────────┐ │
+│ │ Ask a question or describe a change │ │
+│ └─────────────────────────────────────┘ │
+│ +   @   Edit ▾   Web   Thinking ▾  Send │
+│ API credits · 12k / 200k tokens         │
+└─────────────────────────────────────────┘
+```
+
+- **AIP-01 (P1)** Open it from Home › AI Assistant (the rightmost ribbon button, where Office puts its assistant), View › Show › AI Assistant, Ctrl+Alt+I (⌃⌘I), or right-click › Ask AI…. It docks on the right as a tab beside the Format pane (UI-03). P2: side by side with it, or undocked into its own window.
+- **AIP-02 (P1) Header:** connection and model picker (models grouped by connection, with capability icons, and "Manage connections…"); New chat; History; a menu with Rename, Export as Markdown, Delete and AI settings.
+- **AIP-03 (P1) Composer:** multi-line input (Enter sends, Shift+Enter adds a line, Esc or Stop cancels a running turn); a **+** menu — Attach files…, Add current slide, Add selected objects, Add all slides, Add slide picture, Paste image; drag and drop of files and images; **@** mentions of slides and objects (`@slide 3`, `@Logo`, `@selection`) with autocomplete; **/** for saved prompts (AIQ-02); the **Ask / Edit** mode switch; a Web search toggle when the connection supports it; a reasoning level when the model supports it.
+- **AIP-04 (P1) Context chips** above the input list exactly what the next message will send, each removable, with a context meter (tokens used / limit) and the billing line ("API credits", "Using ChatGPT plan · Manage usage", "Copilot plan").
+- **AIP-05 (P1) Messages:** streamed Markdown (lists, tables, code, links — opened in the default browser after confirmation) and images; reasoning summaries, collapsed, when the provider returns them; tool activity as compact steps ("Changed the title on slide 3") that jump to the slide and select the object when clicked. Actions: Copy; Retry (optionally with another model); Edit and resend on the user's messages; Restore to before this message (AIE-06).
+- **AIP-06 (P1) Empty chat:** prompt suggestions based on the deck ("Summarize this deck", "Fix spelling on all slides", "Make slide 3 more visual", "Translate into Italian", "Give the deck a darker theme") and one line on what the assistant can do.
+- **AIP-07 (P1) Conversations** belong to the deck: stored locally in app data (never in the deck file), listed in History with title and date, searchable, renamable and deletable. Options set the retention and can clear all history.
+- **AIP-08 (P1) Usage:** tokens per message; estimated cost for API-key connections from an updatable price table, labelled as an estimate; optional warnings above a cost per turn or per month.
+- **AIP-09 (P1) Accessibility:** F6 reaches the pane; streamed text is announced politely in chunks; every control works from the keyboard (A11Y-01…03).
+
+### 10.5 Context and instructions
+- **AIX-01 (P1)** Each turn's context is built fresh from the current document, including the user's manual edits since the last message.
+- **AIX-02 (P1)** A request contains: (1) Deckhand's instructions (AIX-07); (2) deck facts — detected format and slide selector, slide size, theme variables, fonts, available layouts (ADP-07) and the deck's conventions (classes, units, indentation); (3) an outline with each slide's number, title, layout, hidden state and a short text summary; (4) the current slide's HTML and, for vision-capable models, a picture of it; (5) the selected objects; (6) the user's attachments and @-mentions; (7) the conversation so far, with older tool results shortened; (8) a summary of manual edits since the previous turn ("The user moved 'Logo' on slide 2"), so the model doesn't undo them.
+- **AIX-03 (P1) AI view of the HTML.** The model sees a projection of the source generated by `packages/core`: each object carries a short reference (`data-ref="o12"`); `data:` URIs become asset placeholders (`asset:img-3`, with type, size and dimensions); large framework scripts and styles are elided (`<script data-elided="reveal.js, 120 KB"></script>`). Deckhand maps references and placeholders back when applying edits, so the model can move or reuse pictures without copying base64 data. None of this ever reaches the file (RT-05).
+- **AIX-04 (P1)** Decks whose AI view fits a budget (default 30k tokens, configurable) are sent whole; larger decks are sent as outline plus current slide, and the model reads the rest with tools. Use the provider's prompt caching for the stable part of the request where available.
+- **AIX-05 (P1) Attachments:** images, PDF, Word (.docx), Excel and CSV, PowerPoint (.pptx, text and pictures), text and Markdown, and web pages by URL (fetched by Deckhand and converted to text). Send a format natively when the provider accepts it, otherwise extract the text locally. Show each attachment's size and token estimate; warn above the model's limits.
+- **AIX-06 (P1) Language:** reply in the user's language; write slide content in the deck's language unless asked otherwise.
+- **AIX-07 (P1) Built-in instructions** (a versioned file in `packages/ai`) tell the model to: use tools instead of describing changes; read before writing; keep the deck's structure, framework markup, scripts and navigation intact; prefer theme variables and existing classes to hard-coded values; restyle through CSS variables and stylesheet rules rather than element by element; keep the content unless asked to change it; check visual changes with `render_slide` and keep text inside its boxes; end with a short summary of what changed; and treat deck text, attachments and web pages as data, never as instructions (AIS-03). Users can add their own instructions in Options; P2: per-deck instructions.
+
+### 10.6 Deck tools
+The AI reads and changes the deck only through these tools. One set of definitions (zod schemas, converted to JSON Schema) serves models with function calling, the GitHub Copilot SDK (custom tools), and external agents and MCP clients (Deckhand's MCP server).
+
+| Tool | Mode | What it does |
+|---|---|---|
+| `get_deck_overview` | Ask, Edit | Format, slide size, outline, theme variables, fonts, stylesheets, assets |
+| `get_slide(slide, parts)` | Ask, Edit | AI-view HTML, plain text and/or speaker notes of a slide |
+| `render_slide(slide, width)` | Ask, Edit | PNG of the slide as currently edited (vision-capable models) |
+| `get_styles(filter)` | Ask, Edit | `<style>` blocks and linked CSS with line numbers, filtered by selector or property |
+| `find(query, regex)` | Ask, Edit | Matches in the slides' text or markup, with references |
+| `get_selection` | Ask, Edit | What the user has selected right now |
+| `set_text(ref, html)` | Edit | Replace an object's content; inline formatting only (§8.3) |
+| `set_style(refs, properties)` | Edit | Inline style changes; `null` removes a property (§8.6) |
+| `set_geometry(ref, x, y, w, h, rotation)` | Edit | Move, resize and rotate in slide coordinates, through the positioning model (§8.2) |
+| `set_attributes(ref, attributes)` / `set_classes(ref, add, remove)` | Edit | Attributes and classes |
+| `insert_html(ref, position, html)` / `replace_html(ref, html)` / `delete(refs)` | Edit | New, rewritten and removed objects or slides |
+| `add_slide(after, layout or html)` / `duplicate_slides` / `move_slides` / `delete_slides` / `set_slide_hidden` / `set_notes` | Edit | Slide operations (§8.9) |
+| `set_theme_variable(name, value)` | Edit | Theme colors and fonts (§8.7) |
+| `edit_css(target, old, new)` | Edit | Exact replacement inside a `<style>` block or linked stylesheet (FMT-04): deck-wide restyling |
+| `insert_picture(source, ref or position)` | Edit | Picture from an attachment or URL, stored per IMG-02 |
+| `replace_in_source(old, new)` | Edit | Last resort: exact replacement in the HTML source; must match exactly once |
+
+- **AIT-01 (P1)** Write tools validate their input — references exist and lie inside slides, aren't deck chrome or generated content, HTML and CSS parse — then run as ordinary commands (ARCH-02) and return a short result, or an error the model can act on ("Reference o12 no longer exists — call get_slide(3)").
+- **AIT-02 (P1) Stale-write protection:** reads return a version per slide; a write carrying an outdated version (the user or another tool changed the slide since) is rejected with a request to read again.
+- **AIT-03 (P1)** HTML written by the AI is sanitized like pasted HTML (TXT-11) — no `<script>`, event handlers, `javascript:` URLs or new external resources unless allowed (AIS-04) — and re-indented to match its surroundings (RT-04).
+- **AIT-04 (P1) Limits per turn,** all configurable: tool calls (default 40); changed slides before asking ("This changes 18 slides — continue?"); size of HTML written.
+- **AIT-05 (P2)** `generate_image(prompt, size)` when the connection offers an image model; the picture is inserted per IMG-02.
+- **AIT-06 (P2) Edit-block format** for models or connections without tool calling (AIC-09, some local models): the model writes its changes as fenced `deckhand-edit` blocks containing the same operations as JSON; Deckhand validates each block and shows it with an **Apply** button.
+
+### 10.7 Applying, reviewing and undoing AI changes
+- **AIE-01 (P1) Modes:** Ask offers only the read tools; Edit offers all of them. The mode is shown in the composer and remembered per conversation.
+- **AIE-02 (P1)** Changes apply live while the model works, and the affected slides are marked in the slide pane. During a turn, manual editing pauses (navigation, zoom and selection still work) under a bar "AI Assistant is editing… [Stop]". Stop cancels the request and keeps the changes made so far, which remain undoable.
+- **AIE-03 (P1)** All changes from one turn form **one undo step**, named after the request ("AI: Translate the slides into Italian").
+- **AIE-04 (P1) Change card:** each Edit turn ends with a card in the chat listing the changes by slide, with thumbnails, and three actions: **Keep** (closes the review), **Undo all**, and **Undo** per slide when no later change depends on it. Changed slides keep a badge in the slide pane until reviewed. P2: before/after comparison on the canvas.
+- **AIE-05 (P1) Ask before applying** (Options): the turn runs against a copy of the document; Deckhand then previews the changes and applies them only after **Apply**.
+- **AIE-06 (P1) Checkpoints:** every user message records the document version; "Restore to before this message" returns the deck to that point as one undoable command and greys out the later messages.
+- **AIE-07 (P1)** AI changes follow every fidelity rule (§6.3): the parts of the file the AI didn't change stay byte-identical (TST-09).
+- **AIE-08 (P1)** Saving stays manual (AutoRecover still runs): AI changes reach the disk only when the user saves.
+
+### 10.8 Quick actions
+- **AIQ-01 (P1) Text actions** in the mini toolbar and context menu — AI ▸ Rewrite, Shorten, Expand, Fix spelling and grammar, More formal, More friendly, Translate to…: one-shot Edit turns on the selected text, previewed in place with **Keep**, **Discard** and **Try again**, without opening the pane.
+- **AIQ-02 (P1) Prompt gallery**, like Office's prompt library: built-in and user-saved prompts, available in the pane and through `/` in the composer.
+- **AIQ-03 (P2)** Slide pane context menu: Write speaker notes, Suggest a better layout, Split into two slides, Merge into one slide. Also P2: File › New › From a prompt (generate a whole deck).
+
+### 10.9 MCP server mode
+For people who would rather chat in their AI provider's own app — the most direct way to use a chat plan:
+- **AIM-01 (P1)** An optional built-in MCP server, off by default, exposes the deck tools of the presentations open in Deckhand: Streamable HTTP on `127.0.0.1` with a random port and a bearer token (Host and Origin headers checked), plus a `deckhand mcp` stdio command for clients that only support stdio. The first time a client connects, the user approves it ("Allow Claude Desktop to read and edit your open presentations?").
+- **AIM-02 (P1)** Options › AI › "Use Deckhand from other AI apps" gives step-by-step setup and copyable configuration for apps that support local MCP servers — e.g. Claude Desktop (P2: a one-click desktop extension), Claude Code, Codex, VS Code with GitHub Copilot, and Google's agent apps.
+- **AIM-03 (P1)** Changes arriving through MCP follow §10.7: calls are grouped into one undo step until 5 s pass without a call or the user edits; their change cards appear in the pane under "From other apps"; a status-bar indicator shows connected clients, and one click disconnects them.
+
+### 10.10 Security and privacy
+- **AIS-01 (P1)** The first time a connection is used, Deckhand states what is sent and to whom ("Slide content, pictures of slides and your attachments are sent to Anthropic"), linking to the provider's privacy terms. Options can turn off sending slide pictures, attachments or fetched web pages.
+- **AIS-02 (P1)** The model can only call deck tools: it can't read or write other files, run commands, change settings, turn on deck scripts or blocked content, save, export or open links.
+- **AIS-03 (P1) Prompt injection:** deck text, notes, attachments and web pages may contain instructions written by someone else. They are passed as clearly marked data, and the limited tool set bounds what an injected instruction could do. Web pages are fetched only when the user attaches them; web search runs only when the user turns it on.
+- **AIS-04 (P1)** Scripts, event handlers and new external resources in AI-written HTML are removed unless the user turns on "Allow the AI to add scripts and external content" (Trust Center, off by default); when it's on, such additions are flagged in the change card.
+- **AIS-05 (P1)** Prompts and responses are never logged unless AI debug logging is on; keys and tokens are always redacted.
+- **AIS-06 (P1) Administrator policy** (§11): turn AI off entirely; allow only listed connection types or endpoints (e.g. only the company's Azure OpenAI); turn off attachments, web search, external agents or MCP server mode; set cost warnings.
+- **AIS-07 (P1)** Credentials follow AIC-08, and all AI network calls are made from the main process.
+
+### 10.11 Implementation notes
+- `packages/ai` (no Electron or React dependency, like `packages/core`): conversation model, context builder and AI-view serializer, tool definitions, agent loop, edit-block parser, token estimates, price table.
+- `apps/desktop/src/main/ai`: connections and credentials, provider clients, OAuth loopback helper (PKCE on `127.0.0.1`), ACP client, Copilot SDK host, MCP server.
+- The agent loop runs in the **main process**, so credentials never reach the renderer and CORS doesn't apply. Tool calls go over typed IPC to the editor window of the target document — where the source model and commands live (§6.1) — and results come back to the loop. External agents and MCP clients reach the same tool executor. `render_slide` reuses the offscreen renderer of RND-09.
+- Libraries (latest stable at implementation, §6.10): the Vercel AI SDK (`ai` with `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`, `@ai-sdk/azure`, `@ai-sdk/openai-compatible`, and the Bedrock and Vertex providers) for streaming and tool calling; a small dedicated client for the ChatGPT plan route because of its required Responses API settings (AIC-04); the GitHub Copilot SDK; `@agentclientprotocol/sdk` for ACP; `@modelcontextprotocol/sdk` for the MCP server.
+- Start with SPIKE-5 (§6.12).
+
+---
+
+## 11. Options and Trust Center
 
 **OPT-01 (P1; settings needed by P0 features ship with them)** Office-style Options dialog:
 
@@ -813,24 +999,25 @@ This is the heart of "change positions": HTML has several layout systems, and th
 | Editing | Units (POS-04), nudge distances, snapping and smart-guide defaults, "typing replaces selected text" (TXT-02), hover outlines, picture storage and downscaling (IMG-02/03), default paste, undo limit |
 | Save | AutoRecover interval, versions kept, metadata in file vs sidecar (RT-06), export defaults, reload on external change |
 | Proofing | Spell-check languages, check while typing |
-| Trust Center | Deck scripts (SEC-06), external content (SEC-05), files outside the folder (SEC-03), Protected View, Trusted Locations (P2) |
+| Trust Center | Deck scripts (SEC-06), external content (SEC-05), files outside the folder (SEC-03), Protected View, Trusted Locations (P2), AI edits that add scripts or external content (AIS-04) |
+| AI | Connections (AIC-01); default mode (Ask/Edit) and live apply vs Ask before applying (AIE-05); custom instructions (AIX-07); sending slide pictures, attachments and web pages (AIS-01); limits per turn (AIT-04); cost warnings (AIP-08); conversation retention and Clear AI history (AIP-07); external agents (AIC-06); "Use Deckhand from other AI apps" (AIM-02) |
 | Advanced | Default design viewport, thumbnail quality, hardware acceleration (turning it off helps some Linux GPUs), log level, reset all settings |
 | Customize (P2) | Quick Access Toolbar, ribbon, keyboard shortcuts |
 
-Settings are stored as JSON in the OS app-data folder. P2: portable mode; an admin policy file that locks Trust Center and update settings.
+Settings are stored as JSON in the OS app-data folder. P1: an administrator policy file (system-wide JSON) that can lock Trust Center, update (PLT-06) and AI (AIS-06) settings. P2: portable mode.
 
 ---
 
-## 11. Help and onboarding
+## 12. Help and onboarding
 - **HLP-01 (P1)** First run: Backstage Home with Open, recent files and "Try a sample deck" (a bundled deck containing every typical element), plus a dismissable five-step tour: slide pane → click & drag → double-click to edit text → Format pane → Save.
 - **HLP-02 (P1)** Search box (Alt+Q) covering commands, settings, recent files and help topics.
-- **HLP-03 (P1)** Offline help (F1): short task-based articles bundled as Markdown — moving things, editing text, changing pictures, theme colors, "Why can't I edit this?", security notices, exporting.
+- **HLP-03 (P1)** Offline help (F1): short task-based articles bundled as Markdown — moving things, editing text, changing pictures, theme colors, "Why can't I edit this?", security notices, exporting, connecting an AI account and who pays for it.
 - **HLP-04 (P0)** Every limitation message has a "Why?" link to the relevant explanation.
 - **HLP-05 (P1)** Help › Keyboard Shortcuts (searchable), Copy Diagnostic Info, Open Log Folder; About shows the version and licenses.
 
 ---
 
-## 12. Testing and quality
+## 13. Testing and quality
 - **TST-01 (P0) — Test corpus** in `test-decks/`, created by Claude Code, small and freely licensed, with framework files vendored so tests run offline:
   1. reveal.js deck — horizontal and vertical slides, notes, backgrounds, a hidden slide
   2. Marp HTML export
@@ -846,7 +1033,7 @@ Settings are stored as JSON in the OS app-data folder. P2: portable mode; an adm
   12. windows-1252 + CRLF, UTF-8 with BOM, mixed indentation, comments, entities
   13. Malformed HTML (unclosed tags, stray `</div>`)
   14. Large deck: 100 slides, 30 MB
-  15. **Hostile deck**: infinite loop, `window.open`, top navigation, `fetch('file:///…')`, `../../` reads, forged messages to the agent, huge memory allocation
+  15. **Hostile deck**: infinite loop, `window.open`, top navigation, `fetch('file:///…')`, `../../` reads, forged messages to the bridge script, hidden text with instructions aimed at the AI Assistant, huge memory allocation
   16. Plain web page without slides
   17. The owner's real sample decks (Q1)
 - **TST-02 (P0) — Round-trip and golden diffs.** For every corpus deck: a no-op save is byte-identical; scripted edits (edit text, move, resize, change color, insert a text box, add/delete/reorder slides, change a picture, change a theme color) produce exactly the stored golden diffs; the RT-05 artifact check runs on every save.
@@ -856,11 +1043,15 @@ Settings are stored as JSON in the OS app-data folder. P2: portable mode; an adm
 - **TST-06 (P0)** CI on Windows, macOS and Linux (xvfb): lint, typecheck, unit, E2E, packaging; installers uploaded as artifacts.
 - **TST-07 (P1)** `docs/QA_CHECKLIST.md`, run manually on all three OSes before each release: install/uninstall, "Open with", HiDPI, dark mode, multi-monitor slide show, IME input, spell-check, saving to a network drive and a synced folder, offline use.
 - **TST-08 (P1)** Benchmarks for the PERF metrics in CI; fail on a regression above 20 %.
+- **TST-09 (P1) AI tests** with a mock provider that replays scripted streams and tool calls: golden diffs for every write tool; undo, change cards, checkpoints and cancellation; stale-write rejection; sanitizing of AI-written HTML; injected instructions in the hostile deck can't reach files, network or settings; credentials never appear in settings files, logs or IPC to the renderer.
+- **TST-10 (P1)** Integration tests with a sample ACP agent and an MCP client (from the SDKs' examples); provider contract tests, run on demand with real keys.
+- **TST-11 (P1) AI evaluation set:** about 25 realistic requests on corpus decks — fix spelling, translate, shorten, add a slide from an attachment, move and resize, restyle with a dark theme, change fonts, make a slide more visual — with a pass/fail rubric, run with at least one model per supported connection type before each release; results in `docs/AI_EVALS.md`.
 
 ---
 
-## 13. Later (P2) ideas
-- **Agent notes** (as in HTML Deck): pin a note to an object ("make this shorter"), stored in the file, so an AI coding agent such as Claude Code can apply it; optionally a built-in AI assistant for rewriting text or restyling.
+## 14. Later (P2) ideas
+- **Agent notes** (as in HTML Deck): pin a note to an object ("make this shorter"), stored in the file, for the AI Assistant or an AI coding agent such as Claude Code to apply later.
+- AI Assistant P2 items (§10): Microsoft 365 Copilot, Bedrock and Vertex connections, OpenRouter sign-in, image generation, the edit-block format, whole-deck generation from a prompt, per-deck instructions, before/after comparison.
 - Comments stored in the HTML for review rounds (as in Decktly).
 - Animations tab for formats that support it (reveal.js fragments and transitions, Animation Pane).
 - Presenter view and rehearsed timings.
@@ -877,32 +1068,37 @@ Settings are stored as JSON in the OS app-data folder. P2: portable mode; an adm
 
 ---
 
-## 14. Milestones
+## 15. Milestones
 
 | Milestone | Scope | Definition of done |
 |---|---|---|
 | **M0 — Foundations** | Monorepo; Electron shell with SEC-01; React + Fluent skeleton (title bar, empty ribbon, panes, status bar); light/dark; i18n scaffolding; CI building installers for all three OSes; SPIKE-1 | CI produces Windows, macOS and Linux installers; the app launches on all three; SPIKE-1 documented |
-| **M1 — Open, render, round-trip** | Source model + patch engine (SPIKE-2); document protocol; sandboxed live view + agent; generic and reveal.js adapters + Define Slides wizard (SPIKE-4); thumbnails; navigation; design viewport and zoom; Save (RT-01); AutoRecover; external-change detection | Every corpus deck opens and renders like Chrome; RT-01 passes for all of them; the hostile deck is contained |
+| **M1 — Open, render, round-trip** | Source model + patch engine (SPIKE-2); document protocol; sandboxed live view + bridge script; generic and reveal.js adapters + Define Slides wizard (SPIKE-4); thumbnails; navigation; design viewport and zoom; Save (RT-01); AutoRecover; external-change detection | Every corpus deck opens and renders like Chrome; RT-01 passes for all of them; the hostile deck is contained |
 | **M2 — Core editing** | Selection; overlay; move/resize/rotate with the positioning model and units (SPIKE-3); smart guides; nudge; text editing with basic formatting; undo/redo; clipboard; Format pane (Size & Position, Fill, Border, Text); status-bar path; context menus | Golden diffs pass; move/resize/text E2E tests pass on all three OSes |
 | **M3 — MVP: the Office experience** | Ribbon with all P0 commands; Backstage; QAT; contextual tabs; tooltips; message bars; shortcuts; slide operations with the layout gallery; pictures (insert/change); text box; links; theme colors; Format Background; Slide Show and browser preview; PDF export; Document Recovery UI | All P0 requirements met → **v0.9 (MVP)** |
-| **M4 — v1.0** | All P1 requirements: Format Painter, find/replace, Selection Pane, align/distribute/group, shapes, tables, icons, crop, picture styles, fonts, apply-to-all-similar, Code view, spell-check, Version History, PNG and single-file export, Options and Trust Center, Protected View, Marp/impress/Shower adapters, page mode, accessibility, help and onboarding, auto-update, signing | All P1 requirements met; QA checklist passed on all three OSes → **v1.0** |
-| **M5+** | P2 items, prioritized with the owner | — |
+| **M4 — AI Assistant** | §10 P1 requirements, starting with SPIKE-5: connections (API keys, Azure OpenAI / Microsoft Foundry, Continue with ChatGPT if eligible, GitHub Copilot, external agents), the pane, context and AI view, deck tools, review and undo, quick actions, MCP server mode, AI security | TST-09 and TST-10 pass on all three OSes; the evaluation set (TST-11) passes with the agreed models |
+| **M5 — v1.0** | All remaining P1 requirements: Format Painter, find/replace, Selection Pane, align/distribute/group, shapes, tables, icons, crop, picture styles, fonts, apply-to-all-similar, Code view, spell-check, Version History, PNG and single-file export, Options and Trust Center, Protected View, Marp/impress/Shower adapters, page mode, accessibility, help and onboarding, auto-update, signing | All P1 requirements met; QA checklist passed on all three OSes → **v1.0** |
+| **M6+** | P2 items, prioritized with the owner | — |
+
+M4 and M5 can be swapped if the owner wants the rest of v1.0 before the AI Assistant.
 
 ---
 
-## 15. Open questions and default assumptions
+## 16. Open questions and default assumptions
 Claude Code asks these before Milestone 1; if they stay unanswered, it proceeds with the defaults.
 
 | # | Question | Default |
 |---|---|---|
 | Q1 | Which tools generate your decks? Please share 3–5 real examples — they join the test corpus and tune slide detection. | AI-generated single-file decks, plus reveal.js |
 | Q2 | Are decks usually one self-contained file, or a folder with assets? | Both supported; single file most common |
-| Q3 | Final name, icon and license (internal tool or open source)? | "Deckhand", placeholder icon, private repository |
+| Q3 | Final name, icon and license (internal tool or open source)? The license also matters for AI: OpenAI currently offers ChatGPT plan usage to open-source and local personal apps, while other apps must apply (AIC-04). | "Deckhand", placeholder icon, private repository |
 | Q4 | Internal distribution (unsigned builds acceptable) or public (requires an Apple Developer ID and a Windows code-signing certificate)? | Unsigned internal builds first; signing configured but optional |
 | Q5 | UI languages besides English? | English only at launch, i18n-ready |
 | Q6 | Do colleagues edit the same files on shared drives (lock files) or through Git? Are comments needed? | Single-user editing; lock files and comments are P2 |
 | Q7 | Is PDF export enough, or is PowerPoint export (slides as pictures) needed? | PDF in the MVP; PPTX pictures in P2 |
 | Q8 | Corporate constraints: proxy, offline machines, MSI/Intune deployment, locked-down settings? | Per-user installers, system proxy support |
+| Q9 | Which AI accounts do the users have — API keys, Claude Max/Team, ChatGPT Plus/Pro, GitHub Copilot, Microsoft 365 Copilot, a company Azure OpenAI / Foundry? Does "Copilot" mean GitHub Copilot or Microsoft 365 Copilot? | API keys (Anthropic, OpenAI, Gemini), Azure OpenAI, Continue with ChatGPT and GitHub Copilot in M4; Microsoft 365 Copilot in P2 |
+| Q10 | May presentation content be sent to external AI providers under company policy, and to which ones? | AI stays inactive until a connection is added; administrators can restrict providers (AIS-06) |
 
 ---
 
@@ -917,7 +1113,7 @@ Written only when the user uses the related feature (RT-06):
 | Guides | `<meta name="deckhand:guides" content="v:960;h:540">` | The user adds guides |
 | Notes in generic decks (P2) | `<template data-deckhand-notes>…</template>` inside the slide | The user writes notes in a generic deck |
 
-**Never written:** `data-deckhand-id`, the agent script, editor stylesheets, `contenteditable`, `spellcheck`, selection/hover classes, temporary visibility or animation overrides. With the sidecar option (RT-06), everything above except notes goes to `<deck>.deckhand.json` instead.
+**Never written:** `data-deckhand-id`, the bridge script, AI-view references (`data-ref`) and asset placeholders (AIX-03), editor stylesheets, `contenteditable`, `spellcheck`, selection/hover classes, temporary visibility or animation overrides. With the sidecar option (RT-06), everything above except notes goes to `<deck>.deckhand.json` instead.
 
 ## Appendix B — Generic slide detection
 
@@ -951,3 +1147,16 @@ Written only when the user uses the related feature (RT-06):
 - Tauri CEF runtime (alpha) — https://docs.rs/crate/tauri-runtime-cef/latest
 - Electron security checklist — https://www.electronjs.org/docs/latest/tutorial/security
 - Fluent UI React v9 — https://react.fluentui.dev/
+- Sign in with ChatGPT, plan usage for apps (OpenAI) — https://developers.openai.com/siwc/token-sharing-open-source
+- Sign in with ChatGPT, preview limitations — https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations
+- Sign in with ChatGPT, UI/UX guidelines — https://developers.openai.com/siwc/ui-ux-guidelines
+- Use the Claude Agent SDK with your Claude plan (Anthropic) — https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan
+- Monthly API credits for Max and Team plans (Anthropic) — https://support.claude.com/en/articles/17154008-monthly-api-credits-for-max-and-team-plans
+- Claude Agent SDK overview — https://code.claude.com/docs/en/agent-sdk/overview
+- Gemini CLI terms of service — https://www.geminicli.com/docs/resources/tos-privacy
+- Gemini API billing and free tier — https://ai.google.dev/gemini-api/docs/billing
+- GitHub Copilot SDK — https://github.com/github/copilot-sdk
+- Microsoft 365 Copilot Chat API — https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/api/ai-services/chat/overview
+- OpenRouter OAuth PKCE — https://openrouter.ai/docs/use-cases/oauth-pkce
+- ACP Registry — https://agentclientprotocol.com/registry
+- Zed external agents and existing subscriptions — https://zed.dev/docs/ai/external-agents · https://zed.dev/docs/ai/use-an-existing-subscription

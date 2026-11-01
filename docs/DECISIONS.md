@@ -31,3 +31,6 @@ Committing `innerHTML` from the live DOM would silently change files in two case
 
 ## ADR-010 — Production build cannot be driven by Playwright
 The fuse `EnableNodeCliInspectArguments=false` (security) blocks Playwright's inspector attach. E2E runs against `out/` and against a *test variant* of the packaged app that differs only in that fuse (`electron-builder -c.electronFuses.enableNodeCliInspectArguments=true`). A separate test asserts the shipped build's fuses by reading the binary.
+
+## ADR-011 — Spec v1.1 adopted; AI Assistant and `bridge` rename deferred
+`docs/SPEC.md` is now v1.1 (adds the AI Assistant, §10, milestone M4). The spec renames the injected script from "agent" to "bridge script" (`packages/bridge`); code still uses `packages/agent` until a dedicated rename commit, to keep this change docs/fixtures-only. The corpus gained Marp, impress.js, Shower, fade/animation, canvas+SVG and remote-resource (Google Fonts, Tailwind CDN) decks plus a hidden AI-injection line in the hostile deck (TST-01 items 2-4, 6-7, 9-10, 15). Third-party framework files are not vendored: the decks reproduce each format's markup only.
