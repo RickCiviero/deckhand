@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { isInside, sanitizeRequestPath } from '@deckhand/core';
+import { registerAi } from './ai.js';
 import {
   DOC_SCHEME, MAX_FILE, buildLive, clearRecovery, closeDoc, createDoc, discardRecovery, docs, listRecovery, loadFromDisk, markHash,
   readRecovery, registerDocProtocol, saveDoc, setBlockedHandler, validateDeckPath, watchDoc, writeRecovery, type Doc,
@@ -178,6 +179,7 @@ function registerIpc(): void {
     return { docId: doc.id, name: path.basename(realFile), dir: path.dirname(realFile), bytes };
   };
 
+  registerAi((e) => { senderWin(e); });
   ipcMain.handle('app:open-dialog', async (e) => {
     const w = senderWin(e);
     const r = await dialog.showOpenDialog(w.win, { properties: ['openFile'], filters: [{ name: 'HTML presentations', extensions: ['html', 'htm'] }] });

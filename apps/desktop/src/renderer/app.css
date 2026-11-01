@@ -71,3 +71,26 @@ body { font: 13px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; overflo
 .crumb:hover { text-decoration: underline; }
 .zoom { display: flex; align-items: center; gap: 8px; }
 .dropveil { position: fixed; inset: 0; background: rgba(196,62,28,.35); display: grid; place-items: center; font-size: 22px; color: #fff; pointer-events: none; }
+.dock { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid rgba(128,128,128,.3); }
+.dock > .pane { flex: 1; border-left: 0; }
+.dockTabs { display: flex; border-bottom: 1px solid rgba(128,128,128,.3); }
+.dockTabs button { flex: 1; padding: 6px; background: none; border: 0; border-bottom: 2px solid transparent; color: inherit; cursor: pointer; font: inherit; }
+.dockTabs button.on { border-bottom-color: var(--accent); font-weight: 600; }
+.aipane { display: flex; flex-direction: column; gap: 6px; height: 100%; min-height: 0; font-size: 13px; }
+.aipane select, .aipane input, .aipane textarea { width: 100%; box-sizing: border-box; padding: 4px 6px; background: Field; color: FieldText; border: 1px solid rgba(128,128,128,.5); border-radius: 3px; font: inherit; }
+.aihead { display: flex; gap: 4px; align-items: center; }
+.aimsgs { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 6px; min-height: 120px; }
+.aimsg { padding: 6px 8px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+.aimsg.user { background: rgba(128,128,128,.22); align-self: flex-end; max-width: 90%; }
+.aimsg.assistant { background: rgba(128,128,128,.08); }
+.aimsg.step { font-size: 11px; opacity: .7; padding: 1px 8px; font-family: ui-monospace, monospace; }
+.aimsg.bad, .aimsg.error, .aierr { color: #d13438; }
+.aicard { border: 1px solid rgba(128,128,128,.4); border-radius: 6px; padding: 8px; }
+.aicard ul { margin: 4px 0 6px; padding-left: 18px; }
+.aiform { display: flex; flex-direction: column; gap: 6px; }
+.aiform label { display: flex; flex-direction: column; gap: 2px; }
+.aichip, .aiusage, .aiform small { font-size: 11px; opacity: .75; }
+.sugg { text-align: left; padding: 5px 8px; margin: 2px 0; background: none; border: 1px solid rgba(128,128,128,.4); border-radius: 6px; color: inherit; cursor: pointer; font: inherit; }
+.sugg:hover:not(:disabled) { background: rgba(128,128,128,.15); }
+.conns { padding-left: 16px; }
+.warn { color: #c19c00; }

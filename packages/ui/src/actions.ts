@@ -2,6 +2,7 @@
 import { deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, moveEdit } from './geometry';
 import { session, useStore } from './session';
+import { ai, useAi } from './ai';
 
 const st = () => useStore.getState();
 
@@ -208,6 +209,7 @@ export function installKeyboard(): () => void {
     const mod = e.ctrlKey || e.metaKey;
     const s = st();
     if (!s.loaded) return;
+    if (mod && e.altKey && e.key.toLowerCase() === 'i') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'ai' ? 'format' : 'ai'); return; }
     const k = e.key;
     if (mod && k.toLowerCase() === 's') { e.preventDefault(); void (e.shiftKey ? session.saveAs() : session.save()); return; }
     if (s.editing !== null) { if (k === 'Escape') { e.preventDefault(); void session.endEdit(true); } return; }

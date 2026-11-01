@@ -16,6 +16,7 @@
     "electron-vite": "^6.0.0",
     "vite": "^8.3.5",
     "@deckhand/agent": "*",
+    "@deckhand/ai": "*",
     "@deckhand/core": "*",
     "@deckhand/ui": "*",
     "zod": "^4.6.7"

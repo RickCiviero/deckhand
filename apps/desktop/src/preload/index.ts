@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
+export interface AiConnection { id: string; name: string; kind: 'anthropic' | 'openai' | 'compatible'; baseUrl: string; model: string; hasKey: boolean }
+
 /** Minimal typed bridge. Every call is re-validated in the main process; nothing here exposes Node or ipcRenderer. */
 const api = {
   openDialog: () => ipcRenderer.invoke('app:open-dialog'),
@@ -17,7 +19,15 @@ const api = {
   recoveryRead: (key: string) => ipcRenderer.invoke('recovery:read', key),
   recoveryDiscard: (key: string) => ipcRenderer.invoke('recovery:discard', key),
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', url),
-  on: (channel: 'open-request' | 'doc-event' | 'cmd', fn: (payload: unknown) => void) => {
+  ai: {
+    list: () => ipcRenderer.invoke('ai:list') as Promise<{ list: AiConnection[]; secure: boolean }>,
+    save: (c: object) => ipcRenderer.invoke('ai:save', c) as Promise<AiConnection[]>,
+    remove: (id: string) => ipcRenderer.invoke('ai:remove', id) as Promise<AiConnection[]>,
+    stream: (req: object) => ipcRenderer.invoke('ai:stream', req) as Promise<string>,
+    cancel: (id: string) => ipcRenderer.invoke('ai:cancel', id),
+    test: (id: string) => ipcRenderer.invoke('ai:test', id) as Promise<{ ok: boolean; error?: string }>,
+  },
+  on: (channel: 'open-request' | 'doc-event' | 'cmd' | 'ai-chunk', fn: (payload: unknown) => void) => {
     const h = (_e: unknown, p: unknown) => fn(p);
     ipcRenderer.on(channel, h);
     return () => { ipcRenderer.removeListener(channel, h); };

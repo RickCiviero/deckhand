@@ -4,6 +4,8 @@ import { Button, FluentProvider, MessageBar, MessageBarActions, MessageBarBody, 
 import { t } from '@deckhand/i18n';
 import { Canvas } from './Canvas';
 import { FormatPane } from './FormatPane';
+import { AiPane } from './AiPane';
+import { ai, useAi } from './ai';
 import { align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide } from './actions';
 import { session, useStore } from './session';
 
@@ -25,6 +27,7 @@ export async function openFromResult(r: unknown, slide?: number): Promise<void> 
 
 export function App(): JSX.Element {
   const s = useStore();
+  const dock = useAi((x) => x.dock);
   const [tab, setTab] = useState<Tab>('home');
   const [dark, setDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [dropping, setDropping] = useState(false);
@@ -115,6 +118,8 @@ export function App(): JSX.Element {
             <Cmd label={t('home.deleteSlide')} tip="Delete the current slide" disabled={!s.loaded || s.slides.length <= 1} onClick={deleteSlide} testid="cmd-del-slide" />
             <span className="sep" />
             <Cmd label={t('home.front')} tip="Bring to Front" disabled={!s.selection.length} onClick={() => arrange('front')} />
+            <Cmd label={t('home.ai')} tip="Open the AI Assistant (Ctrl+Alt+I)" disabled={!s.loaded} on={dock === 'ai'} onClick={() => ai.setDock(dock === 'ai' ? 'format' : 'ai')} testid="cmd-ai" />
+            <span className="sep" />
             <Cmd label={t('home.back')} tip="Send to Back" disabled={!s.selection.length} onClick={() => arrange('back')} />
             <Cmd label="⇤" tip="Align Left" disabled={!s.selection.length} onClick={() => align('left')} />
             <Cmd label="⇔" tip="Align Center" disabled={!s.selection.length} onClick={() => align('center')} />
@@ -166,7 +171,13 @@ export function App(): JSX.Element {
             ))}
           </aside>
           <section className="center"><Canvas /></section>
-          <FormatPane />
+          <div className="dock">
+            <div className="dockTabs" role="tablist">
+              <button role="tab" aria-selected={dock === 'format'} className={dock === 'format' ? 'on' : ''} onClick={() => ai.setDock('format')} data-testid="dock-format">Format</button>
+              <button role="tab" aria-selected={dock === 'ai'} className={dock === 'ai' ? 'on' : ''} onClick={() => ai.setDock('ai')} data-testid="dock-ai">AI Assistant</button>
+            </div>
+            {dock === 'ai' ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
+          </div>
         </main>
       )}
 

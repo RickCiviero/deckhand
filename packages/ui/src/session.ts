@@ -323,6 +323,9 @@ class Session {
     return true;
   }
 
+  /** The Editor was changed by something other than exec (AI deck tools): bring the UI and live view up to date. */
+  adopt(before: SourceDoc): void { this.afterChange(before, null, undefined); }
+
   undo(): void { this.stepHistory('undo'); }
   redo(): void { this.stepHistory('redo'); }
   private stepHistory(k: 'undo' | 'redo'): void {
