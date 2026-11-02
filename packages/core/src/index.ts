@@ -13,3 +13,4 @@ export * from './selectors.js';
 export * from './objects.js';
 export * from './find.js';
 export * from './fonts.js';
+export * from './group.js';

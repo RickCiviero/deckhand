@@ -19,6 +19,7 @@ const plain = (doc: SourceDoc, e: ElementInfo): string => textOf(doc, e).replace
 export function objectName(doc: SourceDoc, e: ElementInfo): { name: string; custom: boolean } {
   const custom = getAttr(e, NAME_ATTR);
   if (custom) return { name: custom, custom: true };
+  if (getAttr(e, 'data-deckhand-group') !== undefined) return { name: 'Group', custom: false };
   const clip = (s: string): string => (s.length > 28 ? `${s.slice(0, 28)}…` : s);
   if (/^h[1-6]$/.test(e.tag)) return { name: `Heading: ${clip(plain(doc, e))}`, custom: false };
   if (e.tag === 'img') {

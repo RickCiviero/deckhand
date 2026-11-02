@@ -13,7 +13,7 @@ import { FindBar } from './FindBar';
 import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
-import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, canHideSlides, toggleHideSlide, distribute, pickFormat, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, groupSelection, ungroupSelection, canHideSlides, toggleHideSlide, distribute, pickFormat, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'design' | 'show' | 'view';
@@ -180,6 +180,8 @@ export function App(): JSX.Element {
             <Cmd label="⇥" tip="Align Right" disabled={!s.selection.length} onClick={() => align('right')} />
             <Cmd label="↔" tip="Distribute Horizontally (three or more objects)" disabled={s.selection.length < 3} onClick={() => distribute('h')} testid="cmd-dist-h" />
             <Cmd label="↕" tip="Distribute Vertically (three or more objects)" disabled={s.selection.length < 3} onClick={() => distribute('v')} testid="cmd-dist-v" />
+            <Cmd label="Group" tip="Group the selected objects (Ctrl+G)" disabled={s.selection.length < 2} onClick={() => groupSelection()} testid="cmd-group" />
+            <Cmd label="Ungroup" tip="Ungroup (Ctrl+Shift+G)" disabled={s.selection.length !== 1} onClick={() => ungroupSelection()} testid="cmd-ungroup" />
           </>)}
           {tab === 'insert' && (<>
             <Cmd label={t('insert.picture')} tip="Insert a picture from a file" disabled={!s.loaded} onClick={() => void insertPicture()} testid="cmd-picture" />

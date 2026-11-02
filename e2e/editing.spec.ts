@@ -550,3 +550,34 @@ test('Design > Fonts replaces a family everywhere in one undo step', async () =>
   await save(c.page).catch(() => undefined);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
 });
+
+test('Group wraps two Free objects without moving them; Ungroup gives them back; Undo restores the bytes', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  const rect = (sel: string) => deckFrame(c.page).evaluate((s) => { const b = document.querySelector(s)!.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; }, sel);
+  const before = [await rect('.slide.active .title'), await rect('.slide.active .body')];
+  await c.page.getByTestId('dock-selection').click();
+  const items = c.page.getByTestId('sel-item');
+  await items.filter({ hasText: 'Quarterly Review' }).locator('.selname').click();
+  await items.filter({ hasText: 'Revenue grew' }).locator('.selname').click({ modifiers: ['Control'] });
+  await expect(c.page.getByTestId('cmd-group')).toBeEnabled();
+  await c.page.getByTestId('cmd-group').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await ready(c.page);
+  expect(await rect('.slide.active .title')).toEqual(before[0]);
+  expect(await rect('.slide.active .body')).toEqual(before[1]);
+  await save(c.page);
+  expect(c.text()).toMatch(/<div data-deckhand-group style="position: absolute; left: 160px; top: 120px; width: \d+(\.\d)?px; height: \d+(\.\d)?px;"><h1 class="title" style="left: 0px; top: 0px;">/);
+  // select the group in the Selection Pane (it is the object that contains the title) and ungroup it
+  await items.filter({ hasText: 'Group' }).first().locator('.selname').click();
+  await c.page.getByTestId('cmd-ungroup').click();
+  await ready(c.page);
+  expect(await rect('.slide.active .title')).toEqual(before[0]);
+  expect(await rect('.slide.active .body')).toEqual(before[1]);
+  await save(c.page);
+  expect(c.text()).not.toContain('data-deckhand-group');
+  await c.page.getByTestId('qat-undo').click();
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});

@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { removeAttrPatch, PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, patchCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { isObjectTag, groupCommand, groupProblem, isGroup, ungroupCommand, removeAttrPatch, PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, patchCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, distributeShifts, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -126,6 +126,50 @@ export function align(kind: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bo
     return { id: r.id, set: moveEdit(r, session.styleOf(r.id), dx / r.sx, dy / r.sy, c).set };
   });
   session.exec(styleMultiCommand('Align', edits));
+}
+
+const px = (n: number): string => `${Math.round(n * 10) / 10}px`;
+const freeRect = (r: { position: string; left: number | null; top: number | null; anchors: { right: boolean; bottom: boolean } | null; transform: string | null }): boolean =>
+  r.position === 'absolute' && r.left !== null && r.top !== null && !r.anchors?.right && !r.anchors?.bottom && (!r.transform || r.transform === 'none');
+
+/** Group (ARR-03): wrap the selected sibling objects in a div. Free objects get a wrapper with their bounding box and are re-positioned inside it. */
+export function groupSelection(): void {
+  const s = st();
+  const problem = groupProblem(session.doc, s.selection);
+  if (problem) { session.notify('info', problem); return; }
+  const rects = s.selection.map((id) => s.rects[id]);
+  if (rects.some((r) => !r)) { session.notify('info', 'The objects have not been measured yet. Try again in a moment.'); return; }
+  const rs = rects as NonNullable<(typeof rects)[number]>[];
+  const free = rs.map(freeRect);
+  if (free.every(Boolean)) {
+    const L = Math.min(...rs.map((r) => r.left!)); const T = Math.min(...rs.map((r) => r.top!));
+    const R = Math.max(...rs.map((r) => r.left! + r.w / r.sx)); const B = Math.max(...rs.map((r) => r.top! + r.h / r.sy));
+    const childSet = new Map(rs.map((r) => [r.id, { left: px(r.left! - L), top: px(r.top! - T) }] as const));
+    session.exec(groupCommand(s.selection, { position: 'absolute', left: px(L), top: px(T), width: px(R - L), height: px(B - T) }, childSet));
+  } else if (free.some(Boolean)) {
+    session.notify('info', 'Group needs all the objects to be positioned freely, or none of them. Use Position > Reset on the others first.');
+  } else {
+    session.exec(groupCommand(s.selection, null, new Map()));
+    session.notify('warning', 'The group stays in the page flow, so the layout may change. Undo (Ctrl+Z) puts it back.');
+  }
+}
+
+export function ungroupSelection(): void {
+  const s = st();
+  const id = s.selection[0];
+  if (id === undefined || s.selection.length !== 1 || !isGroup(session.doc, id)) { session.notify('info', 'Select a group made with Deckhand to ungroup it.'); return; }
+  const g = session.doc.byId(id)!;
+  const gr = s.rects[id];
+  const childSet = new Map<number, Record<string, string>>();
+  if (gr && freeRect(gr)) {
+    for (const k of g.children) {
+      const r = s.rects[k];
+      if (!r) { if (isObjectTag(session.doc.byId(k)?.tag ?? '')) { session.notify('info', 'The objects have not been measured yet. Try again in a moment.'); return; } continue; }
+      if (!freeRect(r)) { session.notify('info', 'A member of this group is not positioned freely, so it cannot be ungrouped safely.'); return; }
+      childSet.set(k, { left: px(r.left! + gr.left!), top: px(r.top! + gr.top!) });
+    }
+  }
+  session.exec(ungroupCommand(id, childSet));
 }
 
 export function distribute(axis: 'h' | 'v'): void {
@@ -273,6 +317,7 @@ export function installKeyboard(): () => void {
     const s = st();
     if (!s.loaded) return;
     if (mod && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h')) { e.preventDefault(); useStore.setState({ findOpen: true }); return; }
+    if (mod && e.key.toLowerCase() === 'g' && !e.altKey) { e.preventDefault(); if (e.shiftKey) ungroupSelection(); else groupSelection(); return; }
     if (e.key === 'F5') { e.preventDefault(); startShow(e.shiftKey ? s.slide : 0); return; }
     if (e.altKey && e.key === 'F10') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'selection' ? 'format' : 'selection'); return; }
     if (mod && e.altKey && e.key.toLowerCase() === 'i') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'ai' ? 'format' : 'ai'); return; }
