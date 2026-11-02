@@ -350,3 +350,28 @@ test('Options: Trust Center defaults apply to the next opened document; AI can b
   await expect(c.page.getByTestId('live-view')).toHaveAttribute('sandbox', '', { timeout: 15000 });
   await expect(c.page.getByTestId('dock-ai')).toHaveCount(0);
 });
+
+test('Define Slides: choose the slide element; saved as one meta tag; reset restores the original bytes', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await clickObj(c.page, '.slide.active .title');
+  await c.page.getByTestId('tab-design').click();
+  await c.page.getByTestId('cmd-define-slides').click();
+  await expect(c.page.getByTestId('define-dialog')).toBeVisible();
+  await c.page.getByTestId('define-selector').fill('div');
+  await expect(c.page.getByTestId('define-count')).toContainText('1 slide');
+  await c.page.getByTestId('define-selector').fill('p:hover');
+  await expect(c.page.getByRole('alert')).toBeVisible();
+  await c.page.getByTestId('define-selector').fill('section');
+  await expect(c.page.getByTestId('define-count')).toContainText('3 slides');
+  await c.page.getByTestId('define-apply').click();
+  await expect(c.page.locator('[data-testid=savestate]')).toHaveText('Unsaved changes');
+  await expect(c.page.getByTestId('adapter-chip')).toHaveText('custom', { timeout: 10000 });
+  await save(c.page);
+  expect(c.text()).toContain('<meta name="deckhand:slides" content="section">');
+  await c.page.getByTestId('tab-design').click();
+  await c.page.getByTestId('cmd-define-slides').click();
+  await c.page.getByTestId('define-reset').click();
+  await save(c.page);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});

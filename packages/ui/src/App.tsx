@@ -6,12 +6,13 @@ import { Canvas } from './Canvas';
 import { FormatPane } from './FormatPane';
 import { AiPane } from './AiPane';
 import { Backstage } from './Backstage';
+import { DefineSlides } from './DefineSlides';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
 import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
 import { session, useStore } from './session';
 
-type Tab = 'file' | 'home' | 'insert' | 'show' | 'view';
+type Tab = 'file' | 'home' | 'insert' | 'design' | 'show' | 'view';
 
 function Cmd({ label, tip, onClick, disabled, on, testid }: { label: string; tip: string; onClick: () => void; disabled?: boolean; on?: boolean; testid?: string }): JSX.Element {
   return (
@@ -54,6 +55,7 @@ export function App(): JSX.Element {
   const [dropping, setDropping] = useState(false);
   const [backstage, setBackstage] = useState(false);
   const [link, setLink] = useState<string | null>(null);
+  const [defining, setDefining] = useState(false);
   const [recovery, setRecovery] = useState<{ key: string; file: string; time: number }[]>([]);
   useEffect(() => { if (!s.loaded) void window.deckhand.recoveryList().then((r) => setRecovery(r as typeof recovery)).catch(() => undefined); }, [s.loaded]);
   const recover = async (r: { key: string; file: string }) => {
@@ -132,7 +134,7 @@ export function App(): JSX.Element {
 
       <nav className="ribbon">
         <div className="tabrow" role="tablist">
-          {(['file', 'home', 'insert', 'show', 'view'] as Tab[]).map((x) => (
+          {(['file', 'home', 'insert', 'design', 'show', 'view'] as Tab[]).map((x) => (
             <button key={x} role="tab" aria-selected={tab === x} className={tab === x ? 'on' : ''} onClick={() => (x === 'file' ? setBackstage(true) : setTab(x))} data-testid={`tab-${x}`}>{t(`tab.${x}`)}</button>
           ))}
         </div>
@@ -175,6 +177,11 @@ export function App(): JSX.Element {
             <span className="sep" />
             <Cmd label={t('insert.link')} tip={s.editing !== null ? 'Link the selected text to a web address' : 'Select some text while editing first'} disabled={s.editing === null} onClick={() => setLink('https://')} testid="cmd-link" />
             <Cmd label={t('insert.changePicture')} tip={s.selection.length && s.loaded && session.doc.byId(s.selection[0]!)?.tag === 'img' ? 'Replace the selected picture, keeping its size and position' : 'Select a picture first'} disabled={!(s.loaded && s.selection.length && session.doc.byId(s.selection[0]!)?.tag === 'img')} onClick={() => void changePicture()} testid="cmd-change-picture" />
+          </>)}
+          {tab === 'design' && (<>
+            <Cmd label={t('design.defineSlides')} tip="Tell Deckhand which element is a slide, if it guessed wrong" disabled={!s.loaded} onClick={() => setDefining(true)} testid="cmd-define-slides" />
+            <Cmd label={t('design.background')} tip="Open Format Background in the side pane" disabled={!s.loaded} onClick={() => { ai.setDock('format'); useStore.setState({ selection: [] }); }} />
+            <Cmd label={t('design.colors')} tip="Theme colors" disabled={!s.loaded} onClick={() => ai.setDock('format')} />
           </>)}
           {tab === 'show' && (<>
             <Cmd label={t('show.fromStart')} tip="Start the slide show from the first slide (F5)" disabled={!s.loaded} onClick={() => startShow(0)} testid="cmd-show-start" />
@@ -256,13 +263,14 @@ export function App(): JSX.Element {
             <button key={e.id} className="crumb" onClick={() => useStore.setState({ selection: [e.id] })}>{i > 0 ? ' › ' : ''}{e.tag}{(() => { const c = (e.attrs.find((a) => a.name === 'class')?.value ?? '').split(/\s+/)[0]; return c ? `.${c}` : ''; })()}</button>
           ))}
         </span>
-        <span className="chip">{s.detection ? `${s.detection.adapter}` : ''}</span>
+        <span className="chip" data-testid="adapter-chip">{s.detection ? `${s.detection.adapter}` : ''}</span>
         <label className="zoom">
           <input type="range" min={10} max={400} value={Math.round(s.zoom * 100)} onChange={(e) => useStore.setState({ fit: false, zoom: Number(e.target.value) / 100 })} aria-label="Zoom" />
           <span data-testid="zoom">{Math.round(s.zoom * 100)}%</span>
         </label>
       </footer>
       {backstage && <Backstage onClose={() => setBackstage(false)} open={() => void open()} onOpenPath={(f) => void window.deckhand.openPath(f).then((r) => openFromResult(r)).catch((e: Error) => session.notify('error', cleanErr(e)))} />}
+      {defining && s.loaded && <DefineSlides onClose={() => setDefining(false)} />}
       {link !== null && (
         <div className="linkbar" role="dialog" aria-label="Insert link" data-testid="link-dialog">
           <input autoFocus value={link} onChange={(e) => setLink(e.target.value)} aria-label="Address" data-testid="link-url"

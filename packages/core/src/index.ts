@@ -9,3 +9,4 @@ export * from './liveview.js';
 export * from './commands.js';
 export * from './layouts.js';
 export * from './info.js';
+export * from './selectors.js';

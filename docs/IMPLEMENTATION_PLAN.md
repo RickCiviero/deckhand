@@ -21,7 +21,7 @@ Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 | Source model + patch engine (SPIKE-2), RT-01/02/05 | ✅ | byte-identical no-op save on all 10 corpus decks incl. windows-1252+CRLF, BOM, malformed |
 | Document protocol, sandboxed live view, agent | ✅ | |
 | Generic + reveal.js + page adapters (SPIKE-4) | 🟡 | 11/11 corpus decks detected correctly; Marp/impress/Shower ⬜ |
-| Define Slides wizard | ⬜ | low-confidence decks show a warning bar only |
+| Define Slides wizard | ✅ | Design > Define Slides…: proposals from the selection and its parents, live match count, selector subset (tag, class, id, attribute, > and descendant); stored as <meta name="deckhand:slides">; Reset restores the file byte-exactly |
 | Thumbnails (RND-09) | 🟡 | hidden-window JPEGs, refreshed ≤ ~1 s after an edit; slides reached by pressing → (vertical reveal stacks and non-key decks may show the wrong slide) |
 | Design viewport presets, zoom | 🟡 | zoom/fit ✅; fixed 1920×1080 viewport, presets ⬜ |
 | Atomic save, external-change detection | ✅ | |
@@ -74,3 +74,7 @@ Still open in M3: Backstage (Info, Recent, Options), Links dialog, Preview in Br
 ### M3 progress (update 2)
 Added and e2e-tested: Backstage (Open + Recent, Info with format/encoding/external domains, Save, Save As, Export PDF), Insert > Link (http(s)/mailto/# only; retargets an existing link), idempotent end-of-edit so Esc followed by Ctrl+S joins one round trip.
 Still open in M3: Preview in Browser, Options / Trust Center UI, theme *Fonts*, Define Slides wizard, contextual tabs, changing the detected format from Info.
+
+### M3 progress (update 3)
+Added and tested: Options (Trust Center defaults for scripts and remote content, AI on/off, AI external-content permission, tool-call limit), Define Slides wizard, Design tab. Fixed two real bugs found by the new tests: settings patches reset other settings to defaults, and stale geometry measured before an edit could make a nudge lose a pixel.
+Still open in M3: Preview in Browser, theme Fonts, contextual tabs, administrator policy file, "Ask" mode for remote content.

@@ -1,5 +1,6 @@
 /** Deck adapters: slide detection (Appendix B + reveal.js). Static pass only; the live pass refines in the UI. */
 import { getAttr, type ElementInfo, type SourceDoc } from './source.js';
+import { matchSelector, storedSlideSelector } from './selectors.js';
 
 export interface SlideRef {
   /** Element id of the slide root. */
@@ -9,7 +10,7 @@ export interface SlideRef {
 }
 
 export interface Detection {
-  adapter: 'revealjs' | 'marp' | 'impress' | 'shower' | 'generic' | 'page';
+  adapter: 'custom' | 'revealjs' | 'marp' | 'impress' | 'shower' | 'generic' | 'page';
   confidence: number;
   slides: SlideRef[];
   /** Suggested CSS-like selector for the Define Slides wizard. */
@@ -102,6 +103,14 @@ function detectGeneric(doc: SourceDoc): Detection | null {
 }
 
 export function detectDeck(doc: SourceDoc): Detection {
+  // a definition the user made (Define Slides) wins over every heuristic
+  const stored = storedSlideSelector(doc);
+  if (stored) {
+    try {
+      const ids = matchSelector(doc, stored);
+      if (ids.length) return { adapter: 'custom', confidence: 1, slides: ids.map((id, i) => ({ id, label: label(doc, doc.byId(id)!, i) })), selector: stored };
+    } catch { /* an unusable stored selector falls back to detection */ }
+  }
   const reveal = detectReveal(doc);
   if (reveal) return reveal;
   const framework = detectMarp(doc) ?? detectImpress(doc) ?? detectShower(doc);
