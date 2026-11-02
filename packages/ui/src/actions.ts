@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { removeAttrPatch, PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, patchCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, distributeShifts, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -159,6 +159,19 @@ export function newSlide(from: number | 'blank'): void {
   const idx = st().slide;
   session.exec(newSlideCommand(from, el.id, el.id));
   session.goTo(idx + 1);
+}
+
+/** Hide Slide (SLD-02): only where the format has a hide marker, which is reveal.js `data-visibility="hidden"`. */
+export const canHideSlides = (): boolean => st().detection?.adapter === 'revealjs';
+export function toggleHideSlide(): void {
+  const el = slideElement();
+  if (!el || !canHideSlides()) return;
+  const hidden = getAttr(el, 'data-visibility') === 'hidden';
+  session.exec(patchCommand(hidden ? 'Show slide' : 'Hide slide', (d) => {
+    const e = d.byId(el.id);
+    const p = e ? (hidden ? removeAttrPatch(d, e, 'data-visibility') : setAttrPatch(d, e, 'data-visibility', 'hidden')) : null;
+    return p ? [p] : [];
+  }));
 }
 
 export function deleteSlide(): void {

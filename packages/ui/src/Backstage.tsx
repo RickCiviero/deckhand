@@ -57,8 +57,8 @@ export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; 
             <p className="hint">These are the starting values for each presentation you open. The View tab changes them for the open one.</p>
             <label className="opt"><input type="checkbox" checked={s.settings.scripts} data-testid="opt-scripts" onChange={(e) => void save({ scripts: e.target.checked })} /> Run the presentation's scripts while editing (they always run in a sandbox)</label>
             <label className="opt">Remote content (fonts, pictures, scripts from the internet)
-              <select value={s.settings.remote} data-testid="opt-remote" onChange={(e) => void save({ remote: e.target.value as 'allow' | 'block' })}>
-                <option value="allow">Allow</option><option value="block">Block</option>
+              <select value={s.settings.remote} data-testid="opt-remote" onChange={(e) => void save({ remote: e.target.value as 'allow' | 'block' | 'ask' })}>
+                <option value="allow">Allow</option><option value="ask">Ask me when a presentation uses it</option><option value="block">Block</option>
               </select>
             </label>
             <h3>AI Assistant</h3>

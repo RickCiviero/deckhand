@@ -477,7 +477,7 @@ test('Format Painter copies visual style (not position) to the next selected obj
   await c.page.getByTestId('tab-home').click();
   await c.page.getByTestId('cmd-painter').click();
   await clickObj(c.page, '.slide.active .body');
-  await expect(c.page.getByTestId('cmd-painter')).not.toHaveAttribute('class', /primary/);
+  await expect(c.page.getByTestId('cmd-painter')).toHaveAttribute('aria-pressed', 'false');
   await save(c.page);
   const out = c.text();
   const body = /<p class="body" style="([^"]*)">/.exec(out)?.[1] ?? '';
@@ -500,4 +500,21 @@ test('Distribute needs three objects, moves only the middle one, and one Undo re
   await c.page.getByTestId('qat-undo').click();
   await save(c.page).catch(() => undefined);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});
+
+test('Remote content "Ask": a deck with external content opens blocked, and the message bar can allow it', async () => {
+  c = await launch('remote-fonts-tailwind.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-file').click();
+  await c.page.getByTestId('bs-options').click();
+  await c.page.getByTestId('opt-remote').selectOption('ask');
+  await expect.poll(() => { try { return JSON.parse(fs.readFileSync(path.join(c.userData, 'settings.json'), 'utf8')).remote; } catch { return null; } }).toBe('ask');
+  await c.page.getByRole('button', { name: 'Open', exact: true }).click();
+  await c.page.getByTestId('recent-item').first().click(); // reopen: the new default applies
+  const bar = c.page.locator('[data-testid=msgbar]', { hasText: 'loads content from the internet' });
+  await expect(bar).toContainText('blocked for now', { timeout: 15000 });
+  await c.page.getByTestId('tab-view').click();
+  await expect(c.page.getByTestId('cmd-remote')).toHaveAttribute('aria-pressed', 'false');
+  await bar.getByRole('button', { name: 'Allow' }).click();
+  await expect(c.page.getByTestId('cmd-remote')).toHaveAttribute('aria-pressed', 'true');
 });

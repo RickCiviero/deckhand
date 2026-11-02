@@ -12,7 +12,7 @@ import { FindBar } from './FindBar';
 import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
-import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, distribute, pickFormat, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, canHideSlides, toggleHideSlide, distribute, pickFormat, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'design' | 'show' | 'view';
@@ -21,7 +21,7 @@ function Cmd({ label, tip, onClick, onDouble, disabled, on, testid }: { label: s
   return (
     <Tooltip content={tip} relationship="description" withArrow>
       {/* mousedown default prevented so formatting buttons do not steal the text selection from the live view */}
-      <Button size="small" appearance={on ? 'primary' : 'subtle'} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onClick} onDoubleClick={onDouble} data-testid={testid}>{label}</Button>
+      <Button size="small" appearance={on ? 'primary' : 'subtle'} disabled={disabled} aria-pressed={on} onMouseDown={(e) => e.preventDefault()} onClick={onClick} onDoubleClick={onDouble} data-testid={testid}>{label}</Button>
     </Tooltip>
   );
 }
@@ -194,6 +194,7 @@ export function App(): JSX.Element {
           {tab === 'show' && (<>
             <Cmd label={t('show.fromStart')} tip="Start the slide show from the first slide (F5)" disabled={!s.loaded} onClick={() => startShow(0)} testid="cmd-show-start" />
             <Cmd label={t('show.fromCurrent')} tip="Start the slide show from this slide (Shift+F5)" disabled={!s.loaded} onClick={() => startShow(s.slide)} testid="cmd-show-current" />
+            <Cmd label={t('show.hide')} tip={canHideSlides() ? 'Hide or show this slide in the slide show' : "Hide Slide isn't available for this presentation format"} on={!!s.slides[s.slide]?.hidden} disabled={!s.loaded || !canHideSlides()} onClick={() => toggleHideSlide()} testid="cmd-hide-slide" />
             <Cmd label={t('show.browser')} tip="Open the current state in your default browser (served from this computer only, stops when you close the document)" disabled={!s.loaded} onClick={() => previewInBrowser()} testid="cmd-preview" />
           </>)}
           {tab === 'view' && (<>

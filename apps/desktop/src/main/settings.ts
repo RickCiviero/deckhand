@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 const fields = z.object({
   scripts: z.boolean(), // SEC-06: run deck scripts while editing
-  remote: z.enum(['allow', 'block']), // SEC-05: remote fonts, images and scripts
+  remote: z.enum(['allow', 'block', 'ask']), // SEC-05; ask = start blocked when the deck uses external content, with a message bar to allow it: remote fonts, images and scripts
   aiEnabled: z.boolean(), // AIG-06
   aiAllowExternal: z.boolean(), // AIS-04
   aiMaxToolCalls: z.number().int().min(1).max(200), // AIT-04

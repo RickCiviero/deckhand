@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import {
   Editor, openBytes, saveBytes, detectDeck, getAttr, moveCommand, resizeCommand, setStyleCommand, setInnerHtmlCommand, deleteElementCommand,
   duplicateElementCommand, reorderCommand, findOutsideRefs, resetPositionCommand, styleMultiCommand, parseSource, setStyleProp, textOf, isSimpleInlineHtml, inlineTagSequence, escapeText, type Detection, type ElementInfo,
-  type Patch, type SourceDoc,
+  type Patch, type SourceDoc, externalDomains,
 } from '@deckhand/core';
 import { z } from 'zod';
 
@@ -144,8 +144,15 @@ class Session {
     set({ thumbs: {} });
     const cfg = await window.deckhand.settings.get().catch(() => null);
     if (cfg) {
-      set({ settings: cfg, scriptsOn: cfg.scripts, remote: cfg.remote === 'allow' });
-      await window.deckhand.setPolicy(r.docId, cfg.remote);
+      const domains = cfg.remote === 'ask' ? externalDomains(doc) : [];
+      const allow = cfg.remote === 'allow' || (cfg.remote === 'ask' && !domains.length);
+      set({ settings: cfg, scriptsOn: cfg.scripts, remote: allow });
+      await window.deckhand.setPolicy(r.docId, allow ? 'allow' : 'block');
+      if (cfg.remote === 'ask' && domains.length) {
+        this.notify('warning', `This presentation loads content from the internet (${domains.slice(0, 3).join(', ')}${domains.length > 3 ? '…' : ''}). It is blocked for now.`, [
+          { label: 'Allow', run: () => { set({ remote: true }); void window.deckhand.setPolicy(r.docId, 'allow').then(() => this.reload()); } },
+        ]);
+      }
     }
     await this.reload();
     this.requestThumbs(true);

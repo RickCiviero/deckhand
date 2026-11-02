@@ -185,3 +185,22 @@ test('Esc selects the parent object; Ctrl+A selects all top-level objects', asyn
   await c.page.keyboard.press('Escape'); // the slide itself is not an object: Esc on a top-level object deselects (SEL-03)
   await expect(c.page.locator('[data-testid=path] button')).toHaveCount(0);
 });
+
+test('Hide Slide toggles reveal.js data-visibility, is one undo step, and is disabled for other formats', async () => {
+  c = await launch('reveal-style.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-show').click();
+  await c.page.getByTestId('cmd-hide-slide').click();
+  await expect(c.page.getByTestId('thumb-0')).toHaveClass(/hidden/);
+  await save(c.page);
+  expect(c.text()).toBe(original('reveal-style.html').toString('latin1').replace('<section>', '<section data-visibility="hidden">'));
+  await c.page.getByTestId('cmd-hide-slide').click();
+  await expect(c.page.getByTestId('thumb-0')).not.toHaveClass(/hidden/);
+  await save(c.page);
+  expect(c.read().equals(original('reveal-style.html'))).toBe(true);
+  await c.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined);
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-show').click();
+  await expect(c.page.getByTestId('cmd-hide-slide')).toBeDisabled();
+});
