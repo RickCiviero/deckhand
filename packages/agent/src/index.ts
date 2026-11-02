@@ -426,6 +426,8 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     ev.stopImmediatePropagation();
     port = ev.ports[0];
     port.onmessage = (me) => handle(me.data);
+    // decks that size their stage from innerWidth/innerHeight when their script first runs can be left at scale(0) if the frame had no size yet; one resize makes them fit again
+    requestAnimationFrame(() => { if (win.innerWidth > 0) win.dispatchEvent(new Event('resize')); });
     send({ t: 'ready', title: doc.title.slice(0, 200), url: String(location.pathname).slice(0, 500) });
   }, true);
 
