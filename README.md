@@ -72,10 +72,10 @@ Uninstall: drag **Deckhand** from Applications to the Bin. Settings live in `~/L
 <details>
 <summary><b>🐧 Linux (x64) — Debian / Ubuntu (.deb)</b></summary>
 
-1. Download **`Deckhand-<version>-linux-x64.deb`** from the [Releases page](https://github.com/RickCiviero/deckhand/releases).
+1. Download **`Deckhand-<version>-linux-amd64.deb`** from the [Releases page](https://github.com/RickCiviero/deckhand/releases).
 2. Install it (this also pulls in the libraries Electron needs):
    ```bash
-   sudo apt install ./Deckhand-*-linux-x64.deb
+   sudo apt install ./Deckhand-*-linux-amd64.deb
    ```
 3. Start it from the application menu, or from a terminal:
    ```bash
@@ -88,11 +88,11 @@ Uninstall: `sudo apt remove deckhand`. Settings live in `~/.config/Deckhand`.
 <details>
 <summary><b>🐧 Linux (x64) — any distribution (AppImage)</b></summary>
 
-1. Download **`Deckhand-<version>-linux-x64.AppImage`** from the [Releases page](https://github.com/RickCiviero/deckhand/releases).
+1. Download **`Deckhand-<version>-linux-x86_64.AppImage`** from the [Releases page](https://github.com/RickCiviero/deckhand/releases).
 2. Make it executable and run it:
    ```bash
-   chmod +x Deckhand-*-linux-x64.AppImage
-   ./Deckhand-*-linux-x64.AppImage ~/slides/my-deck.html
+   chmod +x Deckhand-*-linux-x86_64.AppImage
+   ./Deckhand-*-linux-x86_64.AppImage ~/slides/my-deck.html
    ```
 3. AppImages need FUSE 2. On Ubuntu 22.04 or later install it with `sudo apt install libfuse2` (Fedora: `sudo dnf install fuse-libs`).
 
