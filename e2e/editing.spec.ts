@@ -448,3 +448,18 @@ test('Code view: shows the source, applies a code edit as one undo step, and fol
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
   await expect(c.page.getByTestId('code-view')).not.toContainText('note from code view');
 });
+
+test('Code view: embedded pictures are folded, and an edit that adds HTML errors is held back until confirmed', async () => {
+  c = await launch('base64-images.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-view').click();
+  await c.page.getByTestId('view-code').click();
+  await expect(c.page.locator('.cm-datafold').first()).toContainText('data:image/png;base64,…');
+  await c.page.getByTestId('code-content').click();
+  await c.page.keyboard.press(`${MOD}+End`);
+  await c.page.keyboard.type('</div></div></span><');
+  await expect(c.page.getByTestId('code-status')).toContainText('Not applied', { timeout: 8000 });
+  await expect(c.page.getByTestId('savestate')).not.toHaveText('Unsaved changes');
+  await c.page.getByTestId('code-apply-anyway').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+});

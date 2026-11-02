@@ -13,3 +13,5 @@ playwright-report/
 !docs/**/*.png
 apps/desktop/release/
 apps/desktop/release-test/
+
+graphify-out/

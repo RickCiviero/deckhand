@@ -43,3 +43,11 @@ describe('Find and Replace', () => {
     expect(findText(e.doc, 'zzz')).toHaveLength(0);
   });
 });
+
+import { parseErrors } from './source.js';
+describe('parseErrors', () => {
+  it('is empty for clean html and reports tokenizer errors', () => {
+    expect(parseErrors('<!DOCTYPE html><html><head><title>t</title></head><body><p>x</p></body></html>')).toEqual([]);
+    expect(parseErrors('<!DOCTYPE html><title>t</title><p a="1" a="2">x</p>').length).toBeGreaterThan(0);
+  });
+});

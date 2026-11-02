@@ -144,3 +144,10 @@ export function setTextPatch(doc: SourceDoc, el: ElementInfo, html: string): Pat
   if (el.endTagStart === null) throw new Error('Element has no content range');
   return { start: el.startTagEnd, end: el.endTagStart, text: html };
 }
+
+/** HTML5 parse errors with their offsets (CODE-03). The parser never rejects a file, so "invalid" means more errors than before. */
+export function parseErrors(text: string): { code: string; offset: number }[] {
+  const out: { code: string; offset: number }[] = [];
+  parse(text, { onParseError: (e) => { if (out.length < 200) out.push({ code: e.code, offset: e.startOffset }); } });
+  return out;
+}

@@ -309,4 +309,4 @@ Read [`CLAUDE.md`](CLAUDE.md) (commands, architecture, rules) and [`docs/DECISIO
 
 ## License
 
-No license has been chosen yet, so by default all rights are reserved. Until one is added, please ask before reusing the code.
+Deckhand is free software under the [Apache License 2.0](LICENSE): use it, change it, share it, commercially or not. It comes with no warranty. Contributors also grant a patent licence for what they contribute.
