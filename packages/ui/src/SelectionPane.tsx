@@ -42,7 +42,7 @@ export function SelectionPane(): JSX.Element {
                 onBlur={(e) => { session.exec(renameObjectCommand(n.id, e.target.value)); setEditing(null); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); else if (e.key === 'Escape') setEditing(null); }} />
             ) : (
-              <span className="selname" onClick={(e) => useStore.setState({ selection: e.shiftKey || e.ctrlKey ? [...new Set([...s.selection, n.id])] : [n.id] })} onDoubleClick={() => setEditing(n.id)} title="Double-click to rename">{n.name}</span>
+              <span className="selname" onClick={(e) => useStore.setState({ selection: e.shiftKey || e.ctrlKey || e.metaKey ? [...new Set([...s.selection, n.id])] : [n.id] })} onDoubleClick={() => setEditing(n.id)} title="Double-click to rename">{n.name}</span>
             )}
             <button className="selbtn" aria-label={n.hidden ? 'Show' : 'Hide'} title={n.hidden ? 'Show' : 'Hide'} aria-pressed={n.hidden} onClick={() => session.exec(hideObjectsCommand([n.id], !n.hidden))} data-testid="sel-eye">{n.hidden ? '🚫' : '👁'}</button>
             <button className="selbtn" aria-label={n.locked ? 'Unlock' : 'Lock'} title={n.locked ? 'Unlock' : 'Lock'} aria-pressed={n.locked} onClick={() => session.exec(lockObjectCommand(n.id, !n.locked))} data-testid="sel-lock">{n.locked ? '🔒' : '🔓'}</button>

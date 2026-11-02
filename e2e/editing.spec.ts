@@ -562,7 +562,7 @@ test('Group wraps two Free objects without moving them; Ungroup gives them back;
   await c.page.getByTestId('dock-selection').click();
   const items = c.page.getByTestId('sel-item');
   await items.filter({ hasText: 'Quarterly Review' }).locator('.selname').click();
-  await items.filter({ hasText: 'Revenue grew' }).locator('.selname').click({ modifiers: ['Control'] });
+  await items.filter({ hasText: 'Revenue grew' }).locator('.selname').click({ modifiers: [MOD] });
   await expect(c.page.getByTestId('cmd-group')).toBeEnabled();
   await c.page.getByTestId('cmd-group').click();
   await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
