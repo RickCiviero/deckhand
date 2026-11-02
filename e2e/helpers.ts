@@ -23,6 +23,8 @@ export async function launch(deck: string | null, exeArg?: string): Promise<Ctx>
   const app = await electron.launch(exe ? { executablePath: exe, args, env } : { args, env });
   const page = await app.firstWindow();
   await page.waitForSelector('[data-testid=app]');
+  // CI desktops (xvfb without a window manager, a mac runner with no active app) never focus the window; an unfocused page gets keys late or not at all
+  await app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows()[0]; w?.show(); w?.focus(); w?.webContents.focus(); }).catch(() => undefined);
   if (deck) await page.waitForSelector('[data-testid=live-view]');
   return { app, page, dir, deckDir, file, userData, read: () => fs.readFileSync(file), text: () => fs.readFileSync(file, 'latin1') };
 }
