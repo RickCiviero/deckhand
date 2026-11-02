@@ -535,3 +535,18 @@ test('Selection Pane: dragging an object up the list moves it later in the file 
   await save(c.page).catch(() => undefined);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
 });
+
+test('Design > Fonts replaces a family everywhere in one undo step', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-design').click();
+  await c.page.getByTestId('cmd-fonts').click();
+  await expect(c.page.getByTestId('fonts-from')).toContainText('Georgia (1)');
+  await c.page.getByTestId('fonts-to').fill('Open Sans');
+  await c.page.getByTestId('fonts-apply').click();
+  await save(c.page);
+  expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1').replace('font-family: Georgia, serif', 'font-family: "Open Sans", serif'));
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});

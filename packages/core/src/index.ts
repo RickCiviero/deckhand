@@ -12,3 +12,4 @@ export * from './info.js';
 export * from './selectors.js';
 export * from './objects.js';
 export * from './find.js';
+export * from './fonts.js';
