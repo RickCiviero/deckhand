@@ -19,7 +19,8 @@ export async function launch(deck: string | null, exeArg?: string): Promise<Ctx>
   const args = exe ? [`--user-data-dir=${userData}`] : [path.join(ROOT, 'apps/desktop'), `--user-data-dir=${userData}`];
   if (process.platform === 'linux' && process.env['CI']) args.push('--no-sandbox'); // CI containers lack the SUID chrome-sandbox helper
   if (deck) args.push(file);
-  const app = await electron.launch(exe ? { executablePath: exe, args } : { args });
+  const env = { ...process.env, DECKHAND_NO_BROWSER: '1' } as Record<string, string>; // Preview in Browser must not start a real browser during tests
+  const app = await electron.launch(exe ? { executablePath: exe, args, env } : { args, env });
   const page = await app.firstWindow();
   await page.waitForSelector('[data-testid=app]');
   if (deck) await page.waitForSelector('[data-testid=live-view]');

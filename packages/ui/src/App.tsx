@@ -12,7 +12,7 @@ import { FindBar } from './FindBar';
 import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
-import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'design' | 'show' | 'view';
@@ -191,6 +191,7 @@ export function App(): JSX.Element {
           {tab === 'show' && (<>
             <Cmd label={t('show.fromStart')} tip="Start the slide show from the first slide (F5)" disabled={!s.loaded} onClick={() => startShow(0)} testid="cmd-show-start" />
             <Cmd label={t('show.fromCurrent')} tip="Start the slide show from this slide (Shift+F5)" disabled={!s.loaded} onClick={() => startShow(s.slide)} testid="cmd-show-current" />
+            <Cmd label={t('show.browser')} tip="Open the current state in your default browser (served from this computer only, stops when you close the document)" disabled={!s.loaded} onClick={() => previewInBrowser()} testid="cmd-preview" />
           </>)}
           {tab === 'view' && (<>
             <Cmd label={t('view.normal')} tip="Slide editing" on={s.viewMode === 'normal'} disabled={!s.loaded} onClick={() => useStore.setState({ viewMode: 'normal' })} testid="view-normal" />

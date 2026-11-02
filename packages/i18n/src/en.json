@@ -6,6 +6,6 @@
   "insert": { "textBox": "Text Box", "picture": "Pictures", "link": "Link", "changePicture": "Change Picture" },
   "view": { "normal": "Normal", "code": "Code", "split": "Split", "scripts": "Run deck scripts", "smart": "Smart Guides", "fit": "Fit to Window", "remote": "Allow external content" },
   "design": { "defineSlides": "Define Slides…", "background": "Format Background", "colors": "Theme Colors" },
-  "show": { "fromStart": "From Beginning", "fromCurrent": "From Current Slide" },
+  "show": { "fromStart": "From Beginning", "fromCurrent": "From Current Slide", "browser": "Preview in Browser" },
   "status": { "slide": "Slide {{n}} of {{total}}" }
 }

@@ -7,6 +7,7 @@ import { isInside, sanitizeRequestPath } from '@deckhand/core';
 import { registerAi } from './ai.js';
 import { registerSettings } from './settings.js';
 import { exportPdf, renderThumbs, startShow } from './show.js';
+import { previewInBrowser, stopAllPreviews, stopPreview } from './preview.js';
 import {
   DOC_SCHEME, MAX_FILE, buildLive, clearRecovery, closeDoc, createDoc, discardRecovery, docs, listRecovery, loadFromDisk, markHash,
   readRecovery, registerDocProtocol, saveDoc, setBlockedHandler, validateDeckPath, watchDoc, writeRecovery, type Doc,
@@ -82,7 +83,7 @@ function createWindow(): Win {
     else if (r === 1) { w.closing = true; win.close(); }
   });
   win.on('closed', () => {
-    if (w.doc) closeDoc(w.doc);
+    if (w.doc) { stopPreview(w.doc.id); closeDoc(w.doc); }
     wins.delete(id);
   });
   if (isDev && DEV_URL) void win.loadURL(DEV_URL);
@@ -188,7 +189,7 @@ function registerIpc(): void {
     const w = senderWin(e);
     const p = validateDeckPath(file);
     const { bytes, realFile } = await loadFromDisk(p);
-    if (w.doc) closeDoc(w.doc);
+    if (w.doc) { stopPreview(w.doc.id); closeDoc(w.doc); }
     const doc = await createDoc(e.sender, realFile, bytes);
     w.doc = doc; w.dirty = false;
     w.win.setTitle(`${path.basename(realFile)} - Deckhand`);
@@ -285,6 +286,10 @@ function registerIpc(): void {
     }
     return { src: 'images/' + encodeURIComponent(name), ...dims };
   });
+  ipcMain.handle('show:preview', (e, a: unknown) => {
+    const { docId } = z.object({ docId: idSchema }).parse(a);
+    return previewInBrowser(ownedDoc(e, docId));
+  });
   ipcMain.handle('show:start', (e, a: unknown) => {
     const { docId, slide } = z.object({ docId: idSchema, slide: z.number().int().min(0).max(5000) }).parse(a);
     startShow(ownedDoc(e, docId), slide);
@@ -340,5 +345,6 @@ if (!app.requestSingleInstanceLock()) {
     if (file) void openInWindow(file, slide); else createWindow();
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   });
+  app.on('will-quit', stopAllPreviews);
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 }

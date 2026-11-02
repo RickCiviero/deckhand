@@ -1,3 +1,4 @@
+import http from 'node:http';
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -48,4 +49,24 @@ test('Thumbnails render per slide and refresh after an edit', async () => {
   await clickObj(c.page, '.slide.active .logo');
   await dragObj(c.page, '.slide.active .logo', -300, 200);
   await expect.poll(() => c.page.getByTestId('timg-0').getAttribute('src'), { timeout: 20000 }).not.toBe(before);
+});
+
+test('Preview in Browser serves the current state and the deck folder on 127.0.0.1 only', async () => {
+  c = await launch('multi-file.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-show').click();
+  await c.page.getByTestId('cmd-preview').click();
+  const msg = await c.page.getByTestId('msgbar').filter({ hasText: 'Preview running at' }).textContent();
+  const url = /(http:\/\/127\.0\.0\.1:\d+\/[0-9a-f]{32}\/[^\s]+)/.exec(msg ?? '')![1]!;
+  const ok = await fetch(url);
+  expect(ok.status).toBe(200);
+  expect(ok.headers.get('content-type')).toContain('text/html');
+  expect(await ok.text()).not.toContain('data-deckhand');
+  const base = url.slice(0, url.indexOf('/', url.indexOf('/', 8) + 1) + 1);
+  expect((await fetch(base + 'assets/theme.css')).status).toBe(200);
+  expect((await fetch(base + '..%2f..%2fpackage.json')).status).toBeGreaterThanOrEqual(400);
+  expect((await fetch(url.replace(/\/[0-9a-f]{32}\//, '/' + '0'.repeat(32) + '/'))).status).toBe(404); // wrong token
+  const u = new URL(url); // fetch cannot override Host, so use a raw request
+  const status = await new Promise<number>((ok) => { http.get({ host: '127.0.0.1', port: u.port, path: u.pathname, headers: { Host: 'evil.example:' + u.port } }, (r) => { r.resume(); ok(r.statusCode ?? 0); }); });
+  expect(status).toBe(403); // DNS-rebinding guard
 });

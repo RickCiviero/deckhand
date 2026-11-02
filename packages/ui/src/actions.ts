@@ -216,6 +216,11 @@ export function startShow(from: number): void {
   if (id) void window.deckhand.startShow(id, from);
 }
 
+export function previewInBrowser(): void {
+  const id = st().docId;
+  if (id) void window.deckhand.previewInBrowser(id).then((u) => session.notify('info', `Preview running at ${String(u)} (this computer only; stops when you close the document)`)).catch((e: Error) => session.notify('error', `Could not start the preview: ${e.message}`));
+}
+
 export async function exportPdf(): Promise<void> {
   const s = st();
   if (!s.docId) return;
