@@ -148,6 +148,7 @@ test('text editing keeps entities and untouched markup when only part of the tex
   await editAt(c.page, t.x - t.w / 2 + 30, t.y); // selects the word "Revenue"
   await c.page.keyboard.press(`${MOD}+b`);
   await c.page.keyboard.press('Escape');
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes'); // the Esc commit is asynchronous: saving before it lands would save nothing
   await save(c.page);
   // Windows word-selection includes the trailing space; the untouched &mdash; and &amp; entities must survive (RT-02)
   expect(c.text()).toMatch(/<strong>Revenue ?<\/strong> ?grew <strong>12%<\/strong> &mdash; best quarter &amp; a record\./);
@@ -196,6 +197,7 @@ test('insert a text box: Free div inside the current slide', async () => {
   await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Hello box');
   await c.page.keyboard.press('Escape');
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes'); // the Esc commit is asynchronous: saving before it lands would save nothing
   await save(c.page);
   expect(c.text()).toMatch(/<div style="position: absolute; left: \d+px; top: \d+px; width: 400px;">Hello box<\/div>/);
 });
@@ -218,6 +220,7 @@ test('windows-1252 + CRLF deck: edit keeps encoding and line endings', async () 
   await c.page.keyboard.press(`${MOD}+a`);
   await c.page.keyboard.type('Crème brûlée 日本');
   await c.page.keyboard.press('Escape');
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes'); // the Esc commit is asynchronous: saving before it lands would save nothing
   await save(c.page);
   const buf = c.read();
   const s = buf.toString('latin1');
@@ -399,4 +402,49 @@ test('Selection Pane: select, rename, hide and lock objects; a locked object can
   expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1')
     .replace('<div class="logo">', '<div class="logo" data-deckhand-name="Logo">')
     .replace('<p class="body">Revenue', '<p class="body" style="display: none;">Revenue'));
+});
+
+test('Find and Replace: counts matches across slides, replaces one or all, one Undo', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.keyboard.press(`${MOD}+f`);
+  await c.page.getByTestId('find-query').fill('o');
+  await c.page.getByTestId('find-query').fill('Roadmap');
+  await expect(c.page.getByTestId('find-count')).toContainText('1 of 1 on 1 slide');
+  await c.page.getByTestId('find-query').press('Enter');
+  await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 2 of 3');
+  await c.page.getByTestId('find-replacement').fill('Plan & Roadmap');
+  await c.page.getByTestId('find-replace').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await c.page.getByLabel('Match case').check();
+  await c.page.getByTestId('find-query').fill('Q');
+  await expect(c.page.getByTestId('find-count')).toContainText('of 2');   // "Quarterly" and "Questions?"
+  await c.page.getByTestId('find-replacement').fill('X');
+  await c.page.getByTestId('find-replace-all').click();
+  await save(c.page);
+  expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1')
+    .replace('Roadmap', 'Plan &amp; Roadmap').replace('Quarterly', 'Xuarterly').replace('Questions?', 'Xuestions?'));
+  await c.page.getByTestId('find-query').press('Escape');
+  await expect(c.page.getByTestId('find-bar')).toHaveCount(0);
+});
+
+test('Code view: shows the source, applies a code edit as one undo step, and follows canvas edits', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-view').click();
+  await c.page.getByTestId('view-code').click();
+  await expect(c.page.getByTestId('code-view')).toContainText('Fixed stage deck');
+  await c.page.getByTestId('code-content').click();
+  await c.page.keyboard.press(`${MOD}+End`);
+  await c.page.keyboard.type('<!-- note from code view -->');
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes', { timeout: 8000 }); // applied after 1 s idle
+  await save(c.page);
+  expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1') + '<!-- note from code view -->');
+  await c.page.getByTestId('view-split').click();
+  await expect(c.page.getByTestId('code-view')).toBeVisible();
+  await expect(c.page.getByTestId('live-view')).toBeVisible();
+  await c.page.getByTestId('qat-undo').click(); // the QAT undoes the document; Ctrl+Z inside the code box is the box's own history
+  await save(c.page);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+  await expect(c.page.getByTestId('code-view')).not.toContainText('note from code view');
 });

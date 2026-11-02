@@ -83,3 +83,8 @@ Still open in M3: Preview in Browser, theme Fonts, contextual tabs, administrato
 Done and tested: Selection Pane (Alt+F10: topmost-first tree, rename → `data-deckhand-name`, hide → inline `display: none`, lock → `data-deckhand-locked`, Show/Hide All; locked objects cannot be moved, resized, nudged or deleted), Define Slides (see M3), Marp/impress/Shower detection, Insert > Link, Insert/Change Picture.
 Not done in the Selection Pane: drag to reorder, "generated" markers.
 Not started in M5: Format Painter, find/replace, group/distribute, shapes, tables, icons, crop, picture styles, fonts, apply-to-all-similar, Code view, spell-check, Version History, PNG and single-file export, Protected View, page mode polish, accessibility pass, help and onboarding, auto-update, signing, `agent` → `bridge` rename.
+
+### M5 progress (update 2)
+Done and tested: Find and Replace (Ctrl+F / Ctrl+H; plain-text match across all slides, through entities, match case / whole word, replace one or all as one undo step, replacement always escaped), Code view and Split (CodeMirror 6; edits apply as one undo step after 1 s idle or on Apply; selecting an object puts the caret on its start tag, moving the caret selects the object).
+Known limits of the Code view: files over 2 MB of source are refused (no folding of long data: URIs yet); an edit that leaves invalid HTML is applied anyway (HTML5 parsing never rejects), where CODE-03 asks for error highlighting; no Edit HTML… dialog (CODE-04); Ctrl+Z inside the code box is the box's own history, the QAT Undo is the document's.
+Find and Replace limits: no regular expressions, no Replace Fonts, searches slide text only (not notes or attributes).

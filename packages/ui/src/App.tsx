@@ -8,6 +8,8 @@ import { AiPane } from './AiPane';
 import { Backstage } from './Backstage';
 import { DefineSlides } from './DefineSlides';
 import { SelectionPane } from './SelectionPane';
+import { FindBar } from './FindBar';
+import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
 import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
@@ -163,6 +165,7 @@ export function App(): JSX.Element {
             <Cmd label={t('home.newSlide')} tip="Duplicate the current slide (Ctrl+D)" disabled={!s.loaded} onClick={duplicateSlide} testid="cmd-dup-slide" />
             <Cmd label={t('home.deleteSlide')} tip="Delete the current slide" disabled={!s.loaded || s.slides.length <= 1} onClick={deleteSlide} testid="cmd-del-slide" />
             <span className="sep" />
+            <Cmd label={t('home.find')} tip="Find text on the slides (Ctrl+F)" disabled={!s.loaded} onClick={() => useStore.setState({ findOpen: true })} testid="cmd-find" />
             <Cmd label={t('home.selectAll')} tip="Select all objects on the slide (Ctrl+A)" disabled={!s.loaded} onClick={() => selectAll()} />
             <Cmd label={t('home.front')} tip="Bring to Front" disabled={!s.selection.length} onClick={() => arrange('front')} />
             {s.settings.aiEnabled && <Cmd label={t('home.ai')} tip="Open the AI Assistant (Ctrl+Alt+I)" disabled={!s.loaded} on={dock === 'ai'} onClick={() => ai.setDock(dock === 'ai' ? 'format' : 'ai')} testid="cmd-ai" />}
@@ -189,6 +192,10 @@ export function App(): JSX.Element {
             <Cmd label={t('show.fromCurrent')} tip="Start the slide show from this slide (Shift+F5)" disabled={!s.loaded} onClick={() => startShow(s.slide)} testid="cmd-show-current" />
           </>)}
           {tab === 'view' && (<>
+            <Cmd label={t('view.normal')} tip="Slide editing" on={s.viewMode === 'normal'} disabled={!s.loaded} onClick={() => useStore.setState({ viewMode: 'normal' })} testid="view-normal" />
+            <Cmd label={t('view.code')} tip="Edit the HTML source" on={s.viewMode === 'code'} disabled={!s.loaded} onClick={() => useStore.setState({ viewMode: 'code' })} testid="view-code" />
+            <Cmd label={t('view.split')} tip="Slide and source side by side" on={s.viewMode === 'split'} disabled={!s.loaded} onClick={() => useStore.setState({ viewMode: 'split' })} testid="view-split" />
+            <span className="sep" />
             <Cmd label={t('view.fit')} tip="Fit to window (Ctrl+0)" disabled={!s.loaded} onClick={() => useStore.setState({ fit: true })} />
             <Cmd label={t('view.smart')} tip="Smart guides while dragging" on={s.smart} onClick={() => useStore.setState({ smart: !s.smart })} />
             <Cmd label={t('view.scripts')} tip="Off gives a static view for decks whose scripts get in the way" on={s.scriptsOn} disabled={!s.loaded}
@@ -247,7 +254,10 @@ export function App(): JSX.Element {
               </div>
             ))}
           </aside>
-          <section className="center"><Canvas /></section>
+          <section className={`center ${s.viewMode}`}>
+            {s.viewMode !== 'code' && <Canvas />}
+            {s.viewMode !== 'normal' && <CodeView />}
+          </section>
           <div className="dock">
             <div className="dockTabs" role="tablist">
               <button role="tab" aria-selected={dock === 'selection'} className={dock === 'selection' ? 'on' : ''} onClick={() => ai.setDock('selection')} data-testid="dock-selection">Selection</button>
@@ -273,6 +283,7 @@ export function App(): JSX.Element {
         </label>
       </footer>
       {backstage && <Backstage onClose={() => setBackstage(false)} open={() => void open()} onOpenPath={(f) => void window.deckhand.openPath(f).then((r) => openFromResult(r)).catch((e: Error) => session.notify('error', cleanErr(e)))} />}
+      {s.findOpen && s.loaded && <FindBar onClose={() => useStore.setState({ findOpen: false })} />}
       {defining && s.loaded && <DefineSlides onClose={() => setDefining(false)} />}
       {link !== null && (
         <div className="linkbar" role="dialog" aria-label="Insert link" data-testid="link-dialog">

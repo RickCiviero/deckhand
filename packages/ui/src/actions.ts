@@ -234,6 +234,7 @@ export function installKeyboard(): () => void {
     const mod = e.ctrlKey || e.metaKey;
     const s = st();
     if (!s.loaded) return;
+    if (mod && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h')) { e.preventDefault(); useStore.setState({ findOpen: true }); return; }
     if (e.key === 'F5') { e.preventDefault(); startShow(e.shiftKey ? s.slide : 0); return; }
     if (e.altKey && e.key === 'F10') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'selection' ? 'format' : 'selection'); return; }
     if (mod && e.altKey && e.key.toLowerCase() === 'i') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'ai' ? 'format' : 'ai'); return; }
