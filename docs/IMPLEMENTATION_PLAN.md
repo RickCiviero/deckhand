@@ -66,3 +66,7 @@ M3 (full ribbon, Backstage, layout gallery, pictures, links, Format Background, 
 
 ## M3 progress
 Done and e2e-tested: Slide Show (F5 / Shift+F5, Esc exits, link confirmation), PDF export (image-based, pdf-lib), Document Recovery UI, thumbnails, Slide Show tab. Preview in Browser, Backstage, full ribbon, layout gallery, pictures, links, Format Background are still open.
+
+### M3 progress (update)
+Added and e2e-tested: New Slide gallery from the deck's own layouts + Blank (ADP-07), Format Background, Insert/Change Picture with alt text (files copied to `images/` next to the deck, never overwritten), Home clipboard buttons, text alignment, font colour, Select All.
+Still open in M3: Backstage (Info, Recent, Options), Links dialog, Preview in Browser, theme *Fonts*, Define Slides wizard, contextual tabs (Picture Format etc.), message-bar actions for blocked content.

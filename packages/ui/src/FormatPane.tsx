@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { getStyleProp, type Patch } from '@deckhand/core';
 import { detectUnitMode, moveEdit, resizeEdit } from './geometry';
 import { session, styleMultiCommand, useStore, type Rect } from './session';
+import { setAltText } from './actions';
 
 interface ThemeColor { name: string; value: string; start: number; end: number }
 
@@ -139,6 +140,14 @@ export function FormatPane(): JSX.Element {
             </div>
             <button className="small" onClick={() => setAll('Reset position', { translate: null })}>Reset position</button>
           </section>
+          {r.tag === 'img' && (
+            <section>
+              <h4>Picture</h4>
+              <label className="num wide"><span>Alt text</span>
+                <input type="text" data-testid="fp-alt" key={r.id + session.doc.text.length} defaultValue={(session.doc.byId(r.id)?.attrs.find((a) => a.name === 'alt')?.value) ?? ''} onBlur={(e) => setAltText(e.target.value)} />
+              </label>
+            </section>
+          )}
           <section>
             <h4>Fill</h4>
             <div className="row">

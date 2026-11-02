@@ -261,3 +261,43 @@ test('Format Background changes only the slide element\'s style', async () => {
   await save(c.page);
   expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1').replace('<section class="slide active" data-slide="1">', '<section class="slide active" data-slide="1" style="background-color: #123456;">'));
 });
+
+test('Insert and change a picture; alt text; the file is copied next to the deck', async () => {
+  c = await launch('plain-page.html');
+  await ready(c.page);
+  const pngB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const os = await import('node:os');
+  const dirA = fs.mkdtempSync(path.join(os.tmpdir(), 'dh-pic-'));
+  const picA = path.join(dirA, 'My Photo!.png');
+  fs.writeFileSync(picA, Buffer.from(pngB64, 'base64'));
+  const stub = (f: string) => c.app.evaluate(({ dialog }, file) => { (dialog as unknown as { showOpenDialog: unknown }).showOpenDialog = async () => ({ canceled: false, filePaths: [file] }); }, f);
+  await stub(picA);
+  await c.page.getByTestId('tab-insert').click();
+  await c.page.getByTestId('cmd-picture').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes', { timeout: 10000 });
+  await save(c.page);
+  expect(c.text()).toMatch(/<img src="images\/My-Photo-\.png" alt=""/);
+  expect(fs.existsSync(path.join(c.deckDir, 'images', 'My-Photo-.png'))).toBe(true);
+  expect(c.text()).not.toContain('data-deckhand');
+
+  const picB = path.join(dirA, 'Other.png');
+  fs.writeFileSync(picB, Buffer.from(pngB64, 'base64'));
+  await stub(picB);
+  await clickObj(c.page, 'img');
+  await c.page.getByTestId('fp-alt').fill('A pixel');
+  await c.page.getByTestId('fp-alt').blur();
+  await c.page.getByTestId('cmd-change-picture').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await save(c.page);
+  expect(c.text()).toMatch(/<img src="images\/Other\.png" alt="A pixel" style=/);
+});
+
+test('Home: align text and font colour change only the selected object\'s style', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await clickObj(c.page, '.slide.active .body');
+  await c.page.getByTestId('txt-center').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await save(c.page);
+  expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1').replace('<p class="body">Revenue', '<p class="body" style="text-align: center;">Revenue'));
+});

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, session, shell, net, Menu, type WebContents, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, protocol, session, shell, net, Menu, type WebContents, type IpcMainInvokeEvent } from 'electron';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -237,6 +237,34 @@ function registerIpc(): void {
     const doc = ownedDoc(e, docId);
     doc.plainHtml = text; // thumbnails show the edited (unsaved) deck
     return renderThumbs(doc, indices, 320);
+  });
+  ipcMain.handle('doc:pick-image', async (e, a: unknown) => {
+    const { docId } = z.object({ docId: idSchema }).parse(a);
+    const doc = ownedDoc(e, docId);
+    const r = await dialog.showOpenDialog(senderWin(e).win, { properties: ['openFile'], filters: [{ name: 'Pictures', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const real = await fs.realpath(r.filePaths[0]);
+    const ext = path.extname(real).toLowerCase();
+    if (!['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(ext)) throw new Error('That is not a supported picture type.');
+    const st = await fs.stat(real);
+    if (!st.isFile() || st.size > 20 * 1024 * 1024) throw new Error('Pictures can be up to 20 MB.');
+    const size = nativeImage.createFromPath(real).getSize();
+    const dims = { w: size.width || 400, h: size.height || 300 };
+    // already inside the deck's folder: reference it where it is; otherwise copy it next to the deck (never overwrite)
+    if (isInside(doc.realDir, real, path.sep, process.platform === 'win32' || process.platform === 'darwin')) {
+      return { src: path.relative(doc.realDir, real).split(path.sep).map(encodeURIComponent).join('/'), ...dims };
+    }
+    const dir = path.join(doc.dir, 'images');
+    await fs.mkdir(dir, { recursive: true });
+    const base = path.basename(real, ext).replace(/[^\w.-]+/g, '-').slice(0, 60) || 'picture';
+    let name = base + ext;
+    for (let n = 2; ; n++) {
+      try { await fs.copyFile(real, path.join(dir, name), fs.constants.COPYFILE_EXCL); break; } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+        name = `${base}-${n}${ext}`;
+      }
+    }
+    return { src: 'images/' + encodeURIComponent(name), ...dims };
   });
   ipcMain.handle('show:start', (e, a: unknown) => {
     const { docId, slide } = z.object({ docId: idSchema, slide: z.number().int().min(0).max(5000) }).parse(a);

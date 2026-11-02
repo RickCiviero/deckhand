@@ -7,7 +7,7 @@ import { FormatPane } from './FormatPane';
 import { AiPane } from './AiPane';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
-import { newSlide, align, arrange, deleteSlide, duplicateSlide, exportPdf, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, exportPdf, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'show' | 'view';
@@ -141,17 +141,29 @@ export function App(): JSX.Element {
             <Cmd label={t('file.saveAs')} tip="Save a copy (Ctrl+Shift+S)" disabled={!s.loaded} onClick={() => void session.saveAs()} />
           </>)}
           {tab === 'home' && (<>
+            <Cmd label={t('home.paste')} tip="Paste (Ctrl+V)" disabled={!s.loaded} onClick={() => paste()} testid="cmd-paste" />
+            <Cmd label={t('home.cut')} tip="Cut (Ctrl+X)" disabled={!s.selection.length} onClick={() => copySelection(true)} />
+            <Cmd label={t('home.copy')} tip="Copy (Ctrl+C)" disabled={!s.selection.length} onClick={() => copySelection()} />
+            <span className="sep" />
             <Cmd label={t('home.undo')} tip="Undo (Ctrl+Z)" disabled={!s.canUndo} onClick={() => session.undo()} />
             <Cmd label={t('home.redo')} tip="Redo (Ctrl+Y)" disabled={!s.canRedo} onClick={() => session.redo()} />
             <span className="sep" />
             <Cmd label="B" tip="Bold (Ctrl+B) — while editing text" disabled={s.editing === null} onClick={() => session.format('bold')} testid="fmt-bold" />
             <Cmd label="I" tip="Italic (Ctrl+I)" disabled={s.editing === null} onClick={() => session.format('italic')} />
             <Cmd label="U" tip="Underline (Ctrl+U)" disabled={s.editing === null} onClick={() => session.format('underline')} />
+            <Tooltip content="Font color of the selected objects" relationship="description" withArrow>
+              <input type="color" aria-label="Font color" disabled={!s.selection.length} data-testid="font-color" onChange={(e) => setSelectionStyle('Change font color', { color: e.target.value })} />
+            </Tooltip>
+            <Cmd label="⯇" tip="Align Text Left" disabled={!s.selection.length} onClick={() => setSelectionStyle('Align text', { 'text-align': 'left' })} testid="txt-left" />
+            <Cmd label="≡" tip="Center Text" disabled={!s.selection.length} onClick={() => setSelectionStyle('Align text', { 'text-align': 'center' })} testid="txt-center" />
+            <Cmd label="⯈" tip="Align Text Right" disabled={!s.selection.length} onClick={() => setSelectionStyle('Align text', { 'text-align': 'right' })} />
+            <Cmd label="☰" tip="Justify" disabled={!s.selection.length} onClick={() => setSelectionStyle('Align text', { 'text-align': 'justify' })} />
             <span className="sep" />
             <NewSlideMenu disabled={!s.loaded} />
             <Cmd label={t('home.newSlide')} tip="Duplicate the current slide (Ctrl+D)" disabled={!s.loaded} onClick={duplicateSlide} testid="cmd-dup-slide" />
             <Cmd label={t('home.deleteSlide')} tip="Delete the current slide" disabled={!s.loaded || s.slides.length <= 1} onClick={deleteSlide} testid="cmd-del-slide" />
             <span className="sep" />
+            <Cmd label={t('home.selectAll')} tip="Select all objects on the slide (Ctrl+A)" disabled={!s.loaded} onClick={() => selectAll()} />
             <Cmd label={t('home.front')} tip="Bring to Front" disabled={!s.selection.length} onClick={() => arrange('front')} />
             <Cmd label={t('home.ai')} tip="Open the AI Assistant (Ctrl+Alt+I)" disabled={!s.loaded} on={dock === 'ai'} onClick={() => ai.setDock(dock === 'ai' ? 'format' : 'ai')} testid="cmd-ai" />
             <span className="sep" />
@@ -160,7 +172,12 @@ export function App(): JSX.Element {
             <Cmd label="⇔" tip="Align Center" disabled={!s.selection.length} onClick={() => align('center')} />
             <Cmd label="⇥" tip="Align Right" disabled={!s.selection.length} onClick={() => align('right')} />
           </>)}
-          {tab === 'insert' && <Cmd label={t('insert.textBox')} tip="Insert a text box" disabled={!s.loaded} onClick={() => insertTextBox()} testid="cmd-textbox" />}
+          {tab === 'insert' && (<>
+            <Cmd label={t('insert.picture')} tip="Insert a picture from a file" disabled={!s.loaded} onClick={() => void insertPicture()} testid="cmd-picture" />
+            <Cmd label={t('insert.textBox')} tip="Insert a text box" disabled={!s.loaded} onClick={() => insertTextBox()} testid="cmd-textbox" />
+            <span className="sep" />
+            <Cmd label={t('insert.changePicture')} tip={s.selection.length && s.loaded && session.doc.byId(s.selection[0]!)?.tag === 'img' ? 'Replace the selected picture, keeping its size and position' : 'Select a picture first'} disabled={!(s.loaded && s.selection.length && session.doc.byId(s.selection[0]!)?.tag === 'img')} onClick={() => void changePicture()} testid="cmd-change-picture" />
+          </>)}
           {tab === 'show' && (<>
             <Cmd label={t('show.fromStart')} tip="Start the slide show from the first slide (F5)" disabled={!s.loaded} onClick={() => startShow(0)} testid="cmd-show-start" />
             <Cmd label={t('show.fromCurrent')} tip="Start the slide show from this slide (Shift+F5)" disabled={!s.loaded} onClick={() => startShow(s.slide)} testid="cmd-show-current" />

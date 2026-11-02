@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -296,4 +296,68 @@ export function installKeyboard(): () => void {
   window.addEventListener('deckhand-cmd', onCmd);
   window.addEventListener('deckhand-key', onAgentKey);
   return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('deckhand-cmd', onCmd); window.removeEventListener('deckhand-key', onAgentKey); };
+}
+
+const errMsg = (e: unknown): string => (e as Error).message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
+
+/** Insert > Pictures: the main process copies the file next to the deck (IMG-02); the new <img> is a Free object on the current slide. */
+export async function insertPicture(): Promise<void> {
+  const s = st();
+  const slide = session.slideRoot();
+  const rect = s.rects[slide?.id ?? -1];
+  if (!s.docId || !slide || !rect || slide.endTagStart === null) return;
+  try {
+    const pic = await window.deckhand.pickImage(s.docId);
+    if (!pic) return;
+    const sw = rect.w / rect.sx;
+    const sh = rect.h / rect.sy;
+    const w = Math.round(Math.min(pic.w, sw * 0.6, (sh * 0.6 * pic.w) / pic.h));
+    const h = Math.round((w * pic.h) / pic.w);
+    const doc = session.doc;
+    const eol = doc.meta.eol === 'crlf' ? '\r\n' : '\n';
+    const lineStart = doc.text.lastIndexOf('\n', slide.endTagStart - 1) + 1;
+    const closeIndent = /^[ \t]*$/.test(doc.text.slice(lineStart, slide.endTagStart)) ? doc.text.slice(lineStart, slide.endTagStart) : null;
+    const html = `<img src="${pic.src}" alt="" style="position: absolute; left: ${Math.round((sw - w) / 2)}px; top: ${Math.round((sh - h) / 2)}px; width: ${w}px; height: ${h}px;">`;
+    const patches: Patch[] = [];
+    if (rect.position === 'static') {
+      const p = doc.byId(slide.id)!;
+      const cur = getAttr(p, 'style') ?? '';
+      patches.push(styleAttrPatch(p, getAttr(p, 'style') !== undefined, cur ? `${cur.replace(/;?\s*$/, '')}; position: relative;` : 'position: relative;'));
+    }
+    const at = closeIndent !== null ? lineStart : slide.endTagStart;
+    patches.push({ start: at, end: at, text: closeIndent !== null ? `${closeIndent}  ${html}${eol}` : html });
+    session.exec({ label: 'Insert picture', build: () => patches });
+  } catch (e) { session.notify('error', errMsg(e)); }
+}
+
+/** Picture Format > Change Picture: only the src attribute changes; size and position stay. */
+export async function changePicture(): Promise<void> {
+  const s = st();
+  const id = s.selection[0];
+  const el = id === undefined ? undefined : session.doc.byId(id);
+  if (!s.docId || !el || el.tag !== 'img') return;
+  try {
+    const pic = await window.deckhand.pickImage(s.docId);
+    if (!pic) return;
+    session.exec({ label: 'Change picture', build: (d) => [setAttrPatch(d, d.byId(el.id)!, 'src', pic.src)] });
+  } catch (e) { session.notify('error', errMsg(e)); }
+}
+
+export function setAltText(alt: string): void {
+  const id = st().selection[0];
+  if (id === undefined) return;
+  session.exec({ label: 'Change alt text', coalesceKey: `alt-${id}`, build: (d) => { const e = d.byId(id); return e ? [setAttrPatch(d, e, 'alt', alt)] : []; } });
+}
+
+/** Home > Paragraph / Font: whole-object formatting of the selection (range formatting happens while editing text). */
+export function setSelectionStyle(label: string, set: Record<string, string | null>): void {
+  const s = st();
+  if (!s.selection.length) return;
+  session.exec(styleMultiCommand(label, s.selection.map((id) => ({ id, set }))));
+}
+
+export function selectAll(): void {
+  const s = st();
+  const root = s.slides[s.slide]?.id ?? -2;
+  useStore.setState({ selection: s.slideObjects.filter((id) => session.doc.byId(id)?.parent === root) });
 }
