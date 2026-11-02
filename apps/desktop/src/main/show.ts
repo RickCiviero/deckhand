@@ -3,7 +3,40 @@ import { BrowserWindow, dialog, shell, type WebContents } from 'electron';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { PDFDocument } from 'pdf-lib';
+import { detectDeck, parseSource } from '@deckhand/core';
 import { DOC_SCHEME, type Doc } from './docs.js';
+
+/** The CSS selector of the slides when the deck has no framework of its own (class-based decks): arrow keys cannot be counted on there, because a key may reveal a build step instead of moving to the next slide. */
+function slideSelector(doc: Doc): string | null {
+  try {
+    const det = detectDeck(parseSource(doc.text, { encoding: 'utf-8', bom: false, eol: 'none' }));
+    return (det.adapter === 'generic' || det.adapter === 'custom') && det.selector && det.slides.length > 1 ? det.selector : null;
+  } catch { return null; }
+}
+// runs in the plain page (same logic as the editor's showSlide): show slide `idx` through the deck's own state class or display, and reveal build steps
+const JUMP = `(function (sel, idx) {
+  var els = Array.prototype.slice.call(document.querySelectorAll(sel)); var t = els[idx];
+  if (!t || els.length < 2) return false;
+  var STATE = /^(active|current|present|visible|is-active|is-current|show|shown)$/;
+  var holders = els.filter(function (e) { return Array.prototype.some.call(e.classList, function (c) { return STATE.test(c); }); });
+  var token = holders.length === 1 ? Array.prototype.find.call(holders[0].classList, function (c) { return STATE.test(c); }) : '';
+  if (token) els.forEach(function (e) { e.classList.toggle(token, e === t); });
+  else if (els.filter(function (e) { return e !== t && getComputedStyle(e).display === 'none'; }).length >= els.length - 2) els.forEach(function (e) { e.style.display = e === t ? '' : 'none'; });
+  else return false;
+  var st = document.createElement('style'); st.textContent = '[data-deckhand-reveal]{opacity:1!important;visibility:visible!important;transform:none!important}'; document.head.appendChild(st);
+  Array.prototype.forEach.call(t.querySelectorAll('[data-step],[data-fragment-index],.fragment,.step,.build'), function (e) { var c = getComputedStyle(e); if (c.opacity === '0' || c.visibility === 'hidden') e.setAttribute('data-deckhand-reveal', ''); });
+  return true;
+})`;
+const ACTIVE = `(function (sel) {
+  var els = Array.prototype.slice.call(document.querySelectorAll(sel));
+  var STATE = /^(active|current|present|visible|is-active|is-current|show|shown)$/;
+  var h = els.map(function (e, i) { return Array.prototype.some.call(e.classList, function (c) { return STATE.test(c); }) ? i : -1; }).filter(function (i) { return i >= 0; });
+  return h.length === 1 ? h[0] : -1;
+})`;
+/** Capture windows are not on screen, so CSS transitions run slowly there and a capture can catch two slides half-faded. Capture the settled state instead. */
+const settle = (wc: WebContents): Promise<unknown> => wc.insertCSS('*,*::before,*::after{transition:none!important;animation:none!important}').catch(() => undefined);
+const jumpTo = (wc: WebContents, sel: string, idx: number): Promise<boolean> => wc.executeJavaScript(`${JUMP}(${JSON.stringify(sel)}, ${idx})`, true).then((r) => r === true, () => false);
+const activeIndex = (wc: WebContents, sel: string): Promise<number> => wc.executeJavaScript(`${ACTIVE}(${JSON.stringify(sel)})`, true).then((r) => (typeof r === 'number' ? r : -1), () => -1);
 
 const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const WEB = { sandbox: true, contextIsolation: true, nodeIntegration: false, nodeIntegrationInWorker: false, webSecurity: true, allowRunningInsecureContent: false, webviewTag: false, spellcheck: false } as const;
@@ -41,7 +74,12 @@ export function startShow(doc: Doc, fromSlide: number): void {
   win.webContents.once('did-finish-load', () => {
     void (async () => {
       await delay(600);
-      for (let i = 0; i < fromSlide && !win.isDestroyed(); i++) { await key(win.webContents, 'Right'); await delay(150); }
+      const sel = slideSelector(doc);
+      for (let i = 0; i < (sel ? 80 : fromSlide) && !win.isDestroyed(); i++) {
+        // with build steps one key may only reveal a step, so look at which slide is showing instead of counting keys
+        if (sel && (await activeIndex(win.webContents, sel)) >= fromSlide) break;
+        await key(win.webContents, 'Right'); await delay(150);
+      }
     })();
   });
 }
@@ -54,15 +92,17 @@ export async function exportPdf(parent: BrowserWindow, doc: Doc, slideCount: num
   try {
     await win.loadURL(deckUrl(doc));
     await delay(1200);
+    await settle(win.webContents);
     const pdf = await PDFDocument.create();
     const n = Math.max(1, Math.min(slideCount, 500));
+    const sel = slideSelector(doc);
     for (let i = 0; i < n; i++) {
       await delay(500);
       const img = await win.webContents.capturePage();
       const { width, height } = img.getSize();
       const page = pdf.addPage([width, height]);
       page.drawImage(await pdf.embedPng(img.toPNG()), { x: 0, y: 0, width, height });
-      if (i < n - 1) await key(win.webContents, 'Right');
+      if (i < n - 1) { if (!(sel && await jumpTo(win.webContents, sel, i + 1))) await key(win.webContents, 'Right'); }
     }
     await fs.writeFile(r.filePath, await pdf.save());
     return r.filePath;
@@ -80,10 +120,15 @@ export function renderThumbs(doc: Doc, indices: number[], width: number): Promis
     try {
       await win.loadURL(deckUrl(doc));
       await delay(800);
+      await settle(win.webContents);
+      const sel = slideSelector(doc);
       let at = 0;
       for (const idx of [...new Set(indices)].sort((a, b) => a - b)) {
-        for (; at < idx; at++) { await key(win.webContents, 'Right'); await delay(120); }
-        await delay(250);
+        if (sel && await jumpTo(win.webContents, sel, idx)) { at = idx; await delay(300); }
+        else {
+          for (; at < idx; at++) { await key(win.webContents, 'Right'); await delay(120); }
+          await delay(250);
+        }
         const img = (await win.webContents.capturePage()).resize({ width });
         out[idx] = `data:image/jpeg;base64,${img.toJPEG(70).toString('base64')}`;
       }

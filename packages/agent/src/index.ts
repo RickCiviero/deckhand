@@ -13,6 +13,7 @@ declare const __DECKHAND_TOKEN__: string;
   const N = {
     qsa: Document.prototype.querySelectorAll.bind(doc),
     qs: Document.prototype.querySelector.bind(doc),
+    qsaOf: (root: Element, sel: string): Element[] => Array.from(Element.prototype.querySelectorAll.call(root, sel) as NodeListOf<Element>),
     elementsFromPoint: Document.prototype.elementsFromPoint.bind(doc),
     getComputedStyle: win.getComputedStyle.bind(win),
     getAttribute: Element.prototype.getAttribute,
@@ -122,10 +123,25 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   let slideIds: number[] = [];
   let stateToken: string | null = null;
   const STATE = /^(active|current|present|visible|is-active|is-current|show|shown)$/;
+  // Editing needs every object visible: build steps / fragments that the deck reveals one by one are shown while editing (live view only, never saved).
+  let revealStyle: HTMLStyleElement | null = null;
+  const BUILD = '[data-step],[data-fragment-index],.fragment,.step,.build';
+  const revealBuilds = (root: Element): void => {
+    if (!revealStyle) {
+      revealStyle = doc.createElement('style');
+      revealStyle.textContent = '[data-deckhand-reveal]{opacity:1!important;visibility:visible!important;transform:none!important}';
+      (doc.head ?? doc.documentElement).appendChild(revealStyle);
+    }
+    for (const e of N.qsaOf(root, BUILD) as Element[]) {
+      const cs = N.getComputedStyle(e);
+      if (cs.opacity === '0' || cs.visibility === 'hidden') N.setAttribute.call(e, 'data-deckhand-reveal', '');
+    }
+  };
   const showSlide = (index: number): void => {
     const els = slideIds.map(byId);
     const target = els[index];
     if (!target) return;
+    revealBuilds(target);
     if (stateToken === null) {
       const holders = els.filter((e): e is HTMLElement => !!e && N.from(e.classList).some((c) => STATE.test(c as string)));
       if (holders.length === 1) stateToken = (N.from(holders[0]!.classList) as string[]).find((c) => STATE.test(c)) ?? '';

@@ -67,8 +67,22 @@ function detectShower(doc: SourceDoc): Detection | null {
   return slides.length ? { adapter: 'shower', confidence: 0.97, slides: slides.map((s, i) => ({ id: s.id, label: label(doc, s, i) })), selector: 'section.slide' } : null;
 }
 
+/** `data-step` / `data-fragment-index` numbers shared by several siblings mark build steps inside one slide (several things appear at step 2), not separate slides. */
+const sharesStepNumbers = (kids: ElementInfo[]): boolean => {
+  const seen = new Set<string>();
+  for (const k of kids) {
+    const v = k.attrs.find((a) => a.name === 'data-step' || a.name === 'data-fragment-index')?.value;
+    if (v === undefined) continue;
+    if (seen.has(v)) return true;
+    seen.add(v);
+  }
+  return false;
+};
+
 function detectGeneric(doc: SourceDoc): Detection | null {
-  let best: { parent: ElementInfo; kids: ElementInfo[]; score: number } | null = null;
+  type Cand = { parent: ElementInfo; kids: ElementInfo[]; score: number };
+  const cands: Cand[] = [];
+  let best: Cand | null = null;
   for (const parent of doc.elements) {
     if (['head', 'ul', 'ol', 'table', 'tbody', 'select', 'svg'].includes(parent.tag)) continue;
     const groups = new Map<string, ElementInfo[]>();
@@ -89,8 +103,18 @@ function detectGeneric(doc: SourceDoc): Detection | null {
       if (kids.some((k) => classes(k).some((c) => /^(active|current|present|visible|is-active)$/.test(c)))) score += 3;
       if (kids.every((k) => classes(k).some((c) => CHROME.test(c)))) score -= 5;
       if (kids.length >= 3) score += 1;
+      if (kids.length >= 5) score += 1; // a long run of look-alike siblings is much more likely a deck than a layout
+      if (sharesStepNumbers(kids)) score -= 5; // build steps, not slides
+      cands.push({ parent, kids, score });
       if (!best || score > best.score) best = { parent, kids, score };
     }
+  }
+  // a group that sits inside a member of another solid group is the contents of one slide (steps, columns, cards), not the deck
+  for (let moved = true; best && moved;) {
+    moved = false;
+    const inside = best.parent;
+    const outer = cands.filter((c) => c !== best && c.score >= 5 && c.kids.some((k) => k.start <= inside.start && inside.end <= k.end)).sort((a, b) => b.score - a.score)[0];
+    if (outer) { best = outer; moved = true; }
   }
   if (!best || best.score < 3) return null;
   const cls = classes(best.kids[0]!).find((c) => SLIDE_CLASS.test(c));

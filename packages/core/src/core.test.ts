@@ -267,3 +267,15 @@ describe('text edit fidelity', () => {
     expect(isSimpleInlineHtml('<svg></svg>')).toBe(false);
   });
 });
+
+describe('generic detection on a deck with build steps (reported by a user)', () => {
+  it('finds the 8 slides, not the 9 build-step boxes inside one of them', async () => {
+    const { readFileSync } = await import('node:fs');
+    const doc = openBytes(readFileSync(new URL('../../../test-decks/decks/lorem-steps.html', import.meta.url)));
+    const det = detectDeck(doc);
+    expect(det.adapter).toBe('generic');
+    expect(det.slides).toHaveLength(8);
+    expect(det.selector).toBe('section.slide');
+    expect(det.slides.every((s) => doc.byId(s.id)!.tag === 'section')).toBe(true);
+  });
+});

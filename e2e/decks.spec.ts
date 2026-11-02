@@ -8,7 +8,7 @@ test.afterEach(async () => { await c?.app.evaluate(({ app }) => app.exit(0)).cat
 const original = (name: string): Buffer => fs.readFileSync(path.join(DECKS, 'decks', name));
 
 test.describe('every corpus deck opens and a no-op save is byte-identical', () => {
-  for (const name of ['ai-fixed-stage', 'responsive-scroll-snap', 'reveal-style', 'latin1-crlf', 'utf8-bom', 'malformed', 'plain-page', 'base64-images', 'multi-file', 'large-100']) {
+  for (const name of ['ai-fixed-stage', 'responsive-scroll-snap', 'reveal-style', 'latin1-crlf', 'utf8-bom', 'malformed', 'plain-page', 'base64-images', 'multi-file', 'large-100', 'lorem-steps']) {
     test(name, async () => {
       c = await launch(`${name}.html`);
       await ready(c.page);
@@ -203,4 +203,22 @@ test('Hide Slide toggles reveal.js data-visibility, is one undo step, and is dis
   await ready(c.page);
   await c.page.getByTestId('tab-show').click();
   await expect(c.page.getByTestId('cmd-hide-slide')).toBeDisabled();
+});
+
+test('class-based deck with build steps (user report): 8 slides, every slide shows when picked, build steps are visible while editing, thumbnails are settled', async () => {
+  c = await launch('lorem-steps.html');
+  await ready(c.page);
+  await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 1 of 8');
+  await expect(c.page.locator('[data-testid=msgbar]', { hasText: 'Not sure' })).toHaveCount(0);
+  await expect(c.page.getByTestId('thumb-7')).toBeVisible();
+  await c.page.getByTestId('thumb-3').click(); // the architecture slide: its boxes are build steps the deck reveals one key at a time
+  await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 4 of 8');
+  await expect.poll(() => deckFrame(c.page).evaluate(() => {
+    const a = document.querySelector('.slide.active');
+    return [a?.getAttribute('data-steps'), [...(a?.querySelectorAll('.step') ?? [])].every((e) => getComputedStyle(e).opacity === '1')];
+  }), { timeout: 8000 }).toEqual(['6', true]);
+  // nothing of that went into the file
+  await c.page.keyboard.press(`${MOD}+s`);
+  await c.page.waitForTimeout(500);
+  expect(c.read().equals(original('lorem-steps.html'))).toBe(true);
 });
