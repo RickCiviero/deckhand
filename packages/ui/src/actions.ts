@@ -149,7 +149,7 @@ export function duplicateSlide(): void {
   if (!el) return;
   const idx = st().slide;
   session.exec(duplicateElementCommand(el.id));
-  setTimeout(() => session.goTo(idx + 1), 200);
+  session.goTo(idx + 1); // not on a timer: a late timer would override a slide the user clicked in the meantime
 }
 
 /** New Slide gallery (ADP-07): after the current slide, from a deck layout or blank. */
@@ -158,7 +158,7 @@ export function newSlide(from: number | 'blank'): void {
   if (!el) return;
   const idx = st().slide;
   session.exec(newSlideCommand(from, el.id, el.id));
-  setTimeout(() => session.goTo(idx + 1), 250);
+  session.goTo(idx + 1);
 }
 
 export function deleteSlide(): void {
@@ -166,7 +166,7 @@ export function deleteSlide(): void {
   if (!el || st().slides.length <= 1) return;
   const idx = st().slide;
   session.exec(deleteElementCommand(el.id, 'Delete slide'));
-  setTimeout(() => session.goTo(Math.min(idx, st().slides.length - 1)), 200);
+  session.goTo(Math.min(idx, st().slides.length - 1));
 }
 
 export function moveSlide(from: number, toBefore: number): void {
@@ -176,7 +176,7 @@ export function moveSlide(from: number, toBefore: number): void {
   const parent = session.doc.byId(a.id)?.parent;
   const parentEl = parent === null || parent === undefined ? undefined : session.doc.byId(parent);
   session.exec(reorderCommand(a.id, b ? b.id : null, parentEl?.endTagStart ?? undefined));
-  setTimeout(() => session.goTo(toBefore > from ? toBefore - 1 : toBefore), 250);
+  session.goTo(toBefore > from ? toBefore - 1 : toBefore);
 }
 
 /** INS-01: Free text box inside the current slide, inheriting the deck's text style. */
