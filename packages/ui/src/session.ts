@@ -88,13 +88,15 @@ interface State {
   painter: { set: Record<string, string>; sticky: boolean; from: number } | null;
   /** Remote content allowed for the open document (SEC-05); starts from the Trust Center default. */
   remote: boolean;
+  /** Step being previewed on the current slide (objects appearing later are dimmed), or null for the whole slide. */
+  step: number | null;
 }
 
 export const useStore = create<State>(() => ({
   loaded: false, name: '', docId: null, version: 0, slides: [], detection: null, slide: 0, selection: [], hover: null, rects: {}, slideObjects: [],
   zoom: 0.5, fit: true, viewport: { w: 1920, h: 1080 }, dirty: false, canUndo: false, canRedo: false, undoLabel: '', editing: null, notices: [], src: null,
   origin: null, token: null, loadNonce: 0, agentReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false, thumbs: {},
-  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null,
+  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null, step: null,
 }));
 const set = useStore.setState;
 const get = useStore.getState;
@@ -260,6 +262,7 @@ class Session {
     set({ agentReady: true });
     this.send({ t: 'slides', ids: get().slides.map((x) => x.id) });
     this.send({ t: 'show', index: get().slide });
+    this.setStep(get().step);
     await new Promise((r) => setTimeout(r, 50));
     this.queueRefresh();
   }
@@ -351,9 +354,15 @@ class Session {
     if (n === 0) return;
     const idx = Math.max(0, Math.min(n - 1, i));
     if (get().editing !== null) void this.endEdit(true);
-    set({ slide: idx, selection: [], hover: null });
+    set({ slide: idx, selection: [], hover: null, step: null });
     this.send({ t: 'show', index: idx });
     setTimeout(() => this.queueRefresh(), 80);
+  }
+
+  /** Preview the slide as it looks after action n (null = all objects shown normally). */
+  setStep(n: number | null): void {
+    set({ step: n });
+    this.send({ t: 'step', index: get().slide, n });
   }
 
   // ---- editing ----------------------------------------------------------------------------------------------

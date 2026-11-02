@@ -14,4 +14,5 @@ export * from './objects.js';
 export * from './find.js';
 export * from './fonts.js';
 export * from './group.js';
+export * from './steps.js';
 export * from './version.js';

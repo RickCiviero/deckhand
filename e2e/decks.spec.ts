@@ -222,3 +222,23 @@ test('class-based deck with build steps (user report): 8 slides, every slide sho
   await c.page.waitForTimeout(500);
   expect(c.read().equals(original('lorem-steps.html'))).toBe(true);
 });
+
+test('steps (states): the Steps bar previews a step by dimming later objects, and an object can be retimed', async () => {
+  c = await launch('lorem-steps.html');
+  await ready(c.page);
+  await c.page.getByTestId('thumb-3').click();
+  await c.page.getByTestId('dock-selection').click();
+  await expect(c.page.getByTestId('stepbar')).toBeVisible();
+  await c.page.getByTestId('step-2').click();
+  await expect.poll(() => deckFrame(c.page).evaluate(() => {
+    const a = document.querySelector('.slide.active')!;
+    return [...a.querySelectorAll('[data-step]')].every((e) => (e.hasAttribute('data-deckhand-future')) === (Number(e.getAttribute('data-step')) > 2));
+  })).toBe(true);
+  await c.page.getByTestId('step-all').click();
+  await expect.poll(() => deckFrame(c.page).evaluate(() => document.querySelectorAll('[data-deckhand-future]').length)).toBe(0);
+  const first = c.page.getByTestId('sel-step').first();
+  await first.fill('6');
+  await first.blur();
+  await save(c.page);
+  expect(c.text()).toContain('data-step="6"');
+});

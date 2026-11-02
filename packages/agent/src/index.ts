@@ -129,12 +129,26 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   const revealBuilds = (root: Element): void => {
     if (!revealStyle) {
       revealStyle = doc.createElement('style');
-      revealStyle.textContent = '[data-deckhand-reveal]{opacity:1!important;visibility:visible!important;transform:none!important}';
+      revealStyle.textContent = '[data-deckhand-reveal]{opacity:1!important;visibility:visible!important;transform:none!important}[data-deckhand-future]{opacity:.2!important}';
       (doc.head ?? doc.documentElement).appendChild(revealStyle);
     }
     for (const e of N.qsaOf(root, BUILD) as Element[]) {
       const cs = N.getComputedStyle(e);
       if (cs.opacity === '0' || cs.visibility === 'hidden') N.setAttribute.call(e, 'data-deckhand-reveal', '');
+    }
+  };
+  // Step preview: objects that only appear after step n are dimmed (still selectable), so the author sees the slide as it looks at that action.
+  const stepNo = (e: Element): number | null => {
+    const v = N.getAttribute.call(e, 'data-step') ?? N.getAttribute.call(e, 'data-fragment-index');
+    return v !== null && /^\d{1,3}$/.test(v.trim()) ? Number(v.trim()) : null;
+  };
+  const previewStep = (index: number, n: number | null): void => {
+    for (const e of N.qsaOf(doc.documentElement, '[data-deckhand-future]') as Element[]) N.removeAttribute.call(e, 'data-deckhand-future');
+    const target = slideIds.map(byId)[index];
+    if (n === null || !target) return;
+    for (const e of N.qsaOf(target, BUILD) as Element[]) {
+      const s = stepNo(e);
+      if (s !== null && s > n) N.setAttribute.call(e, 'data-deckhand-future', '');
     }
   };
   const showSlide = (index: number): void => {
@@ -404,6 +418,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
         break;
       }
       case 'show': showSlide(Number(m.index)); send({ t: 'shown', index: m.index }); break;
+      case 'step': previewStep(Number(m.index), m.n === null ? null : Number(m.n)); break;
       case 'edit': startEdit(Number(m.id), String(m.text ?? ''), m.at && typeof m.at === 'object' ? { x: Number(m.at.x), y: Number(m.at.y), mode: String(m.at.mode) } : undefined, Array.isArray(m.tags) ? m.tags.slice(0, 5000) : undefined); break;
       case 'edit-end': stopEdit(m.commit !== false); break;
       case 'refocus': {

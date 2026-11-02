@@ -1,6 +1,7 @@
 /** Selection Pane model (SEP-01, ARR-07/08): the objects of a slide as a tree, with names, hidden and locked state, and the commands that change them. */
 import { getAttr, removeAttrPatch, setAttrPatch, textOf, type ElementInfo, type SourceDoc } from './source.js';
 import { getStyleProp, removeStyleProp, setStyleProp } from './style.js';
+import { stepOf } from './steps.js';
 import type { Command } from './commands.js';
 import type { Patch } from './patch.js';
 
@@ -11,7 +12,7 @@ const INLINE = new Set(['b', 'strong', 'i', 'em', 'u', 's', 'span', 'a', 'sup', 
 const NOT_OBJECT = new Set(['html', 'head', 'body', 'script', 'style', 'link', 'meta', 'title', 'template', 'noscript']);
 export const isObjectTag = (tag: string): boolean => !INLINE.has(tag) && !NOT_OBJECT.has(tag);
 
-export interface ObjectNode { id: number; depth: number; name: string; custom: boolean; hidden: boolean; locked: boolean; tag: string }
+export interface ObjectNode { id: number; depth: number; name: string; custom: boolean; hidden: boolean; locked: boolean; tag: string; step: number | null }
 
 const plain = (doc: SourceDoc, e: ElementInfo): string => textOf(doc, e).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -45,7 +46,7 @@ export function objectTree(doc: SourceDoc, slideId: number): ObjectNode[] {
       const k = doc.byId(c)!;
       if (!isObjectTag(k.tag)) continue;
       const { name, custom } = objectName(doc, k);
-      out.push({ id: k.id, depth, name, custom, hidden: isHidden(k), locked: getAttr(k, LOCK_ATTR) !== undefined, tag: k.tag });
+      out.push({ id: k.id, depth, name, custom, hidden: isHidden(k), locked: getAttr(k, LOCK_ATTR) !== undefined, tag: k.tag, step: stepOf(k) });
       walk(k.id, depth + 1);
     }
   };

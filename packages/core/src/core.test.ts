@@ -5,7 +5,7 @@ import {
   Editor, detectDeck, getAttr, openBytes, parseSource, saveBytes, setPlainTextCommand, moveCommand, setStyleCommand,
   resetPositionCommand, deleteElementCommand, duplicateElementCommand, reorderCommand, sanitizePastedHtml, sanitizeRequestPath,
   isInside, setStyleProp, removeStyleProp, getStyleProp, isSafeCssValue, renderLiveHtml, assertNoArtifacts, setInnerHtmlCommand,
-  textOf, findOutsideRefs, isSimpleInlineHtml,
+  textOf, findOutsideRefs, isSimpleInlineHtml, slideSteps, setStepCommand, stepOf,
 } from './index.js';
 
 const DIR = join(__dirname, '../../../test-decks/decks');
@@ -277,5 +277,28 @@ describe('generic detection on a deck with build steps (reported by a user)', ()
     expect(det.slides).toHaveLength(8);
     expect(det.selector).toBe('section.slide');
     expect(det.slides.every((s) => doc.byId(s.id)!.tag === 'section')).toBe(true);
+  });
+});
+
+describe('build steps (states) of a slide', () => {
+  const lorem = () => openBytes(readFileSync(new URL('../../../test-decks/decks/lorem-steps.html', import.meta.url)));
+  it('lists the steps of the architecture slide in order, with the objects of each', () => {
+    const doc = lorem();
+    const slide = detectDeck(doc).slides[3]!;
+    const steps = slideSteps(doc, slide.id);
+    expect(steps.map((g) => g.step)).toEqual([1, 2, 3, 4, 5]);
+    expect(steps.find((g) => g.step === 2)!.ids.length).toBe(2);
+  });
+  it('retiming an object changes only its data-step attribute; clearing removes it; undo restores the bytes', () => {
+    const doc = lorem();
+    const orig = saveBytes(doc);
+    const ed = new Editor(doc);
+    const id = slideSteps(doc, detectDeck(doc).slides[3]!.id).find((g) => g.step === 1)!.ids[0]!;
+    ed.exec(setStepCommand([id], 4));
+    expect(stepOf(ed.doc.byId(id)!)).toBe(4);
+    ed.exec(setStepCommand([id], null));
+    expect(stepOf(ed.doc.byId(id)!)).toBeNull();
+    ed.undo(); ed.undo();
+    expect(eq(saveBytes(ed.doc), orig)).toBe(true);
   });
 });
