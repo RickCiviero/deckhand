@@ -280,8 +280,11 @@ class Session {
     if (!slide) return;
     const objs = this.objectsOnSlide(slide.id).slice(0, 400);
     const ids = [slide.id, ...new Set([...objs, ...s.selection])];
+    const seq = this.editSeq;
     const r = await this.request<Extract<AgentMsg, { t: 'rects' }>>({ t: 'rects', ids });
     if (!r) return;
+    // measured before a later edit reached the live view: it would put stale geometry in the cache (and make the next nudge lose a pixel)
+    if (seq !== this.editSeq) { this.queueRefresh(); return; }
     const map: Record<number, Rect> = {};
     r.rects.forEach((x, i) => { if (x) map[ids[i]!] = x; });
     set({ rects: map, slideObjects: objs });
@@ -360,7 +363,9 @@ class Session {
     this.afterChange(before, null, undefined);
   }
 
+  private editSeq = 0;
   private afterChange(before: SourceDoc, patches: Patch[] | null, opts?: { live?: boolean; selectAfter?: number[] }): void {
+    this.editSeq++;
     const ed = this.editor!;
     const after = ed.doc;
     set((s) => ({ version: s.version + 1, dirty: true, canUndo: ed.canUndo, canRedo: ed.canRedo, undoLabel: ed.undoLabel ?? '' }));

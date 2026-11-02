@@ -19,7 +19,11 @@ export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; 
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [onClose]);
-  const save = async (patch: Partial<AppSettings>): Promise<void> => { useStore.setState({ settings: await window.deckhand.settings.set(patch) }); };
+  // optimistic: the control reacts at once, the saved copy from the main process replaces it
+  const save = async (patch: Partial<AppSettings>): Promise<void> => {
+    useStore.setState((x) => ({ settings: { ...x.settings, ...patch } }));
+    useStore.setState({ settings: await window.deckhand.settings.set(patch) });
+  };
   const doc = s.loaded ? session.doc : null;
   const domains = doc ? externalDomains(doc) : [];
   const run = (fn: () => void | Promise<unknown>) => () => { onClose(); void fn(); };
