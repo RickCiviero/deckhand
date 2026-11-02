@@ -16,3 +16,5 @@ export * from './fonts.js';
 export * from './group.js';
 export * from './steps.js';
 export * from './version.js';
+export * from './scripttext.js';
+export * from './interactions.js';

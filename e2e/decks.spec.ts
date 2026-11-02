@@ -242,3 +242,38 @@ test('steps (states): the Steps bar previews a step by dimming later objects, an
   await save(c.page);
   expect(c.text()).toContain('data-step="6"');
 });
+
+test('frames: the script-built VS Code animation is expanded, stepped, and its text is edited in the script', async () => {
+  c = await launch('lorem-steps.html');
+  await ready(c.page);
+  await c.page.getByTestId('thumb-2').click();
+  await c.page.getByTestId('dock-frames').click();
+  await c.page.getByTestId('frames-start').click();
+  await expect(c.page.getByTestId('frame-label')).toContainText(/Frame \d{2,} of \d{2,}/, { timeout: 15000 });
+  // starts at the last frame: the finished animation is on the slide
+  await expect.poll(async () => { try { return await deckFrame(c.page).evaluate(() => document.querySelectorAll('#msgs .msg').length); } catch { return 0; } }, { timeout: 15000 }).toBeGreaterThan(3);
+  // stepping back replays the deck up to that frame
+  await c.page.getByTestId('frame-prev').click();
+  await expect(c.page.getByTestId('frame-label')).toContainText(/Frame 164 of 165/, { timeout: 15000 });
+  await c.page.getByTestId('frame-next').click();
+  await expect(c.page.getByTestId('frame-label')).toContainText(/Frame 165 of 165/, { timeout: 15000 });
+  const line = c.page.locator('input[data-testid=frame-text]').and(c.page.locator('input[value^="Quis nostrud"]'));
+  await expect(line).toHaveCount(1, { timeout: 15000 });
+  await line.fill('Edited from the frame');
+  await line.blur();
+  await expect.poll(async () => { try { return await deckFrame(c.page).evaluate(() => [...document.querySelectorAll('#msgs .msg')].some((m) => (m.textContent ?? '').includes('Edited from the frame'))); } catch { return false; } }, { timeout: 15000 }).toBe(true);
+  await save(c.page);
+  expect(c.text()).toContain('addMsg("c", "Edited from the frame")');
+  expect(c.text()).not.toContain('data-deckhand');
+});
+
+test('interactions: the Frames tab lists what the deck script reacts to and jumps to its source', async () => {
+  c = await launch('lorem-steps.html');
+  await ready(c.page);
+  await c.page.getByTestId('dock-frames').click();
+  const row = c.page.getByTestId('interaction').filter({ hasText: 'keydown on document' });
+  await expect(row).toContainText('ArrowRight');
+  await row.click();
+  await expect(c.page.getByTestId('code-view')).toBeVisible();
+  await expect(c.page.locator('.cm-content')).toContainText('keydown');
+});

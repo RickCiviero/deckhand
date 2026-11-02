@@ -5,7 +5,7 @@ import {
   Editor, detectDeck, getAttr, openBytes, parseSource, saveBytes, setPlainTextCommand, moveCommand, setStyleCommand,
   resetPositionCommand, deleteElementCommand, duplicateElementCommand, reorderCommand, sanitizePastedHtml, sanitizeRequestPath,
   isInside, setStyleProp, removeStyleProp, getStyleProp, isSafeCssValue, renderLiveHtml, assertNoArtifacts, setInnerHtmlCommand,
-  textOf, findOutsideRefs, isSimpleInlineHtml, slideSteps, setStepCommand, stepOf,
+  textOf, findOutsideRefs, isSimpleInlineHtml, slideSteps, setStepCommand, stepOf, scriptTextProblem, replaceScriptTextCommand, scriptInteractions,
 } from './index.js';
 
 const DIR = join(__dirname, '../../../test-decks/decks');
@@ -300,5 +300,42 @@ describe('build steps (states) of a slide', () => {
     expect(stepOf(ed.doc.byId(id)!)).toBeNull();
     ed.undo(); ed.undo();
     expect(eq(saveBytes(ed.doc), orig)).toBe(true);
+  });
+});
+
+describe('editing text that a script puts on the slide', () => {
+  const lorem = () => openBytes(readFileSync(new URL('../../../test-decks/decks/lorem-steps.html', import.meta.url)));
+  const MSG = 'Quis nostrud exercitation ullamco laboris nisi ut aliquip.';
+  it('rewrites a chat line inside its string literal and nothing else; undo restores the bytes', () => {
+    const doc = lorem();
+    const orig = saveBytes(doc);
+    const ed = new Editor(doc);
+    expect(scriptTextProblem(doc, MSG, "Don't panic, it's fine.")).toBeNull();
+    ed.exec(replaceScriptTextCommand(MSG, "Don't panic, it's fine."));
+    expect(ed.doc.text).toContain(`addMsg("c", "Don't panic, it's fine.")`);
+    expect(ed.doc.text.length - doc.text.length).toBe("Don't panic, it's fine.".length - MSG.length);
+    ed.undo();
+    expect(eq(saveBytes(ed.doc), orig)).toBe(true);
+  });
+  it('escapes the quote of the surrounding literal and refuses markup, newlines and unknown text', () => {
+    const doc = lorem();
+    const ed = new Editor(doc);
+    ed.exec(replaceScriptTextCommand(MSG, 'She said "hi"'));
+    expect(ed.doc.text).toContain('addMsg("c", "She said \\"hi\\"")');
+    expect(scriptTextProblem(doc, MSG, 'a\nb')).not.toBeNull();
+    expect(scriptTextProblem(doc, MSG, '</script><b>')).not.toBeNull();
+    expect(scriptTextProblem(doc, 'text that is nowhere in the script', 'x')).not.toBeNull();
+    expect(replaceScriptTextCommand('nowhere text', 'x').build(doc)).toEqual([]);
+  });
+});
+
+describe('interactions the deck script listens for', () => {
+  it('finds the keyboard navigation and the replay button of the Lorem deck', () => {
+    const doc = openBytes(readFileSync(new URL('../../../test-decks/decks/lorem-steps.html', import.meta.url)));
+    const found = scriptInteractions(doc);
+    const key = found.find((i) => i.event === 'keydown')!;
+    expect(key.target).toBe('document');
+    expect(key.keys).toEqual(expect.arrayContaining(['ArrowRight', 'Space']));
+    expect(found.some((i) => i.event === 'click' && i.target === '#replay')).toBe(true);
   });
 });

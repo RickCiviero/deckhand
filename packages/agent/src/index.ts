@@ -23,6 +23,8 @@ declare const __DECKHAND_TOKEN__: string;
     addEventListener: win.addEventListener.bind(win),
     postMessage: MessagePort.prototype.postMessage,
     setInterval: win.setInterval.bind(win),
+    setTimeout: win.setTimeout.bind(win),
+    clearTimeout: win.clearTimeout.bind(win),
     JSON,
     Math,
     Array,
@@ -319,8 +321,46 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     }
   }, true);
 
+  // --- frames: a deck whose slide is built by timers (typed prompts, chat lines…) is expanded into steps ---------
+  // Only in a live view opened with #deckhand-frames. Timers set by the deck after the editor arms this are queued on a virtual clock and
+  // fired one at a time, so every frame can be looked at and its text edited. Nothing here touches the saved file.
+  const FRAMES = win.location.hash === '#deckhand-frames';
+  interface VTimer { id: number; at: number; seq: number; fn: (...a: unknown[]) => void; args: unknown[] }
+  let virtual = false;
+  let vq: VTimer[] = [];
+  let vnow = 0;
+  let vseq = 0;
+  let vframe = 0;
+  let passDeck = false;
+  if (FRAMES) {
+    win.setTimeout = ((fn: unknown, ms?: unknown, ...args: unknown[]): number => {
+      if (!virtual || typeof fn !== 'function') return N.setTimeout(fn as TimerHandler, Number(ms) || 0, ...args);
+      const id = 1_000_000_000 + vseq;
+      vq.push({ id, at: vnow + Math.max(0, Number(ms) || 0), seq: vseq++, fn: fn as VTimer['fn'], args });
+      return id;
+    }) as typeof win.setTimeout;
+    win.clearTimeout = ((id?: number): void => {
+      if (typeof id === 'number' && id >= 1_000_000_000) vq = vq.filter((t) => t.id !== id);
+      else N.clearTimeout(id);
+    }) as typeof win.clearTimeout;
+  }
+  const fireNext = (): boolean => {
+    if (vq.length === 0) return false;
+    let k = 0;
+    for (let i = 1; i < vq.length; i++) if (vq[i]!.at < vq[k]!.at || (vq[i]!.at === vq[k]!.at && vq[i]!.seq < vq[k]!.seq)) k = i;
+    const t = vq.splice(k, 1)[0]!;
+    vnow = t.at;
+    vframe++;
+    passDeck = true;
+    try { t.fn(...t.args); } catch { /* a deck error in one frame must not stop the others */ }
+    passDeck = false;
+    return true;
+  };
+  const frameState = (): unknown => ({ t: 'frame', n: vframe, total: vframe + vq.length, time: Math.round(vnow), reset: false });
+
   // suppress the deck's own handlers in design mode (RND-03): capture phase, stop before deck listeners see events
   const suppress = (e: Event): void => {
+    if (passDeck) return;
     if (editing && e.target instanceof Node && editing.contains(e.target)) {
       // typing must not trigger deck navigation, but default editing must work; editor shortcuts are forwarded
       const k = e as KeyboardEvent;
@@ -356,7 +396,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   N.addEventListener('focusout', (e) => {
     const el = editing;
     if (!el || e.target !== el || (e as FocusEvent).relatedTarget || keyedSinceEdit || Date.now() - editStartedAt > 1500) return;
-    setTimeout(() => {
+    N.setTimeout(() => {
       if (editing !== el || doc.activeElement === el) return;
       el.focus({ preventScroll: true });
       const s = win.getSelection();
@@ -415,6 +455,37 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
       }
       case 'slides': {
         if (Array.isArray(m.ids) && m.ids.length < 5000) { slideIds = m.ids.filter(Number.isInteger); stateToken = null; }
+        break;
+      }
+      case 'frames-start': {
+        if (!FRAMES) break;
+        virtual = true; vq = []; vnow = 0; vframe = 0;
+        const el = Number.isInteger(m.trigger) ? byId(m.trigger) : null;
+        if (el) { passDeck = true; try { (el as HTMLElement).click(); } catch { /* the deck's handler failed */ } passDeck = false; }
+        send(frameState());
+        break;
+      }
+      case 'frames-goto': {
+        if (!FRAMES || !virtual) break;
+        const to = Math.max(0, Math.min(100000, Number(m.n)));
+        if (to < vframe) { send({ ...(frameState() as object), reset: true }); break; }
+        while (vframe < to && fireNext()) { /* advance */ }
+        send(frameState());
+        break;
+      }
+      case 'texts': {
+        const root = slideIds.map(byId)[Number(m.index)] ?? doc.body;
+        const out: { text: string; gen: boolean }[] = [];
+        const seen = new Set<string>();
+        const w = doc.createTreeWalker(root, 4);
+        for (let n = w.nextNode(); n && out.length < 300; n = w.nextNode()) {
+          const text = (n.nodeValue ?? '').replace(/\s+/g, ' ').trim();
+          const par = n.parentElement;
+          if (text.length < 2 || text.length > 2000 || !par || seen.has(text) || ['SCRIPT', 'STYLE'].includes(par.tagName)) continue;
+          seen.add(text);
+          out.push({ text, gen: N.getAttribute.call(par, ID) === null });
+        }
+        send({ t: 'texts', req: m.req, items: out });
         break;
       }
       case 'show': showSlide(Number(m.index)); send({ t: 'shown', index: m.index }); break;

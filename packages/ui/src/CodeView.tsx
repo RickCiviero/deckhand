@@ -137,6 +137,16 @@ export function CodeView(): JSX.Element {
     fromSelection.current = false;
   }, [s.selection, pending]);
 
+  // Interactions list: jump to the script line
+  useEffect(() => {
+    const v = view.current;
+    const j = s.codeJump;
+    if (!v || !j || pending || j.pos > v.state.doc.length) return;
+    fromSelection.current = true;
+    v.dispatch({ selection: { anchor: j.pos }, effects: EditorView.scrollIntoView(j.pos, { y: 'center' }) });
+    fromSelection.current = false;
+  }, [s.codeJump, pending]);
+
   if (tooBig) return <div className="codeview" data-testid="code-view"><p className="hint">This file is too large for the code view (over 60 MB of source). Edit it on the slide instead.</p></div>;
   return (
     <div className="codeview" data-testid="code-view">

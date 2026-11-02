@@ -40,6 +40,8 @@ const agentMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('edit-outside') }),
   z.object({ t: z.literal('edit-end'), id: z.number().int().nullable(), dirty: z.boolean(), html: z.string().max(2_000_000).nullable(), text: z.string().max(2_000_000).nullable(), quirk: z.boolean() }),
   z.object({ t: z.literal('key'), key: z.string().max(20), shift: z.boolean().optional(), ctrl: z.boolean().optional(), alt: z.boolean().optional(), meta: z.boolean().optional(), fwd: z.boolean().optional() }),
+  z.object({ t: z.literal('frame'), n: z.number().int().min(0), total: z.number().int().min(0), time: num, reset: z.boolean() }),
+  z.object({ t: z.literal('texts'), req: z.number(), items: z.array(z.object({ text: z.string().max(2000), gen: z.boolean() })).max(300) }),
   z.object({ t: z.literal('viewport'), w: num, h: num, sw: num, sh: num }),
 ]);
 type AgentMsg = z.infer<typeof agentMsg>;
@@ -90,13 +92,19 @@ interface State {
   remote: boolean;
   /** Step being previewed on the current slide (objects appearing later are dimmed), or null for the whole slide. */
   step: number | null;
+  /** Script-built slide expanded into frames (the deck's timers fired one at a time); null when not expanding. */
+  frames: { n: number; total: number; time: number } | null;
+  /** Text on the current slide while expanding: `gen` = put there by the deck's script, not present in the markup. */
+  frameTexts: { text: string; gen: boolean }[];
+  /** Ask the code view to scroll to a source offset (n makes repeated jumps to the same place count). */
+  codeJump: { pos: number; n: number } | null;
 }
 
 export const useStore = create<State>(() => ({
   loaded: false, name: '', docId: null, version: 0, slides: [], detection: null, slide: 0, selection: [], hover: null, rects: {}, slideObjects: [],
   zoom: 0.5, fit: true, viewport: { w: 1920, h: 1080 }, dirty: false, canUndo: false, canRedo: false, undoLabel: '', editing: null, notices: [], src: null,
   origin: null, token: null, loadNonce: 0, agentReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false, thumbs: {},
-  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null, step: null,
+  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null, step: null, frames: null, frameTexts: [], codeJump: null,
 }));
 const set = useStore.setState;
 const get = useStore.getState;
@@ -203,6 +211,7 @@ class Session {
     const s = get();
     if (!s.docId || !this.editor) return;
     const r = (await window.deckhand.setText(s.docId, this.doc.text)) as { src: string; origin: string; token: string };
+    if (this.framesMode) r.src += '#deckhand-frames';
     this.closePort();
     const nonce = get().loadNonce + 1;
     window.setTimeout(() => {
@@ -210,6 +219,42 @@ class Session {
       if (cur.loadNonce === nonce && !cur.agentReady && cur.scriptsOn && this.retried !== nonce) { this.retried = nonce; void this.reload(); }
     }, 4000);
     set((st) => ({ src: r.src, origin: r.origin, token: r.token, loadNonce: st.loadNonce + 1, agentReady: false, editing: null }));
+  }
+
+  // ---- frames (script-built animations) ------------------------------------------------------------------------
+  /** The live view is opened with the deck's timers on a virtual clock. */
+  private framesMode = false;
+  private framesTrigger: number | null = null;
+  private framesWant = 100000;
+
+  /** Expand the slide's animation: run the deck's script from `trigger` (a button it listens to) and step through the timers it sets. */
+  framesStart(trigger: number | null): void {
+    this.framesMode = true;
+    this.framesTrigger = trigger;
+    this.framesWant = 100000;
+    set({ frames: { n: 0, total: 0, time: 0 }, frameTexts: [] });
+    void this.reload();
+  }
+
+  framesStop(): void {
+    this.framesMode = false;
+    set({ frames: null, frameTexts: [] });
+    void this.reload();
+  }
+
+  /** Show the source at an offset: opens the split view when only the slide is showing. */
+  jumpToCode(pos: number): void {
+    set((st) => ({ viewMode: st.viewMode === 'normal' ? 'split' : st.viewMode, codeJump: { pos, n: (st.codeJump?.n ?? 0) + 1 } }));
+  }
+
+  framesGoto(n: number): void {
+    this.framesWant = Math.max(0, n);
+    this.send({ t: 'frames-goto', n: this.framesWant });
+  }
+
+  async loadTexts(): Promise<void> {
+    const r = await this.request<Extract<AgentMsg, { t: 'texts' }>>({ t: 'texts', index: get().slide }, 3000);
+    if (r && r.t === 'texts') set({ frameTexts: r.items });
   }
 
   private closePort(): void {
@@ -239,7 +284,7 @@ class Session {
     switch (m.t) {
       case 'ready': void this.afterReady(); break;
       case 'changed': this.queueRefresh(); break;
-      case 'rects': case 'hit': case 'children': { const w = this.waiters.get(m.req); if (w) { this.waiters.delete(m.req); w(m); } break; }
+      case 'rects': case 'hit': case 'children': case 'texts': { const w = this.waiters.get(m.req); if (w) { this.waiters.delete(m.req); w(m); } break; }
       case 'edit-started': this.iframe?.focus(); this.iframe?.contentWindow?.focus(); this.send({ t: 'refocus' }); break; // editing state starts once focus is confirmed
       case 'edit-ready': set({ editing: m.id ?? get().selection[0] ?? null }); break;
       case 'edit-refused': this.notify('warning', m.why === 'transformed'
@@ -253,6 +298,13 @@ class Session {
         // Either we asked for the end (resolver waiting) or the agent ended the session itself (Esc inside the live view).
         if (this.editResolve) { this.editResolve(m); this.editResolve = null; } else this.finishEdit(m);
         break;
+      case 'frame':
+        if (m.reset) { void this.reload(); break; } // going back: the deck is run again from the start
+        set({ frames: { n: m.n, total: m.total, time: m.time } });
+        this.framesWant = m.n;
+        void this.loadTexts();
+        this.queueRefresh();
+        break;
       case 'key': window.dispatchEvent(new CustomEvent('deckhand-key', { detail: m })); break;
       default: break;
     }
@@ -263,6 +315,10 @@ class Session {
     this.send({ t: 'slides', ids: get().slides.map((x) => x.id) });
     this.send({ t: 'show', index: get().slide });
     this.setStep(get().step);
+    if (this.framesMode) {
+      this.send({ t: 'frames-start', trigger: this.framesTrigger });
+      this.send({ t: 'frames-goto', n: this.framesWant });
+    }
     await new Promise((r) => setTimeout(r, 50));
     this.queueRefresh();
   }

@@ -9,6 +9,7 @@ import { Backstage } from './Backstage';
 import { DefineSlides } from './DefineSlides';
 import { FontsDialog } from './FontsDialog';
 import { SelectionPane } from './SelectionPane';
+import { FramesPane } from './FramesPane';
 import { FindBar } from './FindBar';
 import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
@@ -329,10 +330,11 @@ export function App(): JSX.Element {
           <div className="dock">
             <div className="dockTabs" role="tablist">
               <button role="tab" aria-selected={dock === 'selection'} className={dock === 'selection' ? 'on' : ''} onClick={() => ai.setDock('selection')} data-testid="dock-selection">Selection</button>
+              <button role="tab" aria-selected={dock === 'frames'} className={dock === 'frames' ? 'on' : ''} onClick={() => ai.setDock('frames')} data-testid="dock-frames">Frames</button>
               <button role="tab" aria-selected={dock === 'format'} className={dock === 'format' ? 'on' : ''} onClick={() => ai.setDock('format')} data-testid="dock-format">Format</button>
               {s.settings.aiEnabled && <button role="tab" aria-selected={dock === 'ai'} className={dock === 'ai' ? 'on' : ''} onClick={() => ai.setDock('ai')} data-testid="dock-ai">AI Assistant</button>}
             </div>
-            {dock === 'selection' ? <SelectionPane /> : dock === 'ai' && s.settings.aiEnabled ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
+            {dock === 'selection' ? <SelectionPane /> : dock === 'frames' ? <FramesPane /> : dock === 'ai' && s.settings.aiEnabled ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
           </div>
         </main>
       )}
