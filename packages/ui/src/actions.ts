@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -135,6 +135,15 @@ export function duplicateSlide(): void {
   const idx = st().slide;
   session.exec(duplicateElementCommand(el.id));
   setTimeout(() => session.goTo(idx + 1), 200);
+}
+
+/** New Slide gallery (ADP-07): after the current slide, from a deck layout or blank. */
+export function newSlide(from: number | 'blank'): void {
+  const el = slideElement();
+  if (!el) return;
+  const idx = st().slide;
+  session.exec(newSlideCommand(from, el.id, el.id));
+  setTimeout(() => session.goTo(idx + 1), 250);
 }
 
 export function deleteSlide(): void {

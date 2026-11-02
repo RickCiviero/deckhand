@@ -232,3 +232,32 @@ test('external change on disk shows a message bar', async () => {
   fs.appendFileSync(c.file, '\n<!-- changed elsewhere -->\n');
   await expect(c.page.locator('[data-testid=msgbar]', { hasText: 'changed by another program' })).toBeVisible({ timeout: 10000 });
 });
+
+test('New Slide gallery adds a slide from a deck layout; one Undo removes it', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('cmd-new-slide').click();
+  await expect(c.page.getByTestId('layout-item')).toHaveCount(2);
+  await c.page.getByTestId('layout-item').nth(1).click();
+  await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 2 of 4', { timeout: 10000 });
+  await save(c.page);
+  expect(c.text()).toContain('Click to add title');
+  expect(c.text()).not.toContain('data-deckhand');
+  await c.page.keyboard.press(`${MOD}+z`);
+  await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(3, { timeout: 10000 });
+  await save(c.page);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});
+
+test('Format Background changes only the slide element\'s style', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('bg-color').evaluate((el: HTMLInputElement) => {
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    set.call(el, '#123456');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(c.page.locator('[data-testid=savestate]')).toHaveText('Unsaved changes', { timeout: 10000 });
+  await save(c.page);
+  expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1').replace('<section class="slide active" data-slide="1">', '<section class="slide active" data-slide="1" style="background-color: #123456;">'));
+});

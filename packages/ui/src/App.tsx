@@ -1,12 +1,13 @@
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
-import { Button, FluentProvider, MessageBar, MessageBarActions, MessageBarBody, Tooltip, webDarkTheme, webLightTheme } from '@fluentui/react-components';
+import { Button, FluentProvider, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, MessageBar, MessageBarActions, MessageBarBody, Tooltip, webDarkTheme, webLightTheme } from '@fluentui/react-components';
 import { t } from '@deckhand/i18n';
 import { Canvas } from './Canvas';
 import { FormatPane } from './FormatPane';
 import { AiPane } from './AiPane';
 import { ai, useAi } from './ai';
-import { align, arrange, deleteSlide, duplicateSlide, exportPdf, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
+import { deckLayouts } from '@deckhand/core';
+import { newSlide, align, arrange, deleteSlide, duplicateSlide, exportPdf, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'show' | 'view';
@@ -17,6 +18,25 @@ function Cmd({ label, tip, onClick, disabled, on, testid }: { label: string; tip
       {/* mousedown default prevented so formatting buttons do not steal the text selection from the live view */}
       <Button size="small" appearance={on ? 'primary' : 'subtle'} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onClick} data-testid={testid}>{label}</Button>
     </Tooltip>
+  );
+}
+
+function NewSlideMenu({ disabled }: { disabled: boolean }): JSX.Element {
+  const version = useStore((x) => x.version);
+  const layouts = !disabled ? deckLayouts(session.doc) : [];
+  void version;
+  return (
+    <Menu>
+      <MenuTrigger disableButtonEnhancement>
+        <Button size="small" appearance="subtle" disabled={disabled} onMouseDown={(e) => e.preventDefault()} data-testid="cmd-new-slide">{t('home.newSlideMenu')} ▾</Button>
+      </MenuTrigger>
+      <MenuPopover>
+        <MenuList>
+          {layouts.map((l) => <MenuItem key={l.id} onClick={() => newSlide(l.slideId)} data-testid="layout-item">{l.name} <small>({l.count})</small></MenuItem>)}
+          <MenuItem onClick={() => newSlide('blank')} data-testid="layout-blank">Blank</MenuItem>
+        </MenuList>
+      </MenuPopover>
+    </Menu>
   );
 }
 
@@ -128,6 +148,7 @@ export function App(): JSX.Element {
             <Cmd label="I" tip="Italic (Ctrl+I)" disabled={s.editing === null} onClick={() => session.format('italic')} />
             <Cmd label="U" tip="Underline (Ctrl+U)" disabled={s.editing === null} onClick={() => session.format('underline')} />
             <span className="sep" />
+            <NewSlideMenu disabled={!s.loaded} />
             <Cmd label={t('home.newSlide')} tip="Duplicate the current slide (Ctrl+D)" disabled={!s.loaded} onClick={duplicateSlide} testid="cmd-dup-slide" />
             <Cmd label={t('home.deleteSlide')} tip="Delete the current slide" disabled={!s.loaded || s.slides.length <= 1} onClick={deleteSlide} testid="cmd-del-slide" />
             <span className="sep" />

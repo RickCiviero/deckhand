@@ -104,7 +104,27 @@ export function FormatPane(): JSX.Element {
           ))}
         </section>
       )}
-      {tab === 'shape' && !r && <p className="hint">Select an object to format it.</p>}
+      {tab === 'shape' && !r && (
+        <>
+          <section data-testid="bg-section">
+            <h4>Format Background</h4>
+            {(() => {
+              const sid = s.slides[s.slide]?.id;
+              const setBg = (v: string | null) => { if (sid !== undefined) session.exec(styleMultiCommand('Change slide background', [{ id: sid, set: { 'background-color': v } }])); };
+              return (
+                <>
+                  <div className="row">
+                    <input type="color" data-testid="bg-color" value={toHex(!slideRect || slideRect.background === 'rgba(0, 0, 0, 0)' ? '#ffffff' : slideRect.background)} onChange={(e) => setBg(e.target.value)} />
+                    <button className="small" onClick={() => setBg(null)}>Reset</button>
+                  </div>
+                  {colors.length > 0 && <div className="swatches">{colors.map((c) => <button key={c.name + c.start} className="sw" title={c.name} style={{ background: c.value }} onClick={() => setBg(`var(${c.name})`)} />)}</div>}
+                </>
+              );
+            })()}
+          </section>
+          <p className="hint">Select an object to format it.</p>
+        </>
+      )}
       {tab === 'shape' && r && slideRect && (
         <>
           <section>
