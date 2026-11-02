@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Quarterly review — demo deck</title>
+  <style>
+    :root { --bg1: #0f172a; --bg2: #1e293b; --accent: #38bdf8; --accent2: #f472b6; --ink: #e2e8f0; --muted: #94a3b8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #020617; font-family: "Segoe UI", system-ui, sans-serif; }
+    #stage { width: 1920px; height: 1080px; position: relative; transform-origin: 0 0; overflow: hidden; }
+    .slide { position: absolute; inset: 0; display: none; color: var(--ink); background: radial-gradient(circle at 80% 10%, #1e3a5f 0%, var(--bg1) 55%); }
+    .slide.active { display: block; }
+    h1 { position: absolute; left: 140px; top: 130px; margin: 0; font-size: 110px; letter-spacing: -2px; }
+    h2 { position: absolute; left: 140px; top: 90px; margin: 0; font-size: 72px; }
+    .kicker { position: absolute; left: 144px; top: 70px; font-size: 28px; letter-spacing: 8px; text-transform: uppercase; color: var(--accent); }
+    .lead { position: absolute; left: 144px; top: 470px; width: 1100px; font-size: 44px; line-height: 1.4; color: var(--muted); }
+    .lead b { color: var(--ink); }
+    .pill { position: absolute; left: 144px; top: 760px; padding: 20px 44px; border-radius: 60px; font-size: 34px; font-weight: 600; color: #0f172a; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .orb { position: absolute; right: 160px; top: 200px; width: 520px; height: 520px; border-radius: 50%; background: conic-gradient(from 200deg, var(--accent), var(--accent2), var(--accent)); filter: blur(2px); opacity: .9; }
+    .card { position: absolute; top: 300px; width: 480px; height: 520px; padding: 44px; border-radius: 28px; background: rgba(148,163,184,.12); border: 1px solid rgba(148,163,184,.25); }
+    .card h3 { margin: 0 0 20px; font-size: 44px; color: var(--accent); }
+    .card p { margin: 0; font-size: 34px; line-height: 1.45; color: var(--muted); }
+    .bar { position: absolute; bottom: 200px; width: 150px; border-radius: 16px 16px 0 0; background: linear-gradient(180deg, var(--accent), #0ea5e9); }
+    .bar span { position: absolute; top: -56px; left: 0; right: 0; text-align: center; font-size: 34px; font-weight: 700; }
+    .axis { position: absolute; left: 140px; right: 140px; bottom: 200px; height: 3px; background: rgba(148,163,184,.4); }
+    .cap { position: absolute; bottom: 140px; width: 150px; text-align: center; font-size: 28px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <section class="slide active" data-slide="1">
+      <div class="kicker">Q3 review</div>
+      <h1>Revenue grew 18% &mdash;<br>our best quarter yet</h1>
+      <p class="lead">Three launches, two new markets and <b>zero</b> churn in enterprise accounts.</p>
+      <div class="pill">Read the highlights &rarr;</div>
+      <div class="orb"></div>
+    </section>
+    <section class="slide" data-slide="2">
+      <div class="kicker">Highlights</div>
+      <h2>What changed this quarter</h2>
+      <div class="card" style="left: 140px;"><h3>Faster</h3><p>Median page load dropped from 2.4 s to 0.9 s after the new edge cache.</p></div>
+      <div class="card" style="left: 720px;"><h3>Wider</h3><p>Launched in Japan and Brazil with local payment methods on day one.</p></div>
+      <div class="card" style="left: 1300px;"><h3>Stickier</h3><p>Weekly active teams up 31%, driven by shared workspaces.</p></div>
+    </section>
+    <section class="slide" data-slide="3">
+      <div class="kicker">Growth</div>
+      <h2>Monthly revenue, last six months</h2>
+      <div class="axis"></div>
+      <div class="bar" style="left: 220px; height: 240px;"><span>1.2</span></div>
+      <div class="bar" style="left: 500px; height: 300px;"><span>1.5</span></div>
+      <div class="bar" style="left: 780px; height: 340px;"><span>1.7</span></div>
+      <div class="bar" style="left: 1060px; height: 420px;"><span>2.1</span></div>
+      <div class="bar" style="left: 1340px; height: 480px;"><span>2.4</span></div>
+      <div class="bar" style="left: 1620px; height: 560px;"><span>2.8</span></div>
+      <div class="cap" style="left: 220px;">Apr</div><div class="cap" style="left: 500px;">May</div><div class="cap" style="left: 780px;">Jun</div>
+      <div class="cap" style="left: 1060px;">Jul</div><div class="cap" style="left: 1340px;">Aug</div><div class="cap" style="left: 1620px;">Sep</div>
+    </section>
+    <section class="slide" data-slide="4">
+      <div class="kicker">Next</div>
+      <h1>Thank you</h1>
+      <p class="lead">Questions? Edit this deck in <b>Deckhand</b> &mdash; click, drag, type, save.</p>
+      <div class="orb" style="width: 360px; height: 360px; top: 360px;"></div>
+    </section>
+  </div>
+  <script>
+    var i = 0, slides = document.querySelectorAll('.slide');
+    function fit() { var s = Math.min(innerWidth / 1920, innerHeight / 1080); document.getElementById('stage').style.transform = 'scale(' + s + ')'; }
+    function go(n) { slides[i].classList.remove('active'); i = Math.max(0, Math.min(slides.length - 1, n)); slides[i].classList.add('active'); }
+    addEventListener('resize', fit); fit();
+    addEventListener('keydown', function (e) { if (e.key === 'ArrowRight' || e.key === ' ') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); });
+  </script>
+</body>
+</html>
