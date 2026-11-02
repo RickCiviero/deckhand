@@ -178,6 +178,8 @@ test('slides: duplicate, reorder, delete — each exact and undoable', async () 
     await c.page.getByTestId('thumb-2').click();
     await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 3 of 3', { timeout: 1500 });
   }).toPass({ timeout: 15000 });
+  await c.page.waitForTimeout(1000); // a late handshake or refresh after the reload must not move us off slide 3
+  await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 3 of 3');
   await c.page.getByTestId('cmd-del-slide').click();
   await expect(c.page.locator('[data-testid^=thumb-]')).toHaveCount(2, { timeout: 8000 });
   await save(c.page);
