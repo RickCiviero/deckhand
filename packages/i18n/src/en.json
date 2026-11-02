@@ -3,7 +3,7 @@
   "tab": { "file": "File", "home": "Home", "insert": "Insert", "design": "Design", "show": "Slide Show", "view": "View" },
   "file": { "open": "Open", "save": "Save", "saveAs": "Save As", "exportPdf": "Export PDF", "recent": "Open a presentation", "drop": "Drop an .html file here, or use Open." },
   "home": { "undo": "Undo", "redo": "Redo", "newSlide": "Duplicate Slide", "newSlideMenu": "New Slide", "deleteSlide": "Delete Slide", "front": "Bring to Front", "back": "Send to Back", "ai": "AI Assistant", "paste": "Paste", "cut": "Cut", "copy": "Copy", "painter": "Format Painter", "selectAll": "Select All", "find": "Find & Replace", "bold": "Bold", "italic": "Italic", "underline": "Underline" },
-  "insert": { "textBox": "Text Box", "picture": "Pictures", "link": "Link", "changePicture": "Change Picture" },
+  "insert": { "shapes": "Shapes", "icons": "Icons", "table": "Table", "textBox": "Text Box", "picture": "Pictures", "link": "Link", "changePicture": "Change Picture" },
   "view": { "normal": "Normal", "code": "Code", "split": "Split", "scripts": "Run deck scripts", "smart": "Smart Guides", "fit": "Fit to Window", "remote": "Allow external content" },
   "design": { "defineSlides": "Define Slides…", "background": "Format Background", "colors": "Theme Colors", "fonts": "Fonts" },
   "show": { "fromStart": "From Beginning", "fromCurrent": "From Current Slide", "browser": "Preview in Browser", "hide": "Hide Slide" },

@@ -13,7 +13,7 @@ import { FindBar } from './FindBar';
 import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
-import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, groupSelection, ungroupSelection, canHideSlides, toggleHideSlide, distribute, pickFormat, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, ICONS, insertIcon, insertShape, insertTable, groupSelection, ungroupSelection, canHideSlides, toggleHideSlide, distribute, pickFormat, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'design' | 'show' | 'view';
@@ -40,6 +40,56 @@ function NewSlideMenu({ disabled }: { disabled: boolean }): JSX.Element {
         <MenuList>
           {layouts.map((l) => <MenuItem key={l.id} onClick={() => newSlide(l.slideId)} data-testid="layout-item">{l.name} <small>({l.count})</small></MenuItem>)}
           <MenuItem onClick={() => newSlide('blank')} data-testid="layout-blank">Blank</MenuItem>
+        </MenuList>
+      </MenuPopover>
+    </Menu>
+  );
+}
+
+const isPicture = (s: { loaded: boolean; selection: number[] }): boolean => s.loaded && s.selection.length > 0 && s.selection.every((id) => session.doc.byId(id)?.tag === 'img');
+
+function ShapesMenu({ disabled }: { disabled: boolean }): JSX.Element {
+  return (
+    <Menu>
+      <MenuTrigger disableButtonEnhancement>
+        <Button size="small" appearance="subtle" disabled={disabled} onMouseDown={(e) => e.preventDefault()} data-testid="cmd-shapes">{t('insert.shapes')} ▾</Button>
+      </MenuTrigger>
+      <MenuPopover>
+        <MenuList>
+          <MenuItem onClick={() => insertShape('rectangle')} data-testid="shape-rectangle">Rectangle</MenuItem>
+          <MenuItem onClick={() => insertShape('rounded')} data-testid="shape-rounded">Rounded rectangle</MenuItem>
+          <MenuItem onClick={() => insertShape('ellipse')} data-testid="shape-ellipse">Ellipse</MenuItem>
+          <MenuItem onClick={() => insertShape('line')} data-testid="shape-line">Line</MenuItem>
+        </MenuList>
+      </MenuPopover>
+    </Menu>
+  );
+}
+
+function TableMenu({ disabled }: { disabled: boolean }): JSX.Element {
+  return (
+    <Menu>
+      <MenuTrigger disableButtonEnhancement>
+        <Button size="small" appearance="subtle" disabled={disabled} onMouseDown={(e) => e.preventDefault()} data-testid="cmd-table">{t('insert.table')} ▾</Button>
+      </MenuTrigger>
+      <MenuPopover>
+        <MenuList>
+          {([[2, 2], [3, 3], [4, 3], [5, 4]] as const).map(([r, c]) => <MenuItem key={`${r}x${c}`} onClick={() => insertTable(r, c)} data-testid={`table-${r}x${c}`}>{r} × {c}</MenuItem>)}
+        </MenuList>
+      </MenuPopover>
+    </Menu>
+  );
+}
+
+function IconsMenu({ disabled }: { disabled: boolean }): JSX.Element {
+  return (
+    <Menu>
+      <MenuTrigger disableButtonEnhancement>
+        <Button size="small" appearance="subtle" disabled={disabled} onMouseDown={(e) => e.preventDefault()} data-testid="cmd-icons">{t('insert.icons')} ▾</Button>
+      </MenuTrigger>
+      <MenuPopover>
+        <MenuList>
+          {Object.entries(ICONS).map(([k, v]) => <MenuItem key={k} onClick={() => insertIcon(k)} data-testid={`icon-${k}`}>{v.label}</MenuItem>)}
         </MenuList>
       </MenuPopover>
     </Menu>
@@ -186,9 +236,14 @@ export function App(): JSX.Element {
           {tab === 'insert' && (<>
             <Cmd label={t('insert.picture')} tip="Insert a picture from a file" disabled={!s.loaded} onClick={() => void insertPicture()} testid="cmd-picture" />
             <Cmd label={t('insert.textBox')} tip="Insert a text box" disabled={!s.loaded} onClick={() => insertTextBox()} testid="cmd-textbox" />
+            <ShapesMenu disabled={!s.loaded} />
+            <TableMenu disabled={!s.loaded} />
+            <IconsMenu disabled={!s.loaded} />
             <span className="sep" />
             <Cmd label={t('insert.link')} tip={s.editing !== null ? 'Link the selected text to a web address' : 'Select some text while editing first'} disabled={s.editing === null} onClick={() => setLink('https://')} testid="cmd-link" />
             <Cmd label={t('insert.changePicture')} tip={s.selection.length && s.loaded && session.doc.byId(s.selection[0]!)?.tag === 'img' ? 'Replace the selected picture, keeping its size and position' : 'Select a picture first'} disabled={!(s.loaded && s.selection.length && session.doc.byId(s.selection[0]!)?.tag === 'img')} onClick={() => void changePicture()} testid="cmd-change-picture" />
+            <Cmd label="Crop to fill" tip="Fill the picture's frame, cutting off what does not fit (object-fit: cover). Resize the picture to change the crop." disabled={!isPicture(s)} onClick={() => setSelectionStyle('Crop picture', { 'object-fit': 'cover' })} testid="cmd-crop" />
+            <Cmd label="Fit whole picture" tip="Show the whole picture inside its frame (object-fit: contain)" disabled={!isPicture(s)} onClick={() => setSelectionStyle('Fit picture', { 'object-fit': 'contain' })} testid="cmd-fit-picture" />
           </>)}
           {tab === 'design' && (<>
             <Cmd label={t('design.defineSlides')} tip="Tell Deckhand which element is a slide, if it guessed wrong" disabled={!s.loaded} onClick={() => setDefining(true)} testid="cmd-define-slides" />

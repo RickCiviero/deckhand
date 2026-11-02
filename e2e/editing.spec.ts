@@ -295,6 +295,9 @@ test('Insert and change a picture; alt text; the file is copied next to the deck
   await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
   await save(c.page);
   expect(c.text()).toMatch(/<img src="images\/Other\.png" alt="A pixel" style=/);
+  await c.page.getByTestId('cmd-crop').click();
+  await save(c.page);
+  expect(c.text()).toMatch(/<img src="images\/Other\.png" alt="A pixel" style="[^"]*object-fit: cover/);
 });
 
 test('Home: align text and font colour change only the selected object\'s style', async () => {
@@ -577,6 +580,56 @@ test('Group wraps two Free objects without moving them; Ungroup gives them back;
   await save(c.page);
   expect(c.text()).not.toContain('data-deckhand-group');
   await c.page.getByTestId('qat-undo').click();
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});
+
+test('Insert > Shapes adds a Free div with inline style inside the current slide; one Undo removes it', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-insert').click();
+  await c.page.getByTestId('cmd-shapes').click();
+  await c.page.getByTestId('shape-ellipse').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await save(c.page);
+  expect(c.text()).toMatch(/<div style="position: absolute; left: \d+px; top: \d+px; width: 300px; height: 180px; background: #4472c4; border-radius: 50%;"><\/div>/);
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});
+
+test('Insert > Table adds a Free table; a cell can be edited; one Undo removes everything', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-insert').click();
+  await c.page.getByTestId('cmd-table').click();
+  await c.page.getByTestId('table-2x2').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await ready(c.page);
+  const t = await centreOf(c.page, '.slide.active table td');
+  await editAt(c.page, t.x, t.y);
+  await c.page.keyboard.press(`${MOD}+a`);
+  await c.page.keyboard.type('Q3');
+  await c.page.keyboard.press('Escape');
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await save(c.page);
+  expect(c.text()).toMatch(/<table style="position: absolute; left: \d+px; top: \d+px; border-collapse: collapse; font-size: 28px;"><tbody><tr><th [^>]*>Column 1<\/th><th [^>]*>Column 2<\/th><\/tr><tr><td [^>]*>Q3<\/td><td [^>]*>Text<\/td><\/tr><\/tbody><\/table>/);
+  await c.page.getByTestId('qat-undo').click();
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});
+
+test('Insert > Icons adds an inline SVG that takes the text colour; one Undo removes it', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-insert').click();
+  await c.page.getByTestId('cmd-icons').click();
+  await c.page.getByTestId('icon-star').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await save(c.page);
+  expect(c.text()).toMatch(/<svg viewBox="0 0 24 24" role="img" aria-label="Star" style="position: absolute; left: \d+px; top: \d+px; width: 96px; height: 96px; color: #4472c4;" fill="none" stroke="currentColor"/);
   await c.page.getByTestId('qat-undo').click();
   await save(c.page).catch(() => undefined);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);

@@ -238,17 +238,54 @@ export function moveSlide(from: number, toBefore: number): void {
 
 /** INS-01: Free text box inside the current slide, inheriting the deck's text style. */
 export function insertTextBox(at?: { x: number; y: number }): void {
+  insertFree('Insert text box', { w: 400, h: 60 }, (x, y) => `<div style="position: absolute; left: ${x}px; top: ${y}px; width: 400px;">Click to add text</div>`, true, at);
+}
+
+/** Insert > Shapes (SHP-01, reduced): a plain div with inline styling, drawn centred on the slide. */
+export function insertShape(kind: 'rectangle' | 'rounded' | 'ellipse' | 'line'): void {
+  const fill = 'background: #4472c4;';
+  const body = kind === 'line' ? { w: 400, h: 4, css: 'width: 400px; height: 4px; background: #4472c4;' }
+    : { w: 300, h: 180, css: `width: 300px; height: 180px; ${fill}${kind === 'ellipse' ? ' border-radius: 50%;' : kind === 'rounded' ? ' border-radius: 24px;' : ''}` };
+  insertFree(`Insert ${kind === 'rounded' ? 'rounded rectangle' : kind}`, body, (x, y) => `<div style="position: absolute; left: ${x}px; top: ${y}px; ${body.css}"></div>`, false);
+}
+
+/** Insert > Table (TBL-01, reduced): a plain table with inline cell borders, placed as a Free object. Row and column editing is not built yet. */
+export function insertTable(rows: number, cols: number): void {
+  const r = Math.max(1, Math.min(20, Math.floor(rows))); const c = Math.max(1, Math.min(12, Math.floor(cols)));
+  const cell = (tag: 'th' | 'td', text: string): string => `<${tag} style="border: 1px solid #888; padding: 12px 20px; min-width: 120px; text-align: left;">${text}</${tag}>`;
+  const row = (i: number): string => `<tr>${Array.from({ length: c }, (_, j) => cell(i === 0 ? 'th' : 'td', i === 0 ? `Column ${j + 1}` : 'Text')).join('')}</tr>`;
+  const inner = Array.from({ length: r }, (_, i) => row(i)).join('');
+  insertFree(`Insert ${r}×${c} table`, { w: c * 160, h: r * 60 }, (x, y) => `<table style="position: absolute; left: ${x}px; top: ${y}px; border-collapse: collapse; font-size: 28px;"><tbody>${inner}</tbody></table>`, false);
+}
+
+// Insert > Icons (ICO-01, reduced): a few drawn-in-place SVG icons, no network. They take the text colour (currentColor) and are plain markup in the file.
+export const ICONS: Record<string, { label: string; path: string }> = {
+  check: { label: 'Check', path: 'M4 12.5l5 5L20 6.5' },
+  cross: { label: 'Cross', path: 'M5 5l14 14M19 5L5 19' },
+  arrow: { label: 'Arrow', path: 'M4 12h15M13 6l6 6-6 6' },
+  plus: { label: 'Plus', path: 'M12 4v16M4 12h16' },
+  star: { label: 'Star', path: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z' },
+  heart: { label: 'Heart', path: 'M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z' },
+  info: { label: 'Info', path: 'M12 8h.01M11 12h1v5h1M12 3a9 9 0 100 18 9 9 0 000-18z' },
+};
+export function insertIcon(key: keyof typeof ICONS): void {
+  const ic = ICONS[key];
+  if (!ic) return;
+  insertFree(`Insert icon: ${ic.label}`, { w: 96, h: 96 }, (x, y) => `<svg viewBox="0 0 24 24" role="img" aria-label="${ic.label}" style="position: absolute; left: ${x}px; top: ${y}px; width: 96px; height: 96px; color: #4472c4;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ic.path}"/></svg>`, false);
+}
+
+function insertFree(label: string, size: { w: number; h: number }, html: (x: number, y: number) => string, edit: boolean, at?: { x: number; y: number }): void {
   const s = st();
   const slide = session.slideRoot();
   const rect = s.rects[slide?.id ?? -1];
   if (!slide || !rect || slide.endTagStart === null) return;
   const doc = session.doc;
-  const x = at?.x ?? (rect.w / rect.sx) / 2 - 200;
-  const y = at?.y ?? (rect.h / rect.sy) / 2 - 30;
+  const x = Math.round(at?.x ?? (rect.w / rect.sx) / 2 - size.w / 2);
+  const y = Math.round(at?.y ?? (rect.h / rect.sy) / 2 - size.h / 2);
   const eol = doc.meta.eol === 'crlf' ? '\r\n' : '\n';
   const lineStart = doc.text.lastIndexOf('\n', slide.endTagStart - 1) + 1;
   const closeIndent = /^[ \t]*$/.test(doc.text.slice(lineStart, slide.endTagStart)) ? doc.text.slice(lineStart, slide.endTagStart) : null;
-  const html = `<div style="position: absolute; left: ${Math.round(x)}px; top: ${Math.round(y)}px; width: 400px;">Click to add text</div>`;
+  const markup = html(x, y);
   const patches: Patch[] = [];
   // the slide needs a positioning context for a Free object
   if (rect.position === 'static') {
@@ -257,18 +294,18 @@ export function insertTextBox(at?: { x: number; y: number }): void {
     const next = cur ? `${cur.replace(/;?\s*$/, '')}; position: relative;` : 'position: relative;';
     patches.push(styleAttrPatch(p, cur !== '' || getAttr(p, 'style') !== undefined, next));
   }
-  const text = closeIndent !== null ? `${closeIndent}  ${html}${eol}` : html;
+  const text = closeIndent !== null ? `${closeIndent}  ${markup}${eol}` : markup;
   const at2 = closeIndent !== null ? lineStart : slide.endTagStart;
   patches.push({ start: at2, end: at2, text });
   const nonce0 = useStore.getState().loadNonce;
-  session.exec({ label: 'Insert text box', build: () => patches });
+  session.exec({ label, build: () => patches });
   // Start editing only once the structural edit's reload has finished and the agent is back; otherwise the reload wipes the edit state.
   const began = Date.now();
   const tryEdit = (): void => {
     const st = useStore.getState();
     if ((st.loadNonce === nonce0 || !st.agentReady) && Date.now() - began < 15000) { setTimeout(tryEdit, 100); return; }
-    const n = session.doc.elements.filter((e) => e.start >= at2 && e.start < at2 + text.length && e.tag === 'div').at(0);
-    if (n) { useStore.setState({ selection: [n.id] }); setTimeout(() => session.startEdit(n.id), 150); }
+    const n = session.doc.elements.filter((e) => e.start >= at2 && e.start < at2 + text.length && isObjectTag(e.tag)).at(0);
+    if (n) { useStore.setState({ selection: [n.id] }); if (edit) setTimeout(() => session.startEdit(n.id), 150); }
   };
   setTimeout(tryEdit, 100);
 }
