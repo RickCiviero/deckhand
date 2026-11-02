@@ -7,6 +7,7 @@ import { FormatPane } from './FormatPane';
 import { AiPane } from './AiPane';
 import { Backstage } from './Backstage';
 import { DefineSlides } from './DefineSlides';
+import { SelectionPane } from './SelectionPane';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
 import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
@@ -249,10 +250,11 @@ export function App(): JSX.Element {
           <section className="center"><Canvas /></section>
           <div className="dock">
             <div className="dockTabs" role="tablist">
+              <button role="tab" aria-selected={dock === 'selection'} className={dock === 'selection' ? 'on' : ''} onClick={() => ai.setDock('selection')} data-testid="dock-selection">Selection</button>
               <button role="tab" aria-selected={dock === 'format'} className={dock === 'format' ? 'on' : ''} onClick={() => ai.setDock('format')} data-testid="dock-format">Format</button>
               {s.settings.aiEnabled && <button role="tab" aria-selected={dock === 'ai'} className={dock === 'ai' ? 'on' : ''} onClick={() => ai.setDock('ai')} data-testid="dock-ai">AI Assistant</button>}
             </div>
-            {dock === 'ai' && s.settings.aiEnabled ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
+            {dock === 'selection' ? <SelectionPane /> : dock === 'ai' && s.settings.aiEnabled ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
           </div>
         </main>
       )}

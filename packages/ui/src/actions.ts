@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { isLocked, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -22,6 +22,7 @@ export function nudge(dx: number, dy: number): void {
     return;
   }
   s = st();
+  if (s.selection.some((id) => isLocked(session.doc, id))) return; // SEL-08
   const c = ctx();
   // 1 px in the design viewport; CSS px = viewport px / scale
   const fixed = s.selection.flatMap((id) => {
@@ -48,6 +49,7 @@ export function nudge(dx: number, dy: number): void {
 export function deleteSelection(): void {
   const s = st();
   if (!s.selection.length) return;
+  if (s.selection.some((id) => isLocked(session.doc, id))) { session.notify('info', 'A locked object cannot be deleted. Unlock it in the Selection Pane first.'); return; }
   const top = s.selection.filter((id) => !s.selection.some((o) => o !== id && session.isDescendant(id, o)));
   // delete from the end so earlier offsets stay valid: do it as one transaction via one command
   session.exec({
@@ -233,6 +235,7 @@ export function installKeyboard(): () => void {
     const s = st();
     if (!s.loaded) return;
     if (e.key === 'F5') { e.preventDefault(); startShow(e.shiftKey ? s.slide : 0); return; }
+    if (e.altKey && e.key === 'F10') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'selection' ? 'format' : 'selection'); return; }
     if (mod && e.altKey && e.key.toLowerCase() === 'i') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'ai' ? 'format' : 'ai'); return; }
     const k = e.key;
     if (mod && k.toLowerCase() === 's') { e.preventDefault(); void (e.shiftKey ? session.saveAs() : session.save()); return; }

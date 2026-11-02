@@ -21,7 +21,7 @@ interface AiState {
   items: ChatItem[];
   usage: { input: number; output: number };
   loaded: boolean;
-  dock: 'format' | 'ai';
+  dock: 'format' | 'ai' | 'selection';
 }
 export const useAi = create<AiState>(() => ({ connections: [], secure: true, connId: null, mode: 'edit', busy: false, items: [], usage: { input: 0, output: 0 }, loaded: false, dock: 'format' }));
 const set = useAi.setState;
@@ -76,7 +76,7 @@ export const ai = {
     set((s) => ({ connections: list, connId: s.connId === id ? list[0]?.id ?? null : s.connId }));
   },
   testConnection: (id: string) => window.deckhand.ai.test(id),
-  setDock: (dock: 'format' | 'ai') => set({ dock }),
+  setDock: (dock: 'format' | 'ai' | 'selection') => set({ dock }),
   setMode: (mode: 'ask' | 'edit') => set({ mode }),
   setConnection: (connId: string) => set({ connId }),
   newChat(): void { history = []; set({ items: [], usage: { input: 0, output: 0 } }); },

@@ -91,5 +91,7 @@ export function removeStyleProp(style: string, prop: string): string {
   while (end < style.length && /\s/.test(style[end]!)) end++;
   if (style[end] === ';') end++;
   while (end < style.length && style[end] === ' ') end++;
-  return style.slice(0, d.start) + style.slice(end);
+  // the last declaration leaves no dangling separator space behind
+  const head = end >= style.length ? style.slice(0, d.start).replace(/ +$/, '') : style.slice(0, d.start);
+  return head + style.slice(end);
 }

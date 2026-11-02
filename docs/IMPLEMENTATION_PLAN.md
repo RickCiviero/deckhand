@@ -78,3 +78,8 @@ Still open in M3: Preview in Browser, Options / Trust Center UI, theme *Fonts*, 
 ### M3 progress (update 3)
 Added and tested: Options (Trust Center defaults for scripts and remote content, AI on/off, AI external-content permission, tool-call limit), Define Slides wizard, Design tab. Fixed two real bugs found by the new tests: settings patches reset other settings to defaults, and stale geometry measured before an edit could make a nudge lose a pixel.
 Still open in M3: Preview in Browser, theme Fonts, contextual tabs, administrator policy file, "Ask" mode for remote content.
+
+## M5 progress
+Done and tested: Selection Pane (Alt+F10: topmost-first tree, rename → `data-deckhand-name`, hide → inline `display: none`, lock → `data-deckhand-locked`, Show/Hide All; locked objects cannot be moved, resized, nudged or deleted), Define Slides (see M3), Marp/impress/Shower detection, Insert > Link, Insert/Change Picture.
+Not done in the Selection Pane: drag to reorder, "generated" markers.
+Not started in M5: Format Painter, find/replace, group/distribute, shapes, tables, icons, crop, picture styles, fonts, apply-to-all-similar, Code view, spell-check, Version History, PNG and single-file export, Protected View, page mode polish, accessibility pass, help and onboarding, auto-update, signing, `agent` → `bridge` rename.

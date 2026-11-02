@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isLocked } from '@deckhand/core';
 import { detectUnitMode, isFree, moveEdit, outermost, resizeEdit, snapBox, type Box, type Handle } from './geometry';
 import { session, styleMultiCommand, useStore, type Rect } from './session';
 
@@ -96,7 +97,7 @@ export function Canvas(): JSX.Element {
     const handle = target.dataset['handle'] as Handle | undefined;
     const ids = useStore.getState().selection;
     const st = useStore.getState();
-    if (handle && ids.length === 1) {
+    if (handle && ids.length === 1 && !isLocked(session.doc, ids[0]!)) {
       drag.current = { kind: 'resize', x0: e.clientX, y0: e.clientY, ids, rects: { ...st.rects }, styles: { [ids[0]!]: session.styleOf(ids[0]!) }, handle, moved: false, hitId: ids[0]!, shift: e.shiftKey, wasSelected: true };
       return;
     }
@@ -132,6 +133,11 @@ export function Canvas(): JSX.Element {
     await session.refreshRects();
     const now = useStore.getState();
     mine.kind = 'move';
+    if (now.selection.some((id) => isLocked(session.doc, id))) { // SEL-08: locked objects can be selected but not moved
+      mine.kind = 'pending';
+      session.notify('info', 'This object is locked. Unlock it in the Selection Pane to move it.');
+      return;
+    }
     mine.ids = now.selection;
     mine.rects = { ...now.rects };
     mine.styles = Object.fromEntries(now.selection.map((id) => [id, session.styleOf(id)]));

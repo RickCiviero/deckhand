@@ -375,3 +375,28 @@ test('Define Slides: choose the slide element; saved as one meta tag; reset rest
   await save(c.page);
   expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
 });
+
+test('Selection Pane: select, rename, hide and lock objects; a locked object cannot be moved or deleted', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('dock-selection').click();
+  const items = c.page.getByTestId('sel-item');
+  await expect(items).toHaveCount(3);
+  await expect(items.nth(0)).toContainText('div.logo'); // topmost first
+  await items.nth(0).locator('.selname').click();
+  await expect(c.page.locator('[data-testid=path]')).toContainText('div.logo');
+  await items.nth(0).locator('.selname').dblclick();
+  await c.page.getByTestId('sel-rename').fill('Logo');
+  await c.page.keyboard.press('Enter');
+  await expect(items.nth(0)).toContainText('Logo');
+  await items.nth(0).getByTestId('sel-lock').click();
+  await c.page.keyboard.press('Delete');
+  await expect(c.page.getByTestId('msgbar').filter({ hasText: 'locked object cannot be deleted' })).toBeVisible();
+  await dragObj(c.page, '.slide.active .logo', 80, 40);
+  await items.nth(0).getByTestId('sel-lock').click(); // unlock
+  await items.nth(1).getByTestId('sel-eye').click(); // hide the body text
+  await save(c.page);
+  expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1')
+    .replace('<div class="logo">', '<div class="logo" data-deckhand-name="Logo">')
+    .replace('<p class="body">Revenue', '<p class="body" style="display: none;">Revenue'));
+});
