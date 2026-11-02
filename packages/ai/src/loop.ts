@@ -35,6 +35,9 @@ export interface TurnOptions {
   onEvent?: (e: TurnEvent) => void;
 }
 
+/** Source of every slide, in order (used to undo one slide of an AI turn). */
+export const slideSources = (d: SourceDoc): string[] => detectDeck(d).slides.map((s) => d.text.slice(d.byId(s.id)!.start, d.byId(s.id)!.end));
+
 export interface ChangeEntry { slide: number; kind: 'changed' | 'added' | 'removed'; label: string }
 
 /** Which slides differ between two versions of the deck (AIE-04 change card). */

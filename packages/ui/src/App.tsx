@@ -210,6 +210,7 @@ export function App(): JSX.Element {
         ))}
       </div>
 
+      {s.aiBusy && <div className="aibar" role="status" data-testid="ai-bar">AI Assistant is editing… <Button size="small" onClick={() => ai.stop()}>Stop</Button></div>}
       {!s.loaded ? (
         <main className="welcome" data-testid="welcome">
           <h1>{t('app.name')}</h1>

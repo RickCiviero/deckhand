@@ -64,6 +64,7 @@ export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; 
             <h3>AI Assistant</h3>
             <label className="opt"><input type="checkbox" checked={s.settings.aiEnabled} data-testid="opt-ai" onChange={(e) => void save({ aiEnabled: e.target.checked })} /> Turn the AI Assistant on</label>
             <label className="opt"><input type="checkbox" checked={s.settings.aiAllowExternal} disabled={!s.settings.aiEnabled} data-testid="opt-ai-external" onChange={(e) => void save({ aiAllowExternal: e.target.checked })} /> Let the AI add external content (pictures, fonts and styles from the internet). Scripts are never allowed.</label>
+            <label className="opt"><input type="checkbox" checked={s.settings.aiAskBefore} disabled={!s.settings.aiEnabled} data-testid="opt-ai-ask" onChange={(e) => void save({ aiAskBefore: e.target.checked })} /> Ask before applying: show what the AI wants to change and apply it only after I click Apply</label>
             <label className="opt">Most tool calls in one AI request
               <input type="number" min={1} max={200} value={s.settings.aiMaxToolCalls} disabled={!s.settings.aiEnabled} onChange={(e) => void save({ aiMaxToolCalls: Math.max(1, Math.min(200, Number(e.target.value) || 40)) })} />
             </label>

@@ -10,9 +10,10 @@ const fields = z.object({
   aiEnabled: z.boolean(), // AIG-06
   aiAllowExternal: z.boolean(), // AIS-04
   aiMaxToolCalls: z.number().int().min(1).max(200), // AIT-04
+  aiAskBefore: z.boolean(), // AIE-05: preview changes, apply only after "Apply"
 });
 export type Settings = z.infer<typeof fields>;
-const DEFAULTS: Settings = { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40 };
+const DEFAULTS: Settings = { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false };
 // no .default() on the fields: a partial schema would fill them in and a patch would silently reset every other setting
 const patchSchema = fields.partial().strict();
 

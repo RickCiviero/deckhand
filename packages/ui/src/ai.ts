@@ -1,7 +1,7 @@
 /** AI Assistant state and turn runner (§10). The loop and deck tools run here, next to the Editor; keys and network stay in the main process. */
 import { create } from 'zustand';
-import { detectDeck } from '@deckhand/core';
-import { restoreCheckpoint, runTurn, type Chunk, type ChangeEntry, type Message, type ModelRequest, type Provider } from '@deckhand/ai';
+import { Editor, detectDeck, diffPatch, patchCommand } from '@deckhand/core';
+import { restoreCheckpoint, runTurn, slideSources, type Chunk, type ChangeEntry, type Message, type ModelRequest, type Provider } from '@deckhand/ai';
 import { session, useStore } from './session';
 
 export interface AiConnection { id: string; name: string; kind: 'anthropic' | 'openai' | 'compatible'; baseUrl: string; model: string; hasKey: boolean }
@@ -9,7 +9,7 @@ export type ChatItem =
   | { kind: 'user'; text: string }
   | { kind: 'assistant'; text: string }
   | { kind: 'step'; text: string; error?: boolean }
-  | { kind: 'card'; id: number; changes: ChangeEntry[]; checkpoint: string; label: string; open: boolean }
+  | { kind: 'card'; id: number; changes: ChangeEntry[]; checkpoint: string; label: string; open: boolean; before: string[]; after: string[]; pending?: { base: string; final: string } }
   | { kind: 'error'; text: string };
 
 interface AiState {
@@ -88,7 +88,12 @@ export const ai = {
     if (st.busy || !text.trim() || !st.connId || !sess.loaded) return;
     abort = new AbortController();
     set((s) => ({ busy: true, items: [...s.items, { kind: 'user', text }] }));
-    const editor = session.editor!;
+    if (st.mode === 'edit') useStore.setState({ aiBusy: true });
+    const real = session.editor!;
+    // Ask before applying (AIE-05): the turn runs on a scratch copy; the real document changes only on Apply
+    const ask = sess.settings.aiAskBefore && st.mode === 'edit';
+    const editor = ask ? new Editor(real.doc) : real;
+    const startDoc = real.doc;
     let before = editor.doc;
     let assistant = '';
     const det = detectDeck(editor.doc);
@@ -107,7 +112,7 @@ export const ai = {
             assistant = '';
             const err = (e.result as { error?: string } | null)?.error;
             set((s) => ({ items: [...s.items, { kind: 'step', text: err ? `${e.name}: ${err}` : e.name, error: !!err }] }));
-            if (editor.doc !== before) { session.adopt(before); before = editor.doc; } // changes apply live (AIE-02)
+            if (!ask && editor.doc !== before) { session.adopt(before); before = editor.doc; } // changes apply live (AIE-02)
           }
         },
       });
@@ -115,14 +120,19 @@ export const ai = {
       set((s) => ({
         usage: { input: s.usage.input + r.usage.input, output: s.usage.output + r.usage.output },
         items: r.changes.length && st.mode === 'edit'
-          ? [...s.items, { kind: 'card', id: cardId++, changes: r.changes, checkpoint: r.checkpoint, label: editor.undoLabel ?? '', open: true }]
+          ? [...s.items, {
+              kind: 'card', id: cardId++, changes: r.changes, checkpoint: r.checkpoint, open: true, before: slideSources(startDoc), after: slideSources(editor.doc),
+              label: ask ? `AI: ${text.replace(/s+/g, ' ').slice(0, 50)}` : editor.undoLabel ?? '',
+              ...(ask ? { pending: { base: startDoc.text, final: editor.doc.text } } : {}),
+            }]
           : s.items,
       }));
     } catch (e) {
       set((s) => ({ items: [...s.items, { kind: 'error', text: errText(e) }] }));
     } finally {
-      if (editor.doc !== before) session.adopt(before);
+      if (!ask && editor.doc !== before) session.adopt(before);
       abort = null;
+      useStore.setState({ aiBusy: false });
       set({ busy: false });
     }
   },
@@ -137,8 +147,48 @@ export const ai = {
     else if (restoreCheckpoint(ed, card.checkpoint)) session.adopt(before);
     set((s) => ({ items: s.items.map((i) => (i.kind === 'card' && i.id === id ? { ...i, open: false } : i)) }));
   },
+  /** Apply a previewed turn (AIE-05) as one undo step; refused if the deck changed in the meantime. */
+  applyCard(id: number): void {
+    const card = cardOf(id);
+    if (!card?.pending) return;
+    const ed = session.editor!;
+    if (ed.doc.text !== card.pending.base) {
+      session.notify('error', 'The presentation changed while you were reviewing, so these changes can no longer be applied. Ask again.');
+      return;
+    }
+    const before = ed.doc;
+    const { final } = card.pending;
+    ed.exec(patchCommand(card.label, (d) => (d.text === final ? [] : [diffPatch(d.text, final)])), 0);
+    session.adopt(before);
+    set((s) => ({ items: s.items.map((i) => (i.kind === 'card' && i.id === id ? { ...i, pending: undefined } : i)) }));
+  },
+  discardCard(id: number): void { set((s) => ({ items: s.items.filter((i) => !(i.kind === 'card' && i.id === id)) })); },
+
+  /** Undo the AI's change to one slide (AIE-04), only while that slide is still as the AI left it. */
+  undoSlide(id: number, slide: number): void {
+    const card = cardOf(id);
+    const ed = session.editor;
+    if (!card || !ed) return;
+    const now = slideSources(ed.doc);
+    if (now.length !== card.before.length || now[slide - 1] !== card.after[slide - 1]) {
+      session.notify('warning', `Slide ${slide} has changed since the AI edited it, so only "Undo all" can revert it.`);
+      return;
+    }
+    const before = ed.doc;
+    ed.exec(patchCommand(`Undo AI change on slide ${slide}`, (d) => { const el = d.byId(detectDeck(d).slides[slide - 1]!.id)!; return [{ start: el.start, end: el.end, text: card.before[slide - 1]! }]; }), 0);
+    session.adopt(before);
+    set((s) => ({
+      items: s.items.map((i) => {
+        if (i.kind !== 'card' || i.id !== id) return i;
+        const changes = i.changes.filter((c) => c.slide !== slide);
+        return { ...i, changes, after: i.after.map((a, k) => (k === slide - 1 ? i.before[k]! : a)), open: changes.length > 0 };
+      }),
+    }));
+  },
   keepCard(id: number): void { set((s) => ({ items: s.items.map((i) => (i.kind === 'card' && i.id === id ? { ...i, open: false } : i)) })); },
 };
+
+const cardOf = (id: number): Extract<ChatItem, { kind: 'card' }> | undefined => get().items.find((i) => i.kind === 'card' && i.id === id) as Extract<ChatItem, { kind: 'card' }> | undefined;
 
 function replaceTail(items: ChatItem[], kind: 'assistant', text: string): ChatItem[] {
   const last = items.at(-1);

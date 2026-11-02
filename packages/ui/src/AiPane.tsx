@@ -57,9 +57,14 @@ function ConnectionForm({ onDone }: { onDone: () => void }): JSX.Element {
 function Card({ item }: { item: Extract<ChatItem, { kind: 'card' }> }): JSX.Element {
   return (
     <div className="aicard" data-testid="ai-card">
-      <strong>{item.changes.length} slide{item.changes.length === 1 ? '' : 's'} changed</strong>
-      <ul>{item.changes.map((c) => <li key={`${c.slide}${c.kind}`}>Slide {c.slide} ({c.kind}): {c.label}</li>)}</ul>
-      {item.open && <div className="row"><Button size="small" appearance="primary" onClick={() => ai.keepCard(item.id)}>Keep</Button><Button size="small" onClick={() => ai.undoCard(item.id)} data-testid="ai-undo">Undo all</Button></div>}
+      <strong>{item.pending ? 'The AI wants to change' : ''} {item.changes.length} slide{item.changes.length === 1 ? '' : 's'}{item.pending ? '' : ' changed'}</strong>
+      <ul>{item.changes.map((c) => (
+        <li key={`${c.slide}${c.kind}`}>Slide {c.slide} ({c.kind}): {c.label}
+          {item.open && !item.pending && c.kind === 'changed' && item.changes.every((x) => x.kind === 'changed') && <> <button className="linkish" onClick={() => ai.undoSlide(item.id, c.slide)} data-testid="ai-undo-slide">Undo</button></>}
+        </li>
+      ))}</ul>
+      {item.pending && <div className="row"><Button size="small" appearance="primary" onClick={() => ai.applyCard(item.id)} data-testid="ai-apply">Apply</Button><Button size="small" onClick={() => ai.discardCard(item.id)} data-testid="ai-discard">Discard</Button></div>}
+      {item.open && !item.pending && <div className="row"><Button size="small" appearance="primary" onClick={() => ai.keepCard(item.id)}>Keep</Button><Button size="small" onClick={() => ai.undoCard(item.id)} data-testid="ai-undo">Undo all</Button></div>}
     </div>
   );
 }

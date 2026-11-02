@@ -58,7 +58,7 @@ Full ribbon & Backstage, layout gallery, pictures (insert/change), links dialog,
 | Pane: connection picker, Ask/Edit, streamed text, steps, change card with Keep / Undo all, Stop, context chip | 🟡 | no history list (AIP-07), prompt gallery (AIQ-02), attachments (AIX-05), cost estimate (AIP-08), @-mentions |
 | Quick actions in mini toolbar / context menu (AIQ-01) | ⬜ | |
 | Continue with ChatGPT (AIC-04), GitHub Copilot SDK (AIC-05), ACP external agents (AIC-06), Azure Entra (AIC-03), MCP server mode (AIM) | ⬜ | each depends on provider terms re-check (AIG-02) |
-| Ask-before-applying (AIE-05), per-slide undo on the card (AIE-04), manual editing paused during a turn (AIE-02) | ⬜ | |
+| Ask-before-applying (AIE-05), per-slide undo on the card (AIE-04), manual editing paused during a turn with Stop bar (AIE-02) | ✅ | e2e-tested with the mock model. Per-slide undo only when every change is to an existing slide and that slide is still as the AI left it |
 | Admin policy (AIS-06), TST-10, TST-11 evaluation set, SPIKE-5 token/cost measurement | ⬜ | needs real accounts |
 
 ## Still not started

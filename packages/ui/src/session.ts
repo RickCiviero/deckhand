@@ -80,6 +80,8 @@ interface State {
   zoomBox: boolean;
   thumbs: Record<number, string>;
   settings: AppSettings;
+  /** An AI Edit turn is running: manual editing is paused (AIE-02). */
+  aiBusy: boolean;
   /** Remote content allowed for the open document (SEC-05); starts from the Trust Center default. */
   remote: boolean;
 }
@@ -88,7 +90,7 @@ export const useStore = create<State>(() => ({
   loaded: false, name: '', docId: null, version: 0, slides: [], detection: null, slide: 0, selection: [], hover: null, rects: {}, slideObjects: [],
   zoom: 0.5, fit: true, viewport: { w: 1920, h: 1080 }, dirty: false, canUndo: false, canRedo: false, undoLabel: '', editing: null, notices: [], src: null,
   origin: null, token: null, loadNonce: 0, agentReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false, thumbs: {},
-  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40 }, remote: true,
+  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false }, remote: true, aiBusy: false,
 }));
 const set = useStore.setState;
 const get = useStore.getState;
@@ -342,7 +344,15 @@ class Session {
   }
 
   // ---- editing ----------------------------------------------------------------------------------------------
+  /** Manual edits wait while the AI is editing (AIE-02): navigation, zoom and selection keep working. */
+  private paused(): boolean {
+    if (!get().aiBusy) return false;
+    this.notify('info', 'The AI Assistant is editing. You can edit again when it has finished, or press Stop.');
+    return true;
+  }
+
   exec(cmd: Parameters<Editor['exec']>[0], opts?: { live?: boolean; selectAfter?: number[] }): boolean {
+    if (this.paused()) return false;
     const ed = this.editor!;
     const before = ed.doc;
     const patches = ed.exec(cmd);
@@ -357,6 +367,7 @@ class Session {
   undo(): void { this.stepHistory('undo'); }
   redo(): void { this.stepHistory('redo'); }
   private stepHistory(k: 'undo' | 'redo'): void {
+    if (this.paused()) return;
     const ed = this.editor!;
     const before = ed.doc;
     if (!(k === 'undo' ? ed.undo() : ed.redo())) return;
@@ -420,6 +431,7 @@ class Session {
 
   // ---- text editing --------------------------------------------------------------------------------------------
   startEdit(id: number, at?: { x: number; y: number; mode: 'word' | 'caret' }): void {
+    if (this.paused()) return;
     const el = this.doc.byId(id);
     if (!el || el.endTagStart === null) return;
     if (!isSimpleInlineHtml(textOf(this.doc, el))) {
