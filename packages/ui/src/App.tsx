@@ -12,16 +12,16 @@ import { FindBar } from './FindBar';
 import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
-import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, pickFormat, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'design' | 'show' | 'view';
 
-function Cmd({ label, tip, onClick, disabled, on, testid }: { label: string; tip: string; onClick: () => void; disabled?: boolean; on?: boolean; testid?: string }): JSX.Element {
+function Cmd({ label, tip, onClick, onDouble, disabled, on, testid }: { label: string; tip: string; onClick: () => void; onDouble?: () => void; disabled?: boolean; on?: boolean; testid?: string }): JSX.Element {
   return (
     <Tooltip content={tip} relationship="description" withArrow>
       {/* mousedown default prevented so formatting buttons do not steal the text selection from the live view */}
-      <Button size="small" appearance={on ? 'primary' : 'subtle'} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onClick} data-testid={testid}>{label}</Button>
+      <Button size="small" appearance={on ? 'primary' : 'subtle'} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onClick} onDoubleClick={onDouble} data-testid={testid}>{label}</Button>
     </Tooltip>
   );
 }
@@ -147,6 +147,7 @@ export function App(): JSX.Element {
             <Cmd label={t('home.paste')} tip="Paste (Ctrl+V)" disabled={!s.loaded} onClick={() => paste()} testid="cmd-paste" />
             <Cmd label={t('home.cut')} tip="Cut (Ctrl+X)" disabled={!s.selection.length} onClick={() => copySelection(true)} />
             <Cmd label={t('home.copy')} tip="Copy (Ctrl+C)" disabled={!s.selection.length} onClick={() => copySelection()} />
+            <Cmd label={t('home.painter')} tip="Format Painter: copy the look of the selected object, then select another. Double-click to keep painting; Esc stops." on={!!s.painter} disabled={!s.selection.length && !s.painter} onClick={() => (s.painter ? useStore.setState({ painter: null }) : pickFormat(false))} onDouble={() => pickFormat(true)} testid="cmd-painter" />
             <span className="sep" />
             <Cmd label={t('home.undo')} tip="Undo (Ctrl+Z)" disabled={!s.canUndo} onClick={() => session.undo()} />
             <Cmd label={t('home.redo')} tip="Redo (Ctrl+Y)" disabled={!s.canRedo} onClick={() => session.redo()} />

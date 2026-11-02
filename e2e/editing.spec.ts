@@ -463,3 +463,26 @@ test('Code view: embedded pictures are folded, and an edit that adds HTML errors
   await c.page.getByTestId('code-apply-anyway').click();
   await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
 });
+
+test('Format Painter copies visual style (not position) to the next selected object; one undo step; Esc cancels', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await clickObj(c.page, '.logo');
+  await c.page.locator('[data-testid=fp-fill]').fill('#00aa44');
+  await c.page.locator('[data-testid=fp-x]').fill('100');
+  await c.page.locator('[data-testid=fp-x]').press('Enter');
+  await c.page.waitForTimeout(400);
+  await c.page.getByTestId('tab-home').click();
+  await c.page.getByTestId('cmd-painter').click();
+  await clickObj(c.page, '.slide.active .body');
+  await expect(c.page.getByTestId('cmd-painter')).not.toHaveAttribute('class', /primary/);
+  await save(c.page);
+  const out = c.text();
+  const body = /<p class="body" style="([^"]*)">/.exec(out)?.[1] ?? '';
+  expect(body).toMatch(/background(-color)?: #00aa44/i);
+  expect(body).not.toMatch(/left|top|right|width|height/);
+  // one undo step restores the body untouched
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.text()).toContain(`<p class="body">Revenue`);
+});

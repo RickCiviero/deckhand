@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { isLocked, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -231,6 +231,13 @@ export async function exportPdf(): Promise<void> {
 }
 
 export function installKeyboard(): () => void {
+  // Format Painter applies when a different object gets selected
+  const unsub = useStore.subscribe((x, prev) => {
+    const p = x.painter;
+    if (!p || x.selection === prev.selection || !x.selection.length || x.selection.includes(p.from)) return;
+    setSelectionStyle('Format Painter', p.set);
+    if (!p.sticky) useStore.setState({ painter: null });
+  });
   const onKey = (e: KeyboardEvent): void => {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
@@ -264,6 +271,7 @@ export function installKeyboard(): () => void {
     if (k === 'Delete' || k === 'Backspace') { if (s.selection.length) { e.preventDefault(); deleteSelection(); } return; }
     if (k === 'F2' || k === 'Enter') { const id = s.selection[0]; if (id !== undefined && s.rects[id]?.text) { e.preventDefault(); session.startEdit(id); } return; }
     if (k === 'Escape') {
+      if (s.painter) { useStore.setState({ painter: null }); return; }
       const id = s.selection[0];
       if (id === undefined) return;
       const parent = session.doc.byId(id)?.parent;
@@ -304,7 +312,7 @@ export function installKeyboard(): () => void {
   window.addEventListener('keydown', onKey);
   window.addEventListener('deckhand-cmd', onCmd);
   window.addEventListener('deckhand-key', onAgentKey);
-  return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('deckhand-cmd', onCmd); window.removeEventListener('deckhand-key', onAgentKey); };
+  return () => { unsub(); window.removeEventListener('keydown', onKey); window.removeEventListener('deckhand-cmd', onCmd); window.removeEventListener('deckhand-key', onAgentKey); };
 }
 
 const errMsg = (e: unknown): string => (e as Error).message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
@@ -363,6 +371,17 @@ export function setSelectionStyle(label: string, set: Record<string, string | nu
   const s = st();
   if (!s.selection.length) return;
   session.exec(styleMultiCommand(label, s.selection.map((id) => ({ id, set }))));
+}
+
+/** Format Painter: copy the selected object's visual style; the next object selected receives it (once, or until Esc when sticky). */
+export function pickFormat(sticky: boolean): void {
+  const s = st();
+  const id = s.selection[0];
+  if (id === undefined) return;
+  const set: Record<string, string> = {};
+  for (const [p, v] of styleDeclarations(session.styleOf(id))) if (PAINTABLE.test(p) && isSafeCssProp(p) && isSafeCssValue(v)) set[p] = v;
+  if (!Object.keys(set).length) { session.notify('info', 'This object has no inline formatting to copy.'); return; }
+  useStore.setState({ painter: { set, sticky, from: id } });
 }
 
 export function selectAll(): void {

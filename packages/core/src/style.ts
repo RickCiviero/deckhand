@@ -95,3 +95,11 @@ export function removeStyleProp(style: string, prop: string): string {
   const head = end >= style.length ? style.slice(0, d.start).replace(/ +$/, '') : style.slice(0, d.start);
   return head + style.slice(end);
 }
+
+/** The declarations of an inline style as [property, value] pairs, in order. */
+export function styleDeclarations(style: string): [string, string][] {
+  return scan(style).map((d) => [d.prop, style.slice(d.valueStart, d.end).trim()]);
+}
+
+/** Visual properties Format Painter copies (STY-04): never size or position. */
+export const PAINTABLE = /^(color|background(-[a-z]+)?|border(-[a-z-]+)?|box-shadow|text-shadow|opacity|font(-[a-z]+)?|text-(align|decoration[a-z-]*|transform)|letter-spacing|line-height|filter|outline(-[a-z]+)?)$/;
