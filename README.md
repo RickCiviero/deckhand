@@ -228,6 +228,16 @@ A deck is **untrusted code**. It runs in a sandboxed iframe served from its own 
 
 The editor is tested against a hostile deck (infinite loop, `window.open`, path traversal, forged messages, huge allocations, instructions aimed at the AI). The threat model and the test behind each control are in [`docs/SECURITY.md`](docs/SECURITY.md).
 
+**For administrators.** A `policy.json` file fixes settings for every user of a computer. The same names as in Options apply: `scripts`, `remote` (`allow`, `ask`, `block`), `aiEnabled`, `aiAllowExternal`, `aiMaxToolCalls`, `aiAskBefore`. Fixed settings show as locked in Options and the settings API refuses to change them.
+
+| System | Location |
+|---|---|
+| Windows | `%ProgramData%Deckhandpolicy.json` |
+| macOS | `/Library/Application Support/Deckhand/policy.json` |
+| Linux | `/etc/deckhand/policy.json` |
+
+Example: `{ "aiEnabled": false, "remote": "block" }`. A policy file that is not valid JSON, or has unknown keys, is ignored as a whole.
+
 ## Build from source
 
 You need **Node.js 22 or later** (24 is what CI uses) and Git. `npm install` downloads the matching Electron binary.

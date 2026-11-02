@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { deckFrame, launch, ready, type Ctx } from './helpers';
 
@@ -259,4 +260,24 @@ test.describe('editor UI hardening (SEC-01/07)', () => {
     // the deck folder must contain no temp or recovery files from editing
     expect(fs.readdirSync(c.deckDir).sort()).toEqual(before);
   });
+});
+
+test('administrator policy file: fixed settings win, are shown as locked, and cannot be changed through the settings API', async () => {
+  const policy = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'dh-policy-')), 'policy.json');
+  fs.writeFileSync(policy, JSON.stringify({ aiEnabled: false, remote: 'block' }));
+  process.env['DECKHAND_POLICY_FILE'] = policy;
+  try {
+    c = await launch('ai-fixed-stage.html');
+    await ready(c.page);
+    await expect(c.page.getByTestId('dock-ai')).toHaveCount(0); // AI is off by policy
+    const set = await c.page.evaluate(() => (window as any).deckhand.settings.set({ aiEnabled: true, remote: 'allow', scripts: false }));
+    expect(set).toMatchObject({ aiEnabled: false, remote: 'block', scripts: false });
+    expect([...set.locked].sort()).toEqual(['aiEnabled', 'remote']);
+    await c.page.getByTestId('tab-file').click();
+    await c.page.getByTestId('bs-options').click();
+    await expect(c.page.getByTestId('opt-ai')).toBeDisabled();
+    await expect(c.page.getByTestId('opt-remote')).toBeDisabled();
+    await expect(c.page.getByTestId('opt-scripts')).toBeEnabled();
+    await expect(c.page.getByTestId('policy-note')).toBeVisible();
+  } finally { delete process.env['DECKHAND_POLICY_FILE']; }
 });

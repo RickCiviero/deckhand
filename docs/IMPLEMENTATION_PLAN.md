@@ -77,8 +77,9 @@ Still open in M3: Preview in Browser, Options / Trust Center UI, theme *Fonts*, 
 
 ### M3 progress (update 3)
 Added and tested: Options (Trust Center defaults for scripts and remote content, AI on/off, AI external-content permission, tool-call limit), Define Slides wizard, Design tab. Fixed two real bugs found by the new tests: settings patches reset other settings to defaults, and stale geometry measured before an edit could make a nudge lose a pixel.
-Still open in M3: theme Fonts, contextual tabs, administrator policy file.
+Still open in M3: theme Fonts, contextual tabs.
 Hide Slide (reveal.js data-visibility) and remote-content "Ask" mode: done.
+Administrator policy file (AIS-06): done for the settings that exist. Auto-update switch will join it when updates exist.
 Preview in Browser (SHOW-03): done. A temporary server on 127.0.0.1 (random port, 128-bit path token, Host-header check, serves the in-memory deck plus files inside the deck folder only; stops on close, quit or after 30 idle minutes). The deck opens at slide 1: no deep link yet.
 
 ## M5 progress

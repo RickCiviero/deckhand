@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
-export interface AppSettings { scripts: boolean; remote: 'allow' | 'block' | 'ask'; aiEnabled: boolean; aiAllowExternal: boolean; aiMaxToolCalls: number; aiAskBefore: boolean }
+export interface AppSettings { scripts: boolean; remote: 'allow' | 'block' | 'ask'; aiEnabled: boolean; aiAllowExternal: boolean; aiMaxToolCalls: number; aiAskBefore: boolean; /** settings an administrator policy file fixes */ locked?: string[] }
 export interface AiConnection { id: string; name: string; kind: 'anthropic' | 'openai' | 'compatible'; baseUrl: string; model: string; hasKey: boolean }
 
 /** Minimal typed bridge. Every call is re-validated in the main process; nothing here exposes Node or ipcRenderer. */

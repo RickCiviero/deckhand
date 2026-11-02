@@ -19,8 +19,20 @@ const patchSchema = fields.partial().strict();
 
 const file = (): string => path.join(app.getPath('userData'), 'settings.json');
 
-export async function loadSettings(): Promise<Settings> {
-  try { return { ...DEFAULTS, ...fields.partial().parse(JSON.parse(await fs.readFile(file(), 'utf8'))) }; } catch { return { ...DEFAULTS }; }
+/** Administrator policy (AIS-06, PLT-06): a JSON file with any of the settings above. Its values win over the user's and cannot be changed in Options. */
+const policyPath = (): string => process.env['DECKHAND_POLICY_FILE']
+  ?? (process.platform === 'win32' ? path.join(process.env['ProgramData'] ?? 'C:\ProgramData', 'Deckhand', 'policy.json')
+    : process.platform === 'darwin' ? '/Library/Application Support/Deckhand/policy.json' : '/etc/deckhand/policy.json');
+async function loadPolicy(): Promise<Partial<Settings>> {
+  try { return fields.partial().strict().parse(JSON.parse(await fs.readFile(policyPath(), 'utf8'))); } catch { return {}; }
+}
+
+/** User values with the administrator policy on top; `locked` names the settings the policy fixes. */
+export async function loadSettings(): Promise<Settings & { locked: string[] }> {
+  let user: Settings = { ...DEFAULTS };
+  try { user = { ...DEFAULTS, ...fields.partial().parse(JSON.parse(await fs.readFile(file(), 'utf8'))) }; } catch { /* defaults */ }
+  const policy = await loadPolicy();
+  return { ...user, ...policy, locked: Object.keys(policy) };
 }
 
 export function registerSettings(check: (e: IpcMainInvokeEvent) => void): void {
@@ -29,10 +41,14 @@ export function registerSettings(check: (e: IpcMainInvokeEvent) => void): void {
   let chain: Promise<unknown> = Promise.resolve();
   ipcMain.handle('settings:set', (e, patch: unknown) => {
     check(e);
-    const run = async (): Promise<Settings> => {
-      const next: Settings = { ...(await loadSettings()), ...patchSchema.parse(patch) };
-      await fs.writeFile(file(), JSON.stringify(next, null, 2));
-      return next;
+    const run = async (): Promise<Settings & { locked: string[] }> => {
+      const { locked, ...cur } = await loadSettings();
+      const asked = patchSchema.parse(patch);
+      for (const k of locked) delete (asked as Record<string, unknown>)[k]; // the policy wins; the user's stored value for a locked key is left alone
+      const next: Settings = { ...cur, ...asked };
+      const stored = await fs.readFile(file(), 'utf8').then((t) => fields.partial().parse(JSON.parse(t)), () => ({}));
+      await fs.writeFile(file(), JSON.stringify({ ...DEFAULTS, ...stored, ...asked }, null, 2));
+      return { ...next, locked };
     };
     const p = chain.then(run, run);
     chain = p.catch(() => undefined);
