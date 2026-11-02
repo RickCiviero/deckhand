@@ -113,6 +113,8 @@ class Session {
   private lastHb = 0;
   private hbTimer: number | undefined;
   private recoverTimer: number | undefined;
+  /** Key of the recovery entry this document was opened from; its path can differ from the live document's (symlinks, short names), so the save clears it by key. */
+  recoverKey: string | null = null;
   private noticeId = 1;
   clipboard: string | null = null;
   private pendingShow: number | null = null;
@@ -479,6 +481,7 @@ class Session {
     if (!s.docId || !this.editor) return false;
     try {
       await window.deckhand.save(s.docId, saveBytes(this.doc));
+      if (this.recoverKey) { void window.deckhand.recoveryDiscard(this.recoverKey).catch(() => undefined); this.recoverKey = null; }
       this.editor.markSaved();
       set({ dirty: false });
       void window.deckhand.setDirty(false);

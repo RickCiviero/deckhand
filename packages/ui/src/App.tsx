@@ -69,6 +69,7 @@ export function App(): JSX.Element {
       await session.openResult({ docId: opened.docId, name: opened.name, bytes });
       useStore.setState({ dirty: true });
       void window.deckhand.setDirty(true);
+      session.recoverKey = r.key;
     } catch (e) { session.notify('error', cleanErr(e as Error)); }
   };
   const discard = async (key: string) => { await window.deckhand.recoveryDiscard(key); setRecovery((x) => x.filter((y) => y.key !== key)); };
