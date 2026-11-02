@@ -12,6 +12,7 @@ test.afterEach(async () => { await c?.app.evaluate(({ app }) => app.exit(0)).cat
 test('Slide Show opens the plain deck (no editor artifacts), starts at the current slide, Esc exits', async () => {
   c = await launch('ai-fixed-stage.html');
   await ready(c.page);
+  await expect(c.page.getByTestId('timg-0')).toBeVisible({ timeout: 30000 }); // the hidden thumbnail window has the same URL scheme and closes when it is done; wait for it so only the show window is left
   await c.page.getByTestId('thumb-1').click();
   await c.page.keyboard.press('Shift+F5');
   // the hidden thumbnail window also counts as a window, so wait for the one that shows the deck

@@ -186,8 +186,11 @@ test('slides: duplicate, reorder, delete — each exact and undoable', async () 
   expect(c.text()).not.toContain('Thank you');
   expect(c.text()).toContain('Roadmap');
   // drag slide 1 (Roadmap) before slide 0
-  await c.page.getByTestId('thumb-1').dragTo(c.page.getByTestId('thumb-0'));
-  await expect(c.page.getByTestId('thumb-0')).toContainText('Roadmap', { timeout: 8000 });
+  // a drag that starts before the thumbnails are interactive is lost, so retry it until the order changes
+  await expect(async () => {
+    await c.page.getByTestId('thumb-1').dragTo(c.page.getByTestId('thumb-0'));
+    await expect(c.page.getByTestId('thumb-0')).toContainText('Roadmap', { timeout: 2500 });
+  }).toPass({ timeout: 20000 });
 });
 
 test('insert a text box: Free div inside the current slide', async () => {
