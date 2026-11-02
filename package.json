@@ -1,7 +1,7 @@
 {
   "name": "deckhand",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Visual editor for HTML presentations",
   "workspaces": [
     "apps/*",
