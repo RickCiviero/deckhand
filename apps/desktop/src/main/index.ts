@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { isInside, sanitizeRequestPath } from '@deckhand/core';
 import { registerAi } from './ai.js';
+import { exportPdf, startShow } from './show.js';
 import {
   DOC_SCHEME, MAX_FILE, buildLive, clearRecovery, closeDoc, createDoc, discardRecovery, docs, listRecovery, loadFromDisk, markHash,
   readRecovery, registerDocProtocol, saveDoc, setBlockedHandler, validateDeckPath, watchDoc, writeRecovery, type Doc,
@@ -231,6 +232,15 @@ function registerIpc(): void {
   ipcMain.handle('recovery:list', (e) => { senderWin(e); return listRecovery(); });
   ipcMain.handle('recovery:read', async (e, a: unknown) => { senderWin(e); return readRecovery(z.string().parse(a)); });
   ipcMain.handle('recovery:discard', async (e, a: unknown) => { senderWin(e); await discardRecovery(z.string().parse(a)); return true; });
+  ipcMain.handle('show:start', (e, a: unknown) => {
+    const { docId, slide } = z.object({ docId: idSchema, slide: z.number().int().min(0).max(5000) }).parse(a);
+    startShow(ownedDoc(e, docId), slide);
+    return true;
+  });
+  ipcMain.handle('doc:export-pdf', async (e, a: unknown) => {
+    const { docId, slides } = z.object({ docId: idSchema, slides: z.number().int().min(1).max(5000) }).parse(a);
+    return exportPdf(senderWin(e).win, ownedDoc(e, docId), slides);
+  });
   ipcMain.handle('app:open-external', async (e, a: unknown) => {
     const w = senderWin(e);
     const url = z.string().max(2048).parse(a);

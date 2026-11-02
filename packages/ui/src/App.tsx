@@ -6,10 +6,10 @@ import { Canvas } from './Canvas';
 import { FormatPane } from './FormatPane';
 import { AiPane } from './AiPane';
 import { ai, useAi } from './ai';
-import { align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide } from './actions';
+import { align, arrange, deleteSlide, duplicateSlide, exportPdf, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
 import { session, useStore } from './session';
 
-type Tab = 'file' | 'home' | 'insert' | 'view';
+type Tab = 'file' | 'home' | 'insert' | 'show' | 'view';
 
 function Cmd({ label, tip, onClick, disabled, on, testid }: { label: string; tip: string; onClick: () => void; disabled?: boolean; on?: boolean; testid?: string }): JSX.Element {
   return (
@@ -96,7 +96,7 @@ export function App(): JSX.Element {
 
       <nav className="ribbon">
         <div className="tabrow" role="tablist">
-          {(['file', 'home', 'insert', 'view'] as Tab[]).map((x) => (
+          {(['file', 'home', 'insert', 'show', 'view'] as Tab[]).map((x) => (
             <button key={x} role="tab" aria-selected={tab === x} className={tab === x ? 'on' : ''} onClick={() => setTab(x)} data-testid={`tab-${x}`}>{t(`tab.${x}`)}</button>
           ))}
         </div>
@@ -104,6 +104,7 @@ export function App(): JSX.Element {
           {tab === 'file' && (<>
             <Cmd label={t('file.open')} tip="Open a presentation (Ctrl+O)" onClick={() => void open()} testid="cmd-open" />
             <Cmd label={t('file.save')} tip="Save (Ctrl+S)" disabled={!s.loaded} onClick={() => void session.save()} testid="cmd-save" />
+            <Cmd label={t('file.exportPdf')} tip="Export every slide as a PDF" disabled={!s.loaded} onClick={() => void exportPdf()} testid="cmd-pdf" />
             <Cmd label={t('file.saveAs')} tip="Save a copy (Ctrl+Shift+S)" disabled={!s.loaded} onClick={() => void session.saveAs()} />
           </>)}
           {tab === 'home' && (<>
@@ -126,6 +127,10 @@ export function App(): JSX.Element {
             <Cmd label="⇥" tip="Align Right" disabled={!s.selection.length} onClick={() => align('right')} />
           </>)}
           {tab === 'insert' && <Cmd label={t('insert.textBox')} tip="Insert a text box" disabled={!s.loaded} onClick={() => insertTextBox()} testid="cmd-textbox" />}
+          {tab === 'show' && (<>
+            <Cmd label={t('show.fromStart')} tip="Start the slide show from the first slide (F5)" disabled={!s.loaded} onClick={() => startShow(0)} testid="cmd-show-start" />
+            <Cmd label={t('show.fromCurrent')} tip="Start the slide show from this slide (Shift+F5)" disabled={!s.loaded} onClick={() => startShow(s.slide)} testid="cmd-show-current" />
+          </>)}
           {tab === 'view' && (<>
             <Cmd label={t('view.fit')} tip="Fit to window (Ctrl+0)" disabled={!s.loaded} onClick={() => useStore.setState({ fit: true })} />
             <Cmd label={t('view.smart')} tip="Smart guides while dragging" on={s.smart} onClick={() => useStore.setState({ smart: !s.smart })} />

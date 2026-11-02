@@ -9,19 +9,22 @@
     "dist": "electron-builder"
   },
   "devDependencies": {
+    "@deckhand/agent": "*",
+    "@deckhand/ai": "*",
+    "@deckhand/core": "*",
+    "@deckhand/ui": "*",
     "@electron/fuses": "^2.1.3",
     "@vitejs/plugin-react": "^6.1.2",
     "electron": "45.1.0",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "vite": "^8.3.5",
-    "@deckhand/agent": "*",
-    "@deckhand/ai": "*",
-    "@deckhand/core": "*",
-    "@deckhand/ui": "*",
     "zod": "^4.6.7"
   },
   "description": "Deckhand - visual editor for HTML presentations",
   "author": "Deckhand <civieror@gmail.com>",
-  "homepage": "https://github.com/RickCiviero/deckhand"
+  "homepage": "https://github.com/RickCiviero/deckhand",
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
 }

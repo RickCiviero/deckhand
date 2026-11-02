@@ -190,7 +190,7 @@ test.describe('editor UI hardening (SEC-01/07)', () => {
     expect(csp).not.toMatch(/unsafe-eval|unsafe-inline.*script|script-src[^;]*unsafe-inline/);
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("object-src 'none'");
-    expect(info.bridge).toEqual(['ai', 'autoRecover', 'closeConfirmed', 'on', 'openDialog', 'openExternal', 'openPath', 'pathForFile', 'readDisk', 'recoveryDiscard', 'recoveryList', 'recoveryRead', 'save', 'saveAs', 'setDirty', 'setPolicy', 'setText'].sort());
+    expect(info.bridge).toEqual(['ai', 'autoRecover', 'closeConfirmed', 'exportPdf', 'on', 'openDialog', 'openExternal', 'openPath', 'pathForFile', 'readDisk', 'recoveryDiscard', 'recoveryList', 'recoveryRead', 'save', 'saveAs', 'setDirty', 'setPolicy', 'setText', 'startShow'].sort());
 
     await c.page.evaluate(() => { location.href = 'https://example.com/'; }).catch(() => undefined);
     await c.page.waitForTimeout(1000);

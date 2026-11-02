@@ -200,6 +200,20 @@ function styleAttrPatch(el: ElementInfo, has: boolean, value: string): Patch {
   return { start: pos, end: pos, text: ` style="${value}"` };
 }
 
+export function startShow(from: number): void {
+  const id = st().docId;
+  if (id) void window.deckhand.startShow(id, from);
+}
+
+export async function exportPdf(): Promise<void> {
+  const s = st();
+  if (!s.docId) return;
+  try {
+    const out = await window.deckhand.exportPdf(s.docId, s.slides.length);
+    if (out) session.notify('info', 'Saved ' + out);
+  } catch (e) { session.notify('error', (e as Error).message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '')); }
+}
+
 export function installKeyboard(): () => void {
   const onKey = (e: KeyboardEvent): void => {
     const target = e.target as HTMLElement | null;
@@ -209,6 +223,7 @@ export function installKeyboard(): () => void {
     const mod = e.ctrlKey || e.metaKey;
     const s = st();
     if (!s.loaded) return;
+    if (e.key === 'F5') { e.preventDefault(); startShow(e.shiftKey ? s.slide : 0); return; }
     if (mod && e.altKey && e.key.toLowerCase() === 'i') { e.preventDefault(); ai.setDock(useAi.getState().dock === 'ai' ? 'format' : 'ai'); return; }
     const k = e.key;
     if (mod && k.toLowerCase() === 's') { e.preventDefault(); void (e.shiftKey ? session.saveAs() : session.save()); return; }
