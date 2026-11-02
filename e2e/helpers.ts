@@ -77,8 +77,12 @@ export async function clickObj(page: Page, selector: string): Promise<void> {
       if (await path.isVisible()) return; // the selection survived the settle time
     } catch { /* try again */ }
   }
-  const ready = await page.locator('[data-testid=canvas]').getAttribute('data-agent-ready');
-  throw new Error(`clickObj(${selector}) never produced a lasting selection (agent ready: ${ready}); page log: ${pageLog.slice(-12).join(' | ')}`);
+  const c = await centreOf(page, selector).catch(() => null);
+  const where = c ? await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x!, y!); return e ? `${e.tagName}.${e.className}` : 'nothing'; }, [c.x, c.y]).catch(() => '?') : '?';
+  const vp = await page.evaluate(() => `${innerWidth}x${innerHeight}`).catch(() => '?');
+  const el = await deckFrame(page).evaluate((sel) => { const e = document.querySelector(sel); const b = e?.getBoundingClientRect(); return b ? `${Math.round(b.left)},${Math.round(b.top)} ${Math.round(b.width)}x${Math.round(b.height)} display=${getComputedStyle(e!).display}` : 'missing'; }, selector).catch(() => '?');
+  const path = await page.locator('[data-testid=path]').textContent().catch(() => '?');
+  throw new Error(`clickObj(${selector}) never produced a lasting selection. window ${vp}; click at ${c ? Math.round(c.x) + ',' + Math.round(c.y) + ' zoom ' + c.z.toFixed(2) : '?'} hits ${where}; element in deck ${el}; path "${path}"; page log: ${pageLog.slice(-12).join(' | ')}`);
 }
 
 export async function dragObj(page: Page, selector: string, dx: number, dy: number): Promise<void> {
