@@ -238,7 +238,7 @@ The editor is tested against a hostile deck (infinite loop, `window.open`, path 
 
 Example: `{ "aiEnabled": false, "remote": "block" }`. A policy file that is not valid JSON, or has unknown keys, is ignored as a whole.
 
-**Updates.** Deckhand does not update itself. Once per start it asks github.com which release is newest and, if yours is older, shows a message with a button that opens the release page after you confirm. Nothing is downloaded or installed by the app. Turn it off in Options > Updates, or with `"updates": "off"` in the policy file. This is the only network request the editor makes by itself.
+**Updates.** Deckhand does not update itself. Once per start it asks github.com which release is newest and, if yours is older, shows a message with a button that opens the release page after you confirm. Nothing is downloaded or installed by the app. Turn it off in Options > Updates, or with `"updates": "off"` in the policy file. Apart from content a deck itself loads (see Remote content in Options) and the AI Assistant when you use it, this is the only network request Deckhand makes.
 
 ## Build from source
 
