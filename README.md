@@ -310,3 +310,7 @@ Read [`CLAUDE.md`](CLAUDE.md) (commands, architecture, rules) and [`docs/DECISIO
 ## License
 
 Deckhand is free software under the [Apache License 2.0](LICENSE): use it, change it, share it, commercially or not. It comes with no warranty. Contributors also grant a patent licence for what they contribute.
+
+## Support
+
+Deckhand is free and stays free. If it saves you time, you can donate through [PayPal](https://www.paypal.me/rikycv). Donations are optional and buy no extra features or support.

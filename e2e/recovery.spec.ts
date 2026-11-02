@@ -24,5 +24,5 @@ test('Document Recovery: recovered version opens as unsaved changes; saving clea
   expect(fs.readFileSync(file, 'latin1')).toContain('Just a page'); // disk untouched until the user saves
   await save(c.page);
   expect(fs.readFileSync(file, 'latin1')).toBe(recovered);
-  expect(fs.existsSync(path.join(dir, `${key}.html`))).toBe(false);
+  await expect.poll(() => `${fs.readdirSync(dir).join(',')} | want gone ${key} | file ${file}`, { timeout: 5000 }).not.toContain(`${key}.html`);
 });
