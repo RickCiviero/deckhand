@@ -22,6 +22,9 @@ export async function launch(deck: string | null, exeArg?: string): Promise<Ctx>
   const env = { ...process.env, DECKHAND_NO_BROWSER: '1' } as Record<string, string>; // Preview in Browser must not start a real browser during tests
   const app = await electron.launch(exe ? { executablePath: exe, args, env } : { args, env });
   const page = await app.firstWindow();
+  pageLog.length = 0;
+  page.on('console', (m) => pageLog.push(`${m.type()}: ${m.text().slice(0, 200)}`));
+  page.on('pageerror', (e) => pageLog.push(`pageerror: ${e.message.slice(0, 200)}`));
   await page.waitForSelector('[data-testid=app]');
   // CI desktops (xvfb without a window manager, a mac runner with no active app) never focus the window; an unfocused page gets keys late or not at all
   await app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows()[0]; w?.show(); w?.focus(); w?.webContents.focus(); }).catch(() => undefined);
@@ -59,6 +62,9 @@ export async function centreOf(page: Page, selector: string): Promise<{ x: numbe
   return { x: ov.x + (r.x + r.w / 2) * z, y: ov.y + (r.y + r.h / 2) * z, w: r.w * z, h: r.h * z, z };
 }
 
+/** Last console lines and page errors of the editor window, for failure messages. */
+export const pageLog: string[] = [];
+
 export async function clickObj(page: Page, selector: string): Promise<void> {
   // retry: the very first click can arrive before the agent finished its handshake, and a late live-view rebuild can drop the selection just after it
   const path = page.locator('[data-testid=path] button').first();
@@ -71,6 +77,8 @@ export async function clickObj(page: Page, selector: string): Promise<void> {
       if (await path.isVisible()) return; // the selection survived the settle time
     } catch { /* try again */ }
   }
+  const ready = await page.locator('[data-testid=canvas]').getAttribute('data-agent-ready');
+  throw new Error(`clickObj(${selector}) never produced a lasting selection (agent ready: ${ready}); page log: ${pageLog.slice(-12).join(' | ')}`);
 }
 
 export async function dragObj(page: Page, selector: string, dx: number, dy: number): Promise<void> {
