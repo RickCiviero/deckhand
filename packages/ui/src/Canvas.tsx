@@ -262,7 +262,7 @@ export function Canvas(): JSX.Element {
   void ctxFor;
 
   return (
-    <div className="canvas-wrap" ref={wrap} onWheel={onWheel} data-testid="canvas">
+    <div className="canvas-wrap" ref={wrap} onWheel={onWheel} data-testid="canvas" data-agent-ready={s.agentReady ? '1' : '0'}>
       <div className="stage" ref={stage} style={{ width: VW * z, height: VH * z }}>
         {s.src && (
           <iframe

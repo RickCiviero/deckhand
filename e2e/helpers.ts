@@ -40,6 +40,8 @@ export async function ready(page: Page): Promise<void> {
     // the agent removes its own script tag after setup; presence of the editor id attribute means live html is in place
     expect(await f.evaluate(() => document.querySelectorAll('[data-deckhand-id]').length)).toBeGreaterThan(0);
   }).toPass({ timeout: 15000 });
+  // the agent handshake (private port) finishes after the page loads; interacting earlier loses clicks, and a failed handshake triggers a reload
+  await expect(page.locator('[data-testid=canvas][data-agent-ready="1"]')).toBeVisible({ timeout: 20000 });
   await page.waitForTimeout(600);
 }
 
