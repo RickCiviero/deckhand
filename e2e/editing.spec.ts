@@ -518,3 +518,20 @@ test('Remote content "Ask": a deck with external content opens blocked, and the 
   await bar.getByRole('button', { name: 'Allow' }).click();
   await expect(c.page.getByTestId('cmd-remote')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('Selection Pane: dragging an object up the list moves it later in the file (drawn on top); one Undo restores the bytes', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await c.page.getByTestId('dock-selection').click();
+  const items = c.page.getByTestId('sel-item');
+  await expect(items).toHaveCount(3);
+  await expect(items.nth(2)).toContainText('Quarterly Review');
+  await items.nth(2).dragTo(items.nth(0));
+  await expect(items.nth(0)).toContainText('Quarterly Review', { timeout: 8000 });
+  await save(c.page);
+  const out = c.text();
+  expect(out.indexOf('class="title">Quarterly')).toBeGreaterThan(out.indexOf('class="logo"'));
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});
