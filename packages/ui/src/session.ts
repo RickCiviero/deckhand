@@ -77,12 +77,13 @@ interface State {
   showGuides: boolean;
   smart: boolean;
   zoomBox: boolean;
+  thumbs: Record<number, string>;
 }
 
 export const useStore = create<State>(() => ({
   loaded: false, name: '', docId: null, version: 0, slides: [], detection: null, slide: 0, selection: [], hover: null, rects: {}, slideObjects: [],
   zoom: 0.5, fit: true, viewport: { w: 1920, h: 1080 }, dirty: false, canUndo: false, canRedo: false, undoLabel: '', editing: null, notices: [], src: null,
-  origin: null, token: null, loadNonce: 0, agentReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false,
+  origin: null, token: null, loadNonce: 0, agentReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false, thumbs: {},
 }));
 const set = useStore.setState;
 const get = useStore.getState;
@@ -108,6 +109,7 @@ class Session {
   private pendingShow: number | null = null;
   private editResolve: ((m: Extract<AgentMsg, { t: 'edit-end' }>) => void) | null = null;
   private refreshQueued = false;
+  private thumbTimer: number | undefined;
   private retried = 0;
 
   get doc(): SourceDoc { return this.editor!.doc; }
@@ -126,7 +128,9 @@ class Session {
     if (det.confidence >= 0.8) this.notify('info', `Found ${det.slides.length} slides (${det.adapter}).`);
     else if (det.adapter === 'page') this.notify('warning', 'No slides found: editing as a single page.');
     else this.notify('warning', `Not sure how this deck is organised — assuming ${det.slides.length} slides (${Math.round(det.confidence * 100)}% confident).`);
+    set({ thumbs: {} });
     await this.reload();
+    this.requestThumbs(true);
     window.clearInterval(this.hbTimer);
     window.clearInterval(this.recoverTimer);
     this.lastHb = Date.now();
@@ -134,6 +138,17 @@ class Session {
     this.recoverTimer = window.setInterval(() => void this.autoRecover(), 60_000);
     const rec = (await window.deckhand.recoveryList()) as { key: string; file: string; time: number }[];
     void rec; // listing is surfaced by the welcome screen
+  }
+
+  /** RND-09: thumbnails come from a hidden window in the main process; all of them after a structural change, otherwise only the current slide. */
+  requestThumbs(all: boolean): void {
+    window.clearTimeout(this.thumbTimer);
+    this.thumbTimer = window.setTimeout(() => {
+      const s = get();
+      if (!s.docId || !this.editor) return;
+      const indices = all ? s.slides.map((_, i) => i) : [s.slide];
+      void window.deckhand.thumbs(s.docId, this.doc.text, indices).then((r) => set((x) => ({ thumbs: { ...(all ? {} : x.thumbs), ...r } }))).catch(() => undefined);
+    }, all ? 300 : 1000);
   }
 
   notify(kind: Notice['kind'], text: string, actions?: Notice['actions']): number {
@@ -365,6 +380,7 @@ class Session {
         if (bodyChanged) ops = null;
       }
     }
+    this.requestThumbs(!ops);
     if (ops && !opts?.live) {
       for (const o of ops) this.send({ t: 'style', id: o.id, style: o.style });
       this.queueRefresh();

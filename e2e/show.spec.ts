@@ -37,3 +37,14 @@ test('PDF export writes one page per slide', async () => {
   expect(pdf.getPageCount()).toBe(3);
   fs.rmSync(out, { force: true });
 });
+
+test('Thumbnails render per slide and refresh after an edit', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  for (let i = 0; i < 3; i++) await expect(c.page.getByTestId(`timg-${i}`)).toBeVisible({ timeout: 30000 });
+  const before = await c.page.getByTestId('timg-0').getAttribute('src');
+  const { clickObj, dragObj } = await import('./helpers');
+  await clickObj(c.page, '.slide.active .logo');
+  await dragObj(c.page, '.slide.active .logo', -300, 200);
+  await expect.poll(() => c.page.getByTestId('timg-0').getAttribute('src'), { timeout: 20000 }).not.toBe(before);
+});

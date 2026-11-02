@@ -70,3 +70,29 @@ export async function exportPdf(parent: BrowserWindow, doc: Doc, slideCount: num
     if (!win.isDestroyed()) win.destroy();
   }
 }
+
+/** Thumbnails (RND-09): hidden window, one JPEG data URL per requested slide index. Calls are serialised per process so renders never overlap. */
+let chain: Promise<unknown> = Promise.resolve();
+export function renderThumbs(doc: Doc, indices: number[], width: number): Promise<Record<number, string>> {
+  const run = async (): Promise<Record<number, string>> => {
+    const win = new BrowserWindow({ show: false, width: 1920, height: 1080, useContentSize: true, webPreferences: { ...WEB, backgroundThrottling: false } });
+    const out: Record<number, string> = {};
+    try {
+      await win.loadURL(deckUrl(doc));
+      await delay(800);
+      let at = 0;
+      for (const idx of [...new Set(indices)].sort((a, b) => a - b)) {
+        for (; at < idx; at++) { await key(win.webContents, 'Right'); await delay(120); }
+        await delay(250);
+        const img = (await win.webContents.capturePage()).resize({ width });
+        out[idx] = `data:image/jpeg;base64,${img.toJPEG(70).toString('base64')}`;
+      }
+    } finally {
+      if (!win.isDestroyed()) win.destroy();
+    }
+    return out;
+  };
+  const p = chain.then(run, run);
+  chain = p.catch(() => undefined);
+  return p;
+}

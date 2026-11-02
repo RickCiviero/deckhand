@@ -32,6 +32,19 @@ export function App(): JSX.Element {
   const [dark, setDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [dropping, setDropping] = useState(false);
   const [remote, setRemote] = useState(true);
+  const [recovery, setRecovery] = useState<{ key: string; file: string; time: number }[]>([]);
+  useEffect(() => { if (!s.loaded) void window.deckhand.recoveryList().then((r) => setRecovery(r as typeof recovery)).catch(() => undefined); }, [s.loaded]);
+  const recover = async (r: { key: string; file: string }) => {
+    try {
+      const opened = (await window.deckhand.openPath(r.file)) as { docId: string; name: string };
+      const bytes = (await window.deckhand.recoveryRead(r.key)) as Uint8Array | null;
+      if (!bytes) throw new Error('The recovered version is no longer available.');
+      await session.openResult({ docId: opened.docId, name: opened.name, bytes });
+      useStore.setState({ dirty: true });
+      void window.deckhand.setDirty(true);
+    } catch (e) { session.notify('error', cleanErr(e as Error)); }
+  };
+  const discard = async (key: string) => { await window.deckhand.recoveryDiscard(key); setRecovery((x) => x.filter((y) => y.key !== key)); };
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -160,6 +173,19 @@ export function App(): JSX.Element {
           <p>{t('app.tagline')}</p>
           <Button appearance="primary" onClick={() => void open()} data-testid="welcome-open">{t('file.open')}…</Button>
           <p className="hint">{t('file.drop')}</p>
+          {recovery.length > 0 && (
+            <section className="recovery" data-testid="recovery">
+              <h3>Document Recovery</h3>
+              <p>These presentations had unsaved changes when Deckhand last closed.</p>
+              {recovery.map((r) => (
+                <div key={r.key} className="row">
+                  <span>{r.file.split(/[\/]/).pop()} <small>({new Date(r.time).toLocaleString()})</small></span>
+                  <Button size="small" appearance="primary" onClick={() => void recover(r)} data-testid="recover">Recover</Button>
+                  <Button size="small" onClick={() => void discard(r.key)}>Discard</Button>
+                </div>
+              ))}
+            </section>
+          )}
         </main>
       ) : (
         <main className="workspace">
@@ -170,6 +196,7 @@ export function App(): JSX.Element {
                 onDragStart={(e) => e.dataTransfer.setData('text/x-slide', String(i))}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const from = Number(e.dataTransfer.getData('text/x-slide')); if (Number.isInteger(from)) moveSlide(from, i); }}>
+                {s.thumbs[i] && <img className="timg" src={s.thumbs[i]} alt="" draggable={false} data-testid={`timg-${i}`} />}
                 <span className="num">{i + 1}</span>
                 <span className="lab">{sl.label}</span>
               </div>

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { isInside, sanitizeRequestPath } from '@deckhand/core';
 import { registerAi } from './ai.js';
-import { exportPdf, startShow } from './show.js';
+import { exportPdf, renderThumbs, startShow } from './show.js';
 import {
   DOC_SCHEME, MAX_FILE, buildLive, clearRecovery, closeDoc, createDoc, discardRecovery, docs, listRecovery, loadFromDisk, markHash,
   readRecovery, registerDocProtocol, saveDoc, setBlockedHandler, validateDeckPath, watchDoc, writeRecovery, type Doc,
@@ -232,6 +232,12 @@ function registerIpc(): void {
   ipcMain.handle('recovery:list', (e) => { senderWin(e); return listRecovery(); });
   ipcMain.handle('recovery:read', async (e, a: unknown) => { senderWin(e); return readRecovery(z.string().parse(a)); });
   ipcMain.handle('recovery:discard', async (e, a: unknown) => { senderWin(e); await discardRecovery(z.string().parse(a)); return true; });
+  ipcMain.handle('doc:thumbs', async (e, a: unknown) => {
+    const { docId, text, indices } = z.object({ docId: idSchema, text: z.string().max(MAX_FILE), indices: z.array(z.number().int().min(0).max(5000)).max(500) }).parse(a);
+    const doc = ownedDoc(e, docId);
+    doc.plainHtml = text; // thumbnails show the edited (unsaved) deck
+    return renderThumbs(doc, indices, 320);
+  });
   ipcMain.handle('show:start', (e, a: unknown) => {
     const { docId, slide } = z.object({ docId: idSchema, slide: z.number().int().min(0).max(5000) }).parse(a);
     startShow(ownedDoc(e, docId), slide);

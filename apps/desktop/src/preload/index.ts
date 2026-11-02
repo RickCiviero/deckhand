@@ -18,6 +18,7 @@ const api = {
   recoveryList: () => ipcRenderer.invoke('recovery:list'),
   recoveryRead: (key: string) => ipcRenderer.invoke('recovery:read', key),
   recoveryDiscard: (key: string) => ipcRenderer.invoke('recovery:discard', key),
+  thumbs: (docId: string, text: string, indices: number[]) => ipcRenderer.invoke('doc:thumbs', { docId, text, indices }) as Promise<Record<number, string>>,
   startShow: (docId: string, slide: number) => ipcRenderer.invoke('show:start', { docId, slide }),
   exportPdf: (docId: string, slides: number) => ipcRenderer.invoke('doc:export-pdf', { docId, slides }) as Promise<string | null>,
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', url),

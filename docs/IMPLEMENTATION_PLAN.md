@@ -22,10 +22,10 @@ Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 | Document protocol, sandboxed live view, agent | ✅ | |
 | Generic + reveal.js + page adapters (SPIKE-4) | 🟡 | 11/11 corpus decks detected correctly; Marp/impress/Shower ⬜ |
 | Define Slides wizard | ⬜ | low-confidence decks show a warning bar only |
-| Thumbnails (RND-09) | ⬜ | slide pane shows numbered title cards |
+| Thumbnails (RND-09) | 🟡 | hidden-window JPEGs, refreshed ≤ ~1 s after an edit; slides reached by pressing → (vertical reveal stacks and non-key decks may show the wrong slide) |
 | Design viewport presets, zoom | 🟡 | zoom/fit ✅; fixed 1920×1080 viewport, presets ⬜ |
 | Atomic save, external-change detection | ✅ | |
-| AutoRecover | 🟡 | snapshots written every 60 s to app data; Document Recovery UI ⬜ (IPC exists) |
+| AutoRecover | 🟡 | snapshots written every 60 s to app data; Document Recovery list on the welcome screen ✅ |
 
 ## M2 — Core editing
 | Item | Status | Notes |
@@ -63,3 +63,6 @@ Full ribbon & Backstage, layout gallery, pictures (insert/change), links dialog,
 
 ## Still not started
 M3 (full ribbon, Backstage, layout gallery, pictures, links, Format Background, Slide Show, PDF export, Document Recovery UI), M1 gaps (Define Slides wizard, thumbnails, viewport presets), M5 (everything under "Not started" above), `agent` → `bridge` rename (ADR-011). Marp/impress/Shower are detected (core) but live-view slide navigation for them is not wired.
+
+## M3 progress
+Done and e2e-tested: Slide Show (F5 / Shift+F5, Esc exits, link confirmation), PDF export (image-based, pdf-lib), Document Recovery UI, thumbnails, Slide Show tab. Preview in Browser, Backstage, full ribbon, layout gallery, pictures, links, Format Background are still open.
