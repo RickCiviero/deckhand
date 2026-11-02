@@ -191,7 +191,7 @@ test.describe('editor UI hardening (SEC-01/07)', () => {
     expect(csp).not.toMatch(/unsafe-eval|unsafe-inline.*script|script-src[^;]*unsafe-inline/);
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("object-src 'none'");
-    expect(info.bridge).toEqual(['ai', 'autoRecover', 'closeConfirmed', 'exportPdf', 'on', 'openDialog', 'openExternal', 'openPath', 'pathForFile', 'pickImage', 'previewInBrowser', 'recent', 'readDisk', 'recoveryDiscard', 'recoveryList', 'recoveryRead', 'save', 'saveAs', 'setDirty', 'setPolicy', 'settings', 'setText', 'startShow', 'thumbs'].sort());
+    expect(info.bridge).toEqual(['ai', 'autoRecover', 'checkUpdate', 'closeConfirmed', 'exportPdf', 'on', 'openDialog', 'openExternal', 'openPath', 'pathForFile', 'pickImage', 'previewInBrowser', 'recent', 'readDisk', 'recoveryDiscard', 'recoveryList', 'recoveryRead', 'save', 'saveAs', 'setDirty', 'setPolicy', 'settings', 'setText', 'startShow', 'thumbs'].sort());
 
     await c.page.evaluate(() => { location.href = 'https://example.com/'; }).catch(() => undefined);
     await c.page.waitForTimeout(1000);
@@ -280,4 +280,28 @@ test('administrator policy file: fixed settings win, are shown as locked, and ca
     await expect(c.page.getByTestId('opt-scripts')).toBeEnabled();
     await expect(c.page.getByTestId('policy-note')).toBeVisible();
   } finally { delete process.env['DECKHAND_POLICY_FILE']; }
+});
+
+test('update check: tells the user about a newer release, opens nothing by itself, and stays quiet when switched off', async () => {
+  let asked = 0;
+  const server = http.createServer((req, res) => {
+    asked++;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify([{ tag_name: 'v99.0.0', html_url: 'https://github.com/RickCiviero/deckhand/releases/tag/v99.0.0', draft: false, prerelease: true }, { tag_name: 'v0.0.1', html_url: 'https://github.com/x', draft: false, prerelease: false }]));
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  process.env['DECKHAND_UPDATE_URL'] = `http://127.0.0.1:${(server.address() as { port: number }).port}/`;
+  try {
+    c = await launch('ai-fixed-stage.html');
+    await expect(c.page.locator('[data-testid=msgbar]', { hasText: 'Deckhand 99.0.0 is available' })).toBeVisible({ timeout: 15000 });
+    expect(asked).toBe(1);
+    await c.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined);
+    asked = 0;
+    const userData = c.userData;
+    fs.writeFileSync(path.join(userData, 'settings.json'), JSON.stringify({ updates: 'off' }));
+    c = await launch('ai-fixed-stage.html', undefined, userData);
+    await ready(c.page);
+    await c.page.waitForTimeout(6500); // longer than the start-up delay of the check
+    expect(asked).toBe(0);
+  } finally { delete process.env['DECKHAND_UPDATE_URL']; server.close(); }
 });

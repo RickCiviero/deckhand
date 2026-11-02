@@ -94,7 +94,7 @@ export const useStore = create<State>(() => ({
   loaded: false, name: '', docId: null, version: 0, slides: [], detection: null, slide: 0, selection: [], hover: null, rects: {}, slideObjects: [],
   zoom: 0.5, fit: true, viewport: { w: 1920, h: 1080 }, dirty: false, canUndo: false, canRedo: false, undoLabel: '', editing: null, notices: [], src: null,
   origin: null, token: null, loadNonce: 0, agentReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false, thumbs: {},
-  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null,
+  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null,
 }));
 const set = useStore.setState;
 const get = useStore.getState;

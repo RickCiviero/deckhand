@@ -128,6 +128,8 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     void window.deckhand.settings.get().then((cfg) => useStore.setState({ settings: cfg })).catch(() => undefined);
+    // a few seconds after start: opening the document clears earlier notices, and the check should not compete with it
+    const updateTimer = window.setTimeout(() => void window.deckhand.checkUpdate().then((u) => { if (u) session.notify('info', `Deckhand ${u.version} is available.`, [{ label: 'Open download page', run: () => void window.deckhand.openExternal(u.url) }]); }).catch(() => undefined), 4000);
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const h = (e: MediaQueryListEvent) => setDark(e.matches);
     mq.addEventListener('change', h);
@@ -160,7 +162,7 @@ export function App(): JSX.Element {
       } catch (err) { session.notify('error', cleanErr(err as Error)); }
     };
     window.addEventListener('dragover', dragOver); window.addEventListener('dragleave', dragLeave); window.addEventListener('drop', drop);
-    return () => { mq.removeEventListener('change', h); off(); offOpen(); offDoc(); offCmd(); window.removeEventListener('dragover', dragOver); window.removeEventListener('dragleave', dragLeave); window.removeEventListener('drop', drop); };
+    return () => { window.clearTimeout(updateTimer); mq.removeEventListener('change', h); off(); offOpen(); offDoc(); offCmd(); window.removeEventListener('dragover', dragOver); window.removeEventListener('dragleave', dragLeave); window.removeEventListener('drop', drop); };
   }, []);
 
   const reloadFromDisk = async () => {

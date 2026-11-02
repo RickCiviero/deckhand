@@ -70,6 +70,13 @@ export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; 
             <label className="opt">Most tool calls in one AI request
               <input type="number" min={1} max={200} value={s.settings.aiMaxToolCalls} disabled={!s.settings.aiEnabled} onChange={(e) => void save({ aiMaxToolCalls: Math.max(1, Math.min(200, Number(e.target.value) || 40)) })} />
             </label>
+            <h3>Updates</h3>
+            <label className="opt">Check for a newer version
+              <select value={s.settings.updates} disabled={locked('updates')} data-testid="opt-updates" onChange={(e) => void save({ updates: e.target.value as 'notify' | 'off' })}>
+                <option value="notify">Tell me when one exists</option><option value="off">Never</option>
+              </select>
+            </label>
+            <p className="hint">Once per start, Deckhand asks github.com which release is newest. It never downloads or installs anything by itself.</p>
           </>
         )}
         {page === 'info' && doc && (

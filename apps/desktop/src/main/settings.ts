@@ -11,9 +11,10 @@ const fields = z.object({
   aiAllowExternal: z.boolean(), // AIS-04
   aiMaxToolCalls: z.number().int().min(1).max(200), // AIT-04
   aiAskBefore: z.boolean(), // AIE-05: preview changes, apply only after "Apply"
+  updates: z.enum(['notify', 'off']), // PLT-06: notify = ask GitHub once per start which release is newest; the app never downloads or installs anything
 });
 export type Settings = z.infer<typeof fields>;
-const DEFAULTS: Settings = { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false };
+const DEFAULTS: Settings = { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' };
 // no .default() on the fields: a partial schema would fill them in and a patch would silently reset every other setting
 const patchSchema = fields.partial().strict();
 

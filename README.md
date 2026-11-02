@@ -228,7 +228,7 @@ A deck is **untrusted code**. It runs in a sandboxed iframe served from its own 
 
 The editor is tested against a hostile deck (infinite loop, `window.open`, path traversal, forged messages, huge allocations, instructions aimed at the AI). The threat model and the test behind each control are in [`docs/SECURITY.md`](docs/SECURITY.md).
 
-**For administrators.** A `policy.json` file fixes settings for every user of a computer. The same names as in Options apply: `scripts`, `remote` (`allow`, `ask`, `block`), `aiEnabled`, `aiAllowExternal`, `aiMaxToolCalls`, `aiAskBefore`. Fixed settings show as locked in Options and the settings API refuses to change them.
+**For administrators.** A `policy.json` file fixes settings for every user of a computer. The same names as in Options apply: `scripts`, `remote` (`allow`, `ask`, `block`), `aiEnabled`, `aiAllowExternal`, `aiMaxToolCalls`, `aiAskBefore`, `updates` (`notify`, `off`). Fixed settings show as locked in Options and the settings API refuses to change them.
 
 | System | Location |
 |---|---|
@@ -237,6 +237,8 @@ The editor is tested against a hostile deck (infinite loop, `window.open`, path 
 | Linux | `/etc/deckhand/policy.json` |
 
 Example: `{ "aiEnabled": false, "remote": "block" }`. A policy file that is not valid JSON, or has unknown keys, is ignored as a whole.
+
+**Updates.** Deckhand does not update itself. Once per start it asks github.com which release is newest and, if yours is older, shows a message with a button that opens the release page after you confirm. Nothing is downloaded or installed by the app. Turn it off in Options > Updates, or with `"updates": "off"` in the policy file. This is the only network request the editor makes by itself.
 
 ## Build from source
 

@@ -9,17 +9,17 @@ export const DECKS = path.join(ROOT, 'test-decks');
 export interface Ctx { app: ElectronApplication; page: Page; dir: string; deckDir: string; file: string; userData: string; read: () => Buffer; text: () => string }
 
 /** Copies the corpus into a temp folder (tests modify files) and opens one deck in a fresh app instance. */
-export async function launch(deck: string | null, exeArg?: string): Promise<Ctx> {
+export async function launch(deck: string | null, exeArg?: string, userDataDir?: string): Promise<Ctx> {
   const exe = exeArg ?? process.env['DECKHAND_EXE']; // DECKHAND_EXE=<packaged test build> reruns any suite against the installer's payload
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dh-e2e-'));
   fs.cpSync(DECKS, dir, { recursive: true });
-  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'dh-ud-'));
+  const userData = userDataDir ?? fs.mkdtempSync(path.join(os.tmpdir(), 'dh-ud-'));
   const deckDir = path.join(dir, 'decks');
   const file = deck ? path.join(deckDir, deck) : '';
   const args = exe ? [`--user-data-dir=${userData}`] : [path.join(ROOT, 'apps/desktop'), `--user-data-dir=${userData}`];
   if (process.platform === 'linux' && process.env['CI']) args.push('--no-sandbox'); // CI containers lack the SUID chrome-sandbox helper
   if (deck) args.push(file);
-  const env = { ...process.env, DECKHAND_NO_BROWSER: '1' } as Record<string, string>; // Preview in Browser must not start a real browser during tests
+  const env = { ...process.env, DECKHAND_NO_BROWSER: '1', DECKHAND_UPDATE_URL: process.env['DECKHAND_UPDATE_URL'] ?? 'http://127.0.0.1:9/' } as Record<string, string>; // Preview in Browser must not start a real browser during tests
   const app = await electron.launch(exe ? { executablePath: exe, args, env } : { args, env });
   const page = await app.firstWindow();
   pageLog.length = 0;

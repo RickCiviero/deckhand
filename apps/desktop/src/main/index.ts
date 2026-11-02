@@ -5,8 +5,9 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { isInside, sanitizeRequestPath } from '@deckhand/core';
 import { registerAi } from './ai.js';
-import { registerSettings } from './settings.js';
+import { loadSettings, registerSettings } from './settings.js';
 import { exportPdf, renderThumbs, startShow } from './show.js';
+import { checkForUpdate } from './updates.js';
 import { previewInBrowser, stopAllPreviews, stopPreview } from './preview.js';
 import {
   DOC_SCHEME, MAX_FILE, buildLive, clearRecovery, closeDoc, createDoc, discardRecovery, docs, listRecovery, loadFromDisk, markHash,
@@ -298,6 +299,13 @@ function registerIpc(): void {
   ipcMain.handle('doc:export-pdf', async (e, a: unknown) => {
     const { docId, slides } = z.object({ docId: idSchema, slides: z.number().int().min(1).max(5000) }).parse(a);
     return exportPdf(senderWin(e).win, ownedDoc(e, docId), slides);
+  });
+  let updateChecked = false; // once per start
+  ipcMain.handle('app:check-update', async (e) => {
+    senderWin(e);
+    if (updateChecked || (await loadSettings()).updates === 'off') return null;
+    updateChecked = true;
+    return checkForUpdate();
   });
   ipcMain.handle('app:open-external', async (e, a: unknown) => {
     const w = senderWin(e);

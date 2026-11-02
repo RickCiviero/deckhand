@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
-export interface AppSettings { scripts: boolean; remote: 'allow' | 'block' | 'ask'; aiEnabled: boolean; aiAllowExternal: boolean; aiMaxToolCalls: number; aiAskBefore: boolean; /** settings an administrator policy file fixes */ locked?: string[] }
+export interface AppSettings { scripts: boolean; remote: 'allow' | 'block' | 'ask'; aiEnabled: boolean; aiAllowExternal: boolean; aiMaxToolCalls: number; aiAskBefore: boolean; updates: 'notify' | 'off'; /** settings an administrator policy file fixes */ locked?: string[] }
 export interface AiConnection { id: string; name: string; kind: 'anthropic' | 'openai' | 'compatible'; baseUrl: string; model: string; hasKey: boolean }
 
 /** Minimal typed bridge. Every call is re-validated in the main process; nothing here exposes Node or ipcRenderer. */
@@ -29,6 +29,7 @@ const api = {
   previewInBrowser: (docId: string) => ipcRenderer.invoke('show:preview', { docId }),
   startShow: (docId: string, slide: number) => ipcRenderer.invoke('show:start', { docId, slide }),
   exportPdf: (docId: string, slides: number) => ipcRenderer.invoke('doc:export-pdf', { docId, slides }) as Promise<string | null>,
+  checkUpdate: () => ipcRenderer.invoke('app:check-update') as Promise<{ version: string; url: string } | null>,
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', url),
   ai: {
     list: () => ipcRenderer.invoke('ai:list') as Promise<{ list: AiConnection[]; secure: boolean }>,
