@@ -83,8 +83,9 @@ Preview in Browser (SHOW-03): done. A temporary server on 127.0.0.1 (random port
 ## M5 progress
 Done and tested: Selection Pane (Alt+F10: topmost-first tree, rename → `data-deckhand-name`, hide → inline `display: none`, lock → `data-deckhand-locked`, Show/Hide All; locked objects cannot be moved, resized, nudged or deleted), Define Slides (see M3), Marp/impress/Shower detection, Insert > Link, Insert/Change Picture.
 Not done in the Selection Pane: drag to reorder, "generated" markers.
-Not started in M5: find/replace, group/distribute, shapes, tables, icons, crop, picture styles, fonts, apply-to-all-similar, Code view, spell-check, Version History, PNG and single-file export, Protected View, page mode polish, accessibility pass, help and onboarding, auto-update, signing, `agent` → `bridge` rename.
+Not started in M5: find/replace, shapes, tables, icons, crop, picture styles, fonts, apply-to-all-similar, Code view, spell-check, Version History, PNG and single-file export, Protected View, page mode polish, accessibility pass, help and onboarding, auto-update, signing, `agent` → `bridge` rename.
 Format Painter (STY-04): done. Copies inline visual declarations (colour, background, border, shadow, opacity, font, text) of the selected object to the next one selected; click once or double-click to keep painting, Esc stops. Not copied: size, position, and character formatting inside text runs.
+Distribute horizontally/vertically: done (three or more objects, outer two stay). Group is still open.
 
 ### M5 progress (update 2)
 Done and tested: Find and Replace (Ctrl+F / Ctrl+H; plain-text match across all slides, through entities, match case / whole word, replace one or all as one undo step, replacement always escaped), Code view and Split (CodeMirror 6; edits apply as one undo step after 1 s idle or on Apply; selecting an object puts the caret on its start tag, moving the caret selects the object).

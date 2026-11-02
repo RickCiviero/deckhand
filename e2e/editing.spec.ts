@@ -486,3 +486,16 @@ test('Format Painter copies visual style (not position) to the next selected obj
   await save(c.page).catch(() => undefined);
   expect(c.text()).toContain(`<p class="body">Revenue`);
 });
+
+test('Distribute needs three objects, moves only the middle one, and one Undo restores the bytes', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await clickObj(c.page, '.logo');
+  await c.page.keyboard.press(`${MOD}+a`);
+  await expect(c.page.getByTestId('cmd-dist-v')).toBeEnabled();
+  await c.page.getByTestId('cmd-dist-v').click();
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await c.page.getByTestId('qat-undo').click();
+  await save(c.page).catch(() => undefined);
+  expect(c.read().equals(original('ai-fixed-stage.html'))).toBe(true);
+});

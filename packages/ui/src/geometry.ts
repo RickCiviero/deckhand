@@ -139,3 +139,18 @@ export function snapBox(moving: Box, others: Box[], threshold: number): Snap {
 export function outermost(ids: number[], isDescendant: (id: number, anc: number) => boolean): number[] {
   return ids.filter((id) => !ids.some((o) => o !== id && isDescendant(id, o)));
 }
+
+/** Distribute (ALN-03): equal gaps between three or more boxes along one axis; the outer two stay put. Returns the shift per id, in viewport px. */
+export function distributeShifts(boxes: { id: number; x: number; y: number; w: number; h: number }[], axis: 'h' | 'v'): Map<number, number> {
+  const out = new Map<number, number>();
+  if (boxes.length < 3) return out;
+  const pos = (b: { x: number; y: number }): number => (axis === 'h' ? b.x : b.y);
+  const len = (b: { w: number; h: number }): number => (axis === 'h' ? b.w : b.h);
+  const sorted = [...boxes].sort((a, b) => pos(a) - pos(b));
+  const first = sorted[0]!;
+  const last = sorted[sorted.length - 1]!;
+  const gap = (pos(last) + len(last) - pos(first) - sorted.reduce((n, b) => n + len(b), 0)) / (sorted.length - 1);
+  let cursor = pos(first) + len(first) + gap;
+  for (const b of sorted.slice(1, -1)) { out.set(b.id, cursor - pos(b)); cursor += len(b) + gap; }
+  return out;
+}

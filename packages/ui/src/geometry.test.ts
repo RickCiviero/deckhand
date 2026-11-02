@@ -89,3 +89,14 @@ describe('misc', () => {
     expect(parseLen('auto')).toBeNull();
   });
 });
+
+import { distributeShifts } from './geometry';
+describe('distributeShifts', () => {
+  it('equalises the gaps and leaves the outer boxes alone', () => {
+    const b = (id: number, x: number, w: number) => ({ id, x, y: 0, w, h: 10 });
+    const m = distributeShifts([b(1, 0, 100), b(2, 120, 50), b(3, 400, 100)], 'h');
+    expect(m.get(2)).toBe(105); // gap = (500 - 250) / 2 = 125, so box 2 starts at 225, 105 right of where it was
+    expect(m.has(1) || m.has(3)).toBe(false);
+  });
+  it('needs three boxes', () => { expect(distributeShifts([{ id: 1, x: 0, y: 0, w: 1, h: 1 }, { id: 2, x: 5, y: 0, w: 1, h: 1 }], 'h').size).toBe(0); });
+});

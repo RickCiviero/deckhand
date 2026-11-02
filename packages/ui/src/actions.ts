@@ -1,6 +1,6 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
 import { PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
-import { detectUnitMode, moveEdit } from './geometry';
+import { detectUnitMode, distributeShifts, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
 
@@ -126,6 +126,19 @@ export function align(kind: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bo
     return { id: r.id, set: moveEdit(r, session.styleOf(r.id), dx / r.sx, dy / r.sy, c).set };
   });
   session.exec(styleMultiCommand('Align', edits));
+}
+
+export function distribute(axis: 'h' | 'v'): void {
+  const s = st();
+  const sel = s.selection.map((id) => s.rects[id]).filter((r): r is NonNullable<typeof r> => !!r);
+  const shifts = distributeShifts(sel, axis);
+  if (!shifts.size) { session.notify('info', 'Select three or more objects to distribute them.'); return; }
+  const c = ctx();
+  const edits = sel.flatMap((r) => {
+    const d = shifts.get(r.id);
+    return d === undefined ? [] : [{ id: r.id, set: moveEdit(r, session.styleOf(r.id), axis === 'h' ? d / r.sx : 0, axis === 'v' ? d / r.sy : 0, c).set }];
+  });
+  session.exec(styleMultiCommand('Distribute', edits));
 }
 
 // ---- slides ---------------------------------------------------------------------------------------------------
