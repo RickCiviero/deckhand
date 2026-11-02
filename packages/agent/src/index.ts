@@ -151,6 +151,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   let keyedSinceEdit = false;
   let editStartedAt = 0;
   let lastRange: Range | null = null;
+  let lastSelected: Range | null = null; // last non-collapsed selection: the link dialog takes focus away and the selection collapses
   let savedRange: Range | null = null;
   const norm = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
@@ -181,7 +182,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
       return;
     }
     editing = el;
-    if (!again) { editDirty = false; keyedSinceEdit = false; editStartedAt = Date.now(); lastRange = null; }
+    if (!again) { editDirty = false; keyedSinceEdit = false; editStartedAt = Date.now(); lastRange = null; lastSelected = null; }
     el.setAttribute('contenteditable', 'true');
     el.setAttribute('spellcheck', 'false');
     el.setAttribute('data-deckhand-editing', '');
@@ -221,13 +222,21 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     editQuirk = false;
   };
 
-  const wrapSelection = (tag: string, css?: [string, string]): void => {
+  const wrapSelection = (tag: string, css?: [string, string], attr?: [string, string]): void => {
     if (editQuirk) return; // formatting would be written on top of parser-generated structure
     const sel = win.getSelection();
-    if (!editing || !sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-    const range = sel.getRangeAt(0);
+    if (!editing || !sel) return;
+    const live = sel.rangeCount > 0 && !sel.isCollapsed;
+    if (!live && !(attr && lastSelected)) return;
+    const range = live ? sel.getRangeAt(0) : lastSelected!;
     if (!editing.contains(range.commonAncestorContainer)) return;
-    if (!css) {
+    if (attr) {
+      // links: an existing link around the selection is retargeted instead of nested or removed
+      for (let n: Node | null = range.commonAncestorContainer; n && n !== editing; n = n.parentNode) {
+        if (n.nodeType === 1 && (n as Element).tagName.toLowerCase() === tag) { (n as Element).setAttribute(attr[0], attr[1]); editDirty = true; return; }
+      }
+    }
+    if (!css && !attr) {
       // toggle off if selection sits inside the same tag
       let n: Node | null = range.commonAncestorContainer;
       while (n && n !== editing) {
@@ -243,6 +252,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     }
     const w = doc.createElement(tag);
     if (css) w.style.setProperty(css[0], css[1]);
+    if (attr) w.setAttribute(attr[0], attr[1]);
     w.appendChild(range.extractContents());
     range.insertNode(w);
     sel.removeAllRanges();
@@ -308,7 +318,10 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
   // moment after we focused it. During the first instants of an edit (before any key), put focus and caret straight back.
   N.addEventListener('selectionchange', () => {
     const s = editing ? win.getSelection() : null;
-    if (editing && s && s.rangeCount && s.anchorNode && editing.contains(s.anchorNode)) lastRange = s.getRangeAt(0).cloneRange();
+    if (editing && s && s.rangeCount && s.anchorNode && editing.contains(s.anchorNode)) {
+      lastRange = s.getRangeAt(0).cloneRange();
+      if (!s.isCollapsed) lastSelected = lastRange;
+    }
   }, true);
   N.addEventListener('focusout', (e) => {
     const el = editing;
@@ -394,6 +407,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
         else if (m.cmd === 'italic') wrapSelection('em');
         else if (m.cmd === 'underline') wrapSelection('u');
         else if (m.cmd === 'color' && typeof m.value === 'string') wrapSelection('span', ['color', m.value]);
+        else if (m.cmd === 'link' && typeof m.value === 'string' && /^(https?:|mailto:|#)/i.test(m.value.trim())) wrapSelection('a', undefined, ['href', m.value.trim()]);
         else if (m.cmd === 'size' && typeof m.value === 'string') wrapSelection('span', ['font-size', m.value]);
         break;
       }

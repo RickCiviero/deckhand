@@ -166,6 +166,21 @@ function registerAppProtocol(): void {
   });
 }
 
+// ---- recent files (File > Open): paths only, in app data ---------------------------------------------------------------
+const recentFile = (): string => path.join(app.getPath('userData'), 'recent.json');
+async function readRecent(): Promise<string[]> {
+  try {
+    const list = (JSON.parse(await fs.readFile(recentFile(), 'utf8')) as unknown[]).filter((x): x is string => typeof x === 'string');
+    const alive: string[] = [];
+    for (const f of list) if (await fs.stat(f).then((st) => st.isFile(), () => false)) alive.push(f);
+    return alive.slice(0, 10);
+  } catch { return []; }
+}
+async function remember(file: string): Promise<void> {
+  const list = [file, ...(await readRecent()).filter((f) => f.toLowerCase() !== file.toLowerCase())].slice(0, 10);
+  await fs.writeFile(recentFile(), JSON.stringify(list)).catch(() => undefined);
+}
+
 // ---- IPC ----------------------------------------------------------------------------------------------------------------
 function registerIpc(): void {
   const openDoc = async (e: IpcMainInvokeEvent, file: string) => {
@@ -177,10 +192,12 @@ function registerIpc(): void {
     w.doc = doc; w.dirty = false;
     w.win.setTitle(`${path.basename(realFile)} - Deckhand`);
     watchDoc(doc, () => { if (!e.sender.isDestroyed()) e.sender.send('doc-event', { type: 'external-change', docId: doc.id }); });
+    void remember(realFile);
     return { docId: doc.id, name: path.basename(realFile), dir: path.dirname(realFile), bytes };
   };
 
   registerAi((e) => { senderWin(e); });
+  ipcMain.handle('app:recent', (e) => { senderWin(e); return readRecent(); });
   ipcMain.handle('app:open-dialog', async (e) => {
     const w = senderWin(e);
     const r = await dialog.showOpenDialog(w.win, { properties: ['openFile'], filters: [{ name: 'HTML presentations', extensions: ['html', 'htm'] }] });

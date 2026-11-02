@@ -98,3 +98,20 @@ body { font: 13px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; overflo
 .recovery h3 { margin: 0 0 4px; }
 .recovery .row { justify-content: space-between; margin: 4px 0; }
 .thumb .timg { display: block; width: 100%; border-radius: 2px; margin-bottom: 3px; pointer-events: none; }
+.backstage { position: fixed; inset: 0; z-index: 50; display: flex; background: Canvas; color: CanvasText; }
+.bsnav { width: 220px; background: var(--accent); color: #fff; display: flex; flex-direction: column; padding: 8px 0; }
+.bsnav button { text-align: left; padding: 10px 18px; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.bsnav button:hover:not(:disabled), .bsnav button.on { background: rgba(255,255,255,.18); }
+.bsnav button:disabled { opacity: .5; cursor: default; }
+.bsnav .bsback { font-size: 20px; margin-bottom: 8px; }
+.bspage { flex: 1; padding: 28px 40px; overflow: auto; }
+.bspage h2 { margin-top: 0; }
+.info { display: grid; grid-template-columns: 160px 1fr; gap: 8px 16px; }
+.info dt { opacity: .7; }
+.info dd { margin: 0; }
+.dom { display: inline-block; margin: 0 6px 4px 0; padding: 1px 6px; border-radius: 4px; background: rgba(128,128,128,.25); }
+.recent { list-style: none; padding: 0; }
+.recent li { padding: 4px 0; }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
+.linkbar { position: fixed; left: 50%; top: 110px; transform: translateX(-50%); z-index: 40; display: flex; gap: 6px; align-items: center; padding: 8px 10px; background: Canvas; color: CanvasText; border: 1px solid rgba(128,128,128,.5); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.linkbar input { width: 320px; padding: 4px 6px; background: Field; color: FieldText; border: 1px solid rgba(128,128,128,.5); border-radius: 3px; font: inherit; }

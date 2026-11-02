@@ -301,3 +301,34 @@ test('Home: align text and font colour change only the selected object\'s style'
   await save(c.page);
   expect(c.text()).toBe(original('ai-fixed-stage.html').toString('latin1').replace('<p class="body">Revenue', '<p class="body" style="text-align: center;">Revenue'));
 });
+
+test('Backstage: Info lists format and external domains; Open lists recent files', async () => {
+  c = await launch('remote-fonts-tailwind.html');
+  await ready(c.page);
+  await c.page.getByTestId('tab-file').click();
+  await expect(c.page.getByTestId('info')).toContainText('cdn.tailwindcss.com');
+  await expect(c.page.getByTestId('info')).toContainText('fonts.googleapis.com');
+  await expect(c.page.getByTestId('info')).toContainText('generic');
+  await c.page.getByRole('button', { name: 'Open', exact: true }).click();
+  await expect(c.page.getByTestId('recent-item').first()).toHaveText('remote-fonts-tailwind.html');
+  await c.page.keyboard.press('Escape');
+  await expect(c.page.getByTestId('backstage')).toHaveCount(0);
+});
+
+test('Insert > Link wraps the selected text in an anchor; unsafe addresses are refused', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  const t = await centreOf(c.page, '.slide.active .body');
+  await editAt(c.page, t.x - t.w / 2 + 30, t.y); // selects the word "Revenue"
+  await c.page.waitForTimeout(1700); // the agent's refocus guard covers the first 1.5 s of an edit
+  await c.page.getByTestId('tab-insert').click();
+  await c.page.getByTestId('cmd-link').click();
+  await c.page.getByTestId('link-url').fill('javascript:alert(1)');
+  await expect(c.page.getByTestId('link-ok')).toBeDisabled();
+  await c.page.getByTestId('link-url').fill('https://example.com/a?b=1&c=2');
+  await c.page.getByTestId('link-ok').click();
+  await c.page.keyboard.press('Escape');
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes'); // the Esc commit is asynchronous; save() would otherwise match the old 'Saved'
+  await save(c.page);
+  expect(c.text()).toMatch(/<a href="https:\/\/example\.com\/a\?b=1&amp;c=2">Revenue ?<\/a> ?grew/);
+});

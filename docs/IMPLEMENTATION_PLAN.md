@@ -70,3 +70,7 @@ Done and e2e-tested: Slide Show (F5 / Shift+F5, Esc exits, link confirmation), P
 ### M3 progress (update)
 Added and e2e-tested: New Slide gallery from the deck's own layouts + Blank (ADP-07), Format Background, Insert/Change Picture with alt text (files copied to `images/` next to the deck, never overwritten), Home clipboard buttons, text alignment, font colour, Select All.
 Still open in M3: Backstage (Info, Recent, Options), Links dialog, Preview in Browser, theme *Fonts*, Define Slides wizard, contextual tabs (Picture Format etc.), message-bar actions for blocked content.
+
+### M3 progress (update 2)
+Added and e2e-tested: Backstage (Open + Recent, Info with format/encoding/external domains, Save, Save As, Export PDF), Insert > Link (http(s)/mailto/# only; retargets an existing link), idempotent end-of-edit so Esc followed by Ctrl+S joins one round trip.
+Still open in M3: Preview in Browser, Options / Trust Center UI, theme *Fonts*, Define Slides wizard, contextual tabs, changing the detected format from Info.

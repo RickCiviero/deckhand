@@ -5,6 +5,7 @@ export interface AiConnection { id: string; name: string; kind: 'anthropic' | 'o
 /** Minimal typed bridge. Every call is re-validated in the main process; nothing here exposes Node or ipcRenderer. */
 const api = {
   openDialog: () => ipcRenderer.invoke('app:open-dialog'),
+  recent: () => ipcRenderer.invoke('app:recent') as Promise<string[]>,
   openPath: (file: string) => ipcRenderer.invoke('app:open-path', file),
   pathForFile: (f: File): string => webUtils.getPathForFile(f),
   setText: (docId: string, text: string) => ipcRenderer.invoke('doc:set-text', { docId, text }),

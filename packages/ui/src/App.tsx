@@ -5,9 +5,10 @@ import { t } from '@deckhand/i18n';
 import { Canvas } from './Canvas';
 import { FormatPane } from './FormatPane';
 import { AiPane } from './AiPane';
+import { Backstage } from './Backstage';
 import { ai, useAi } from './ai';
 import { deckLayouts } from '@deckhand/core';
-import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, exportPdf, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, insertTextBox, moveSlide, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'show' | 'view';
@@ -51,6 +52,8 @@ export function App(): JSX.Element {
   const [tab, setTab] = useState<Tab>('home');
   const [dark, setDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [dropping, setDropping] = useState(false);
+  const [backstage, setBackstage] = useState(false);
+  const [link, setLink] = useState<string | null>(null);
   const [remote, setRemote] = useState(true);
   const [recovery, setRecovery] = useState<{ key: string; file: string; time: number }[]>([]);
   useEffect(() => { if (!s.loaded) void window.deckhand.recoveryList().then((r) => setRecovery(r as typeof recovery)).catch(() => undefined); }, [s.loaded]);
@@ -130,16 +133,10 @@ export function App(): JSX.Element {
       <nav className="ribbon">
         <div className="tabrow" role="tablist">
           {(['file', 'home', 'insert', 'show', 'view'] as Tab[]).map((x) => (
-            <button key={x} role="tab" aria-selected={tab === x} className={tab === x ? 'on' : ''} onClick={() => setTab(x)} data-testid={`tab-${x}`}>{t(`tab.${x}`)}</button>
+            <button key={x} role="tab" aria-selected={tab === x} className={tab === x ? 'on' : ''} onClick={() => (x === 'file' ? setBackstage(true) : setTab(x))} data-testid={`tab-${x}`}>{t(`tab.${x}`)}</button>
           ))}
         </div>
         <div className="tools">
-          {tab === 'file' && (<>
-            <Cmd label={t('file.open')} tip="Open a presentation (Ctrl+O)" onClick={() => void open()} testid="cmd-open" />
-            <Cmd label={t('file.save')} tip="Save (Ctrl+S)" disabled={!s.loaded} onClick={() => void session.save()} testid="cmd-save" />
-            <Cmd label={t('file.exportPdf')} tip="Export every slide as a PDF" disabled={!s.loaded} onClick={() => void exportPdf()} testid="cmd-pdf" />
-            <Cmd label={t('file.saveAs')} tip="Save a copy (Ctrl+Shift+S)" disabled={!s.loaded} onClick={() => void session.saveAs()} />
-          </>)}
           {tab === 'home' && (<>
             <Cmd label={t('home.paste')} tip="Paste (Ctrl+V)" disabled={!s.loaded} onClick={() => paste()} testid="cmd-paste" />
             <Cmd label={t('home.cut')} tip="Cut (Ctrl+X)" disabled={!s.selection.length} onClick={() => copySelection(true)} />
@@ -176,6 +173,7 @@ export function App(): JSX.Element {
             <Cmd label={t('insert.picture')} tip="Insert a picture from a file" disabled={!s.loaded} onClick={() => void insertPicture()} testid="cmd-picture" />
             <Cmd label={t('insert.textBox')} tip="Insert a text box" disabled={!s.loaded} onClick={() => insertTextBox()} testid="cmd-textbox" />
             <span className="sep" />
+            <Cmd label={t('insert.link')} tip={s.editing !== null ? 'Link the selected text to a web address' : 'Select some text while editing first'} disabled={s.editing === null} onClick={() => setLink('https://')} testid="cmd-link" />
             <Cmd label={t('insert.changePicture')} tip={s.selection.length && s.loaded && session.doc.byId(s.selection[0]!)?.tag === 'img' ? 'Replace the selected picture, keeping its size and position' : 'Select a picture first'} disabled={!(s.loaded && s.selection.length && session.doc.byId(s.selection[0]!)?.tag === 'img')} onClick={() => void changePicture()} testid="cmd-change-picture" />
           </>)}
           {tab === 'show' && (<>
@@ -264,6 +262,16 @@ export function App(): JSX.Element {
           <span data-testid="zoom">{Math.round(s.zoom * 100)}%</span>
         </label>
       </footer>
+      {backstage && <Backstage onClose={() => setBackstage(false)} open={() => void open()} onOpenPath={(f) => void window.deckhand.openPath(f).then((r) => openFromResult(r)).catch((e: Error) => session.notify('error', cleanErr(e)))} />}
+      {link !== null && (
+        <div className="linkbar" role="dialog" aria-label="Insert link" data-testid="link-dialog">
+          <input autoFocus value={link} onChange={(e) => setLink(e.target.value)} aria-label="Address" data-testid="link-url"
+            onKeyDown={(e) => { if (e.key === 'Enter') { session.format('link', link); setLink(null); } else if (e.key === 'Escape') setLink(null); }} />
+          <Button size="small" appearance="primary" disabled={!/^(https?:|mailto:|#)/i.test(link.trim())} onClick={() => { session.format('link', link); setLink(null); }} data-testid="link-ok">OK</Button>
+          <Button size="small" onClick={() => setLink(null)}>Cancel</Button>
+          <small>https://, mailto: or #anchor</small>
+        </div>
+      )}
       {dropping && <div className="dropveil">{t('file.drop')}</div>}
       </div>
     </FluentProvider>

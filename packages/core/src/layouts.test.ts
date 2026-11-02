@@ -46,3 +46,13 @@ describe('layouts from the deck (ADP-07)', () => {
     expect(text(e)).toBe(before);
   });
 });
+
+describe('externalDomains (File > Info)', () => {
+  it('lists hosts from attributes and CSS, ignores namespaces', async () => {
+    const { externalDomains } = await import('./index.js');
+    const e = load('remote-fonts-tailwind.html');
+    expect(externalDomains(e.doc)).toEqual(['cdn.tailwindcss.com', 'fonts.googleapis.com']);
+    expect(externalDomains(load('ai-fixed-stage.html').doc)).toEqual([]);
+    expect(externalDomains(load('chart-svg-icons.html').doc)).toEqual([]);
+  });
+});

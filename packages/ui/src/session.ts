@@ -427,15 +427,21 @@ class Session {
     }
   }
 
-  async endEdit(commit: boolean): Promise<void> {
-    if (get().editing === null) return;
+  /** One end-of-edit round trip at a time: Esc followed at once by Ctrl+S joins the first instead of racing it. */
+  endEdit(commit: boolean): Promise<void> {
+    if (get().editing === null) return this.ending ?? Promise.resolve();
+    this.ending ??= this.doEndEdit(commit).finally(() => { this.ending = null; });
+    return this.ending;
+  }
+  private ending: Promise<void> | null = null;
+  private async doEndEdit(commit: boolean): Promise<void> {
     const done = new Promise<Extract<AgentMsg, { t: 'edit-end' }>>((res) => { this.editResolve = res; });
     this.send({ t: 'edit-end', commit });
     const r = await Promise.race([done, new Promise<null>((res) => setTimeout(() => res(null), 1500))]);
     this.editResolve = null;
     if (r) this.finishEdit(r); else set({ editing: null });
   }
-  format(cmd: 'bold' | 'italic' | 'underline' | 'color' | 'size', value?: string): void { this.send({ t: 'fmt', cmd, value }); }
+  format(cmd: 'bold' | 'italic' | 'underline' | 'color' | 'size' | 'link', value?: string): void { this.send({ t: 'fmt', cmd, value }); }
 
   // ---- saving -------------------------------------------------------------------------------------------------
   async save(): Promise<boolean> {
