@@ -13,8 +13,9 @@ test('Slide Show opens the plain deck (no editor artifacts), starts at the curre
   await ready(c.page);
   await c.page.getByTestId('thumb-1').click();
   await c.page.keyboard.press('Shift+F5');
-  await expect.poll(() => c.app.windows().length, { timeout: 15000 }).toBe(2);
-  const show = c.app.windows().find((w) => w !== c.page)!;
+  // the hidden thumbnail window also counts as a window, so wait for the one that shows the deck
+  await expect.poll(() => c.app.windows().filter((w) => w !== c.page && w.url().startsWith('deckhand-doc://')).length, { timeout: 15000 }).toBe(1);
+  const show = c.app.windows().find((w) => w !== c.page && w.url().startsWith('deckhand-doc://'))!;
   await show.waitForLoadState('load');
   expect(show.url()).toMatch(/^deckhand-doc:\/\//);
   expect(await show.evaluate(() => document.querySelectorAll('[data-deckhand-id]').length)).toBe(0);
@@ -22,7 +23,7 @@ test('Slide Show opens the plain deck (no editor artifacts), starts at the curre
   await expect.poll(() => show.evaluate(() => (document.querySelector('.slide.active') as HTMLElement | null)?.dataset['slide']), { timeout: 10000 }).toBe('2');
   // CDP key events bypass the browser-side input hook, so send a real input event from the main process
   await c.app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows().find((x) => x.isFullScreen() || x.getTitle() === 'Slide Show')!; w.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); });
-  await expect.poll(() => c.app.windows().length, { timeout: 10000 }).toBe(1);
+  await expect.poll(() => c.app.windows().filter((w) => w !== c.page && !w.isClosed() && w.url().startsWith('deckhand-doc://')).length, { timeout: 10000 }).toBe(0);
 });
 
 test('PDF export writes one page per slide', async () => {

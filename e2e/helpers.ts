@@ -44,24 +44,28 @@ export async function ready(page: Page): Promise<void> {
 
 /** Centre of an element of the deck, in page coordinates (accounts for canvas zoom). */
 export async function centreOf(page: Page, selector: string): Promise<{ x: number; y: number; w: number; h: number; z: number }> {
-  const f = deckFrame(page);
-  const r = await f.evaluate((sel) => { const b = document.querySelector(sel)!.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height, vw: innerWidth }; }, selector);
+  // the live view is rebuilt after structural edits (rename, hide…), so the frame can be briefly missing or navigating
+  let r!: { x: number; y: number; w: number; h: number; vw: number };
+  await expect(async () => {
+    r = await deckFrame(page).evaluate((sel) => { const b = document.querySelector(sel)!.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height, vw: innerWidth }; }, selector);
+  }).toPass({ timeout: 15000 });
   const ov = (await page.locator('[data-testid=overlay]').boundingBox())!;
   const z = ov.width / r.vw;
   return { x: ov.x + (r.x + r.w / 2) * z, y: ov.y + (r.y + r.h / 2) * z, w: r.w * z, h: r.h * z, z };
 }
 
 export async function clickObj(page: Page, selector: string): Promise<void> {
-  // retry: the very first click can arrive before the agent finished its handshake and hit-testing is not yet available
-  for (let attempt = 0; attempt < 5; attempt++) {
+  // retry: the very first click can arrive before the agent finished its handshake, and a late live-view rebuild can drop the selection just after it
+  const path = page.locator('[data-testid=path] button').first();
+  for (let attempt = 0; attempt < 6; attempt++) {
     const c = await centreOf(page, selector);
     await page.mouse.click(c.x, c.y);
     try {
-      await expect(page.locator('[data-testid=path] button').first()).toBeVisible({ timeout: 3000 });
-      break;
+      await expect(path).toBeVisible({ timeout: 3000 });
+      await page.waitForTimeout(500);
+      if (await path.isVisible()) return; // the selection survived the settle time
     } catch { /* try again */ }
   }
-  await page.waitForTimeout(400);
 }
 
 export async function dragObj(page: Page, selector: string, dx: number, dy: number): Promise<void> {
