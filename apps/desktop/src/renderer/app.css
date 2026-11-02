@@ -115,3 +115,6 @@ body { font: 13px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; overflo
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
 .linkbar { position: fixed; left: 50%; top: 110px; transform: translateX(-50%); z-index: 40; display: flex; gap: 6px; align-items: center; padding: 8px 10px; background: Canvas; color: CanvasText; border: 1px solid rgba(128,128,128,.5); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
 .linkbar input { width: 320px; padding: 4px 6px; background: Field; color: FieldText; border: 1px solid rgba(128,128,128,.5); border-radius: 3px; font: inherit; }
+.opt { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; max-width: 560px; }
+.opt input[type=checkbox] { margin-right: 6px; }
+.opt select, .opt input[type=number] { width: 160px; padding: 3px 6px; background: Field; color: FieldText; border: 1px solid rgba(128,128,128,.5); border-radius: 3px; font: inherit; }

@@ -54,7 +54,6 @@ export function App(): JSX.Element {
   const [dropping, setDropping] = useState(false);
   const [backstage, setBackstage] = useState(false);
   const [link, setLink] = useState<string | null>(null);
-  const [remote, setRemote] = useState(true);
   const [recovery, setRecovery] = useState<{ key: string; file: string; time: number }[]>([]);
   useEffect(() => { if (!s.loaded) void window.deckhand.recoveryList().then((r) => setRecovery(r as typeof recovery)).catch(() => undefined); }, [s.loaded]);
   const recover = async (r: { key: string; file: string }) => {
@@ -70,6 +69,7 @@ export function App(): JSX.Element {
   const discard = async (key: string) => { await window.deckhand.recoveryDiscard(key); setRecovery((x) => x.filter((y) => y.key !== key)); };
 
   useEffect(() => {
+    void window.deckhand.settings.get().then((cfg) => useStore.setState({ settings: cfg })).catch(() => undefined);
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const h = (e: MediaQueryListEvent) => setDark(e.matches);
     mq.addEventListener('change', h);
@@ -162,7 +162,7 @@ export function App(): JSX.Element {
             <span className="sep" />
             <Cmd label={t('home.selectAll')} tip="Select all objects on the slide (Ctrl+A)" disabled={!s.loaded} onClick={() => selectAll()} />
             <Cmd label={t('home.front')} tip="Bring to Front" disabled={!s.selection.length} onClick={() => arrange('front')} />
-            <Cmd label={t('home.ai')} tip="Open the AI Assistant (Ctrl+Alt+I)" disabled={!s.loaded} on={dock === 'ai'} onClick={() => ai.setDock(dock === 'ai' ? 'format' : 'ai')} testid="cmd-ai" />
+            {s.settings.aiEnabled && <Cmd label={t('home.ai')} tip="Open the AI Assistant (Ctrl+Alt+I)" disabled={!s.loaded} on={dock === 'ai'} onClick={() => ai.setDock(dock === 'ai' ? 'format' : 'ai')} testid="cmd-ai" />}
             <span className="sep" />
             <Cmd label={t('home.back')} tip="Send to Back" disabled={!s.selection.length} onClick={() => arrange('back')} />
             <Cmd label="⇤" tip="Align Left" disabled={!s.selection.length} onClick={() => align('left')} />
@@ -185,8 +185,8 @@ export function App(): JSX.Element {
             <Cmd label={t('view.smart')} tip="Smart guides while dragging" on={s.smart} onClick={() => useStore.setState({ smart: !s.smart })} />
             <Cmd label={t('view.scripts')} tip="Off gives a static view for decks whose scripts get in the way" on={s.scriptsOn} disabled={!s.loaded}
               onClick={() => { useStore.setState({ scriptsOn: !s.scriptsOn }); void session.reload(); }} testid="cmd-scripts" />
-            <Cmd label={t('view.remote')} tip="Load fonts, images and scripts from the internet when the deck asks for them" on={remote} disabled={!s.loaded}
-              onClick={() => { const v = !remote; setRemote(v); void window.deckhand.setPolicy(s.docId!, v ? 'allow' : 'block').then(() => session.reload()); }} testid="cmd-remote" />
+            <Cmd label={t('view.remote')} tip="Load fonts, images and scripts from the internet when the deck asks for them" on={s.remote} disabled={!s.loaded}
+              onClick={() => { const v = !s.remote; useStore.setState({ remote: v }); void window.deckhand.setPolicy(s.docId!, v ? 'allow' : 'block').then(() => session.reload()); }} testid="cmd-remote" />
           </>)}
         </div>
       </nav>
@@ -242,9 +242,9 @@ export function App(): JSX.Element {
           <div className="dock">
             <div className="dockTabs" role="tablist">
               <button role="tab" aria-selected={dock === 'format'} className={dock === 'format' ? 'on' : ''} onClick={() => ai.setDock('format')} data-testid="dock-format">Format</button>
-              <button role="tab" aria-selected={dock === 'ai'} className={dock === 'ai' ? 'on' : ''} onClick={() => ai.setDock('ai')} data-testid="dock-ai">AI Assistant</button>
+              {s.settings.aiEnabled && <button role="tab" aria-selected={dock === 'ai'} className={dock === 'ai' ? 'on' : ''} onClick={() => ai.setDock('ai')} data-testid="dock-ai">AI Assistant</button>}
             </div>
-            {dock === 'ai' ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
+            {dock === 'ai' && s.settings.aiEnabled ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
           </div>
         </main>
       )}

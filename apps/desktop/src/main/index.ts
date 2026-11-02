@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { isInside, sanitizeRequestPath } from '@deckhand/core';
 import { registerAi } from './ai.js';
+import { registerSettings } from './settings.js';
 import { exportPdf, renderThumbs, startShow } from './show.js';
 import {
   DOC_SCHEME, MAX_FILE, buildLive, clearRecovery, closeDoc, createDoc, discardRecovery, docs, listRecovery, loadFromDisk, markHash,
@@ -197,6 +198,7 @@ function registerIpc(): void {
   };
 
   registerAi((e) => { senderWin(e); });
+  registerSettings((e) => { senderWin(e); });
   ipcMain.handle('app:recent', (e) => { senderWin(e); return readRecent(); });
   ipcMain.handle('app:open-dialog', async (e) => {
     const w = senderWin(e);

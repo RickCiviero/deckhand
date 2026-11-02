@@ -332,3 +332,21 @@ test('Insert > Link wraps the selected text in an anchor; unsafe addresses are r
   await save(c.page);
   expect(c.text()).toMatch(/<a href="https:\/\/example\.com\/a\?b=1&amp;c=2">Revenue ?<\/a> ?grew/);
 });
+
+test('Options: Trust Center defaults apply to the next opened document; AI can be switched off', async () => {
+  c = await launch('ai-fixed-stage.html');
+  await ready(c.page);
+  await expect(c.page.getByTestId('live-view')).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin');
+  await expect(c.page.getByTestId('dock-ai')).toBeVisible();
+  await c.page.getByTestId('tab-file').click();
+  await c.page.getByTestId('bs-options').click();
+  await c.page.getByTestId('opt-scripts').uncheck();
+  await c.page.getByTestId('opt-remote').selectOption('block');
+  await c.page.getByTestId('opt-ai').uncheck();
+  await expect(c.page.getByTestId('opt-ai-external')).toBeDisabled();
+  await expect.poll(() => { try { return JSON.parse(fs.readFileSync(path.join(c.userData, 'settings.json'), 'utf8')); } catch { return null; } }).toMatchObject({ scripts: false, remote: 'block', aiEnabled: false, aiAllowExternal: false });
+  await c.page.getByRole('button', { name: 'Open', exact: true }).click();
+  await c.page.getByTestId('recent-item').first().click(); // reopen: the new defaults apply
+  await expect(c.page.getByTestId('live-view')).toHaveAttribute('sandbox', '', { timeout: 15000 });
+  await expect(c.page.getByTestId('dock-ai')).toHaveCount(0);
+});

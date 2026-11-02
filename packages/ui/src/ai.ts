@@ -97,7 +97,8 @@ export const ai = {
     try {
       const r = await runTurn({
         provider: ipcProvider(st.connId), editor, mode: st.mode, history, user: text, deckFacts: facts, signal: abort.signal,
-        ctx: { getSelection: () => useStore.getState().selection },
+        maxToolCalls: sess.settings.aiMaxToolCalls,
+        ctx: { getSelection: () => useStore.getState().selection, allowExternal: sess.settings.aiAllowExternal },
         onEvent: (e) => {
           if (e.type === 'text') {
             assistant += e.text;

@@ -1,10 +1,15 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
+export interface AppSettings { scripts: boolean; remote: 'allow' | 'block'; aiEnabled: boolean; aiAllowExternal: boolean; aiMaxToolCalls: number }
 export interface AiConnection { id: string; name: string; kind: 'anthropic' | 'openai' | 'compatible'; baseUrl: string; model: string; hasKey: boolean }
 
 /** Minimal typed bridge. Every call is re-validated in the main process; nothing here exposes Node or ipcRenderer. */
 const api = {
   openDialog: () => ipcRenderer.invoke('app:open-dialog'),
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get') as Promise<AppSettings>,
+    set: (patch: Partial<AppSettings>) => ipcRenderer.invoke('settings:set', patch) as Promise<AppSettings>,
+  },
   recent: () => ipcRenderer.invoke('app:recent') as Promise<string[]>,
   openPath: (file: string) => ipcRenderer.invoke('app:open-path', file),
   pathForFile: (f: File): string => webUtils.getPathForFile(f),
