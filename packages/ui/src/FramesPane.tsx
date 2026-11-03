@@ -44,7 +44,7 @@ export function FramesPane(): JSX.Element {
     session.exec(replaceScriptTextCommand(old, v));
   };
   return (
-    <aside className="pane format" data-testid="frames-pane">
+    <aside className="pane format" data-testid="frames-pane" tabIndex={0} aria-label="Frames">
       {!f ? (
         <div className="framesbox">
           <p className="hint">{hasTimers ? 'This presentation builds content with timed scripts (for example a typed prompt or a chat). Expand it to look at each frame and edit the text it shows.' : 'This presentation has no timed scripts. Steps (Selection tab) cover objects that appear one by one.'}</p>

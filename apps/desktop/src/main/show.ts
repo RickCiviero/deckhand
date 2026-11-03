@@ -17,13 +17,14 @@ function slideSelector(doc: Doc): string | null {
 const JUMP = `(function (sel, idx) {
   var els = Array.prototype.slice.call(document.querySelectorAll(sel)); var t = els[idx];
   if (!t || els.length < 2) return false;
+  var scrolled = false;
   var STATE = /^(active|current|present|visible|is-active|is-current|show|shown)$/;
   var holders = els.filter(function (e) { return Array.prototype.some.call(e.classList, function (c) { return STATE.test(c); }); });
   var token = holders.length === 1 ? Array.prototype.find.call(holders[0].classList, function (c) { return STATE.test(c); }) : '';
   if (token) els.forEach(function (e) { e.classList.toggle(token, e === t); });
   if (token) { var seen = []; els.forEach(function (e) { for (var a = e.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) { var peers = a.parentElement ? Array.prototype.filter.call(a.parentElement.children, function (x) { return x.tagName === a.tagName; }) : []; if (peers.length >= 2 && peers.some(function (x) { return x.classList.contains(token); }) && seen.indexOf(a) < 0) seen.push(a); } }); seen.forEach(function (g) { g.classList.toggle(token, g.contains(t)); }); }
   else if (els.filter(function (e) { return e !== t && getComputedStyle(e).display === 'none'; }).length >= els.length - 2) els.forEach(function (e) { e.style.display = e === t ? '' : 'none'; });
-  else { document.documentElement.style.paddingBottom = '100vh'; t.scrollIntoView({ block: 'start', inline: 'start' }); }
+  else { scrolled = true; document.documentElement.style.paddingBottom = '100vh'; t.scrollIntoView({ block: 'start', inline: 'start' }); }
   if (!token) { var cs = getComputedStyle(t); if (cs.display === 'none') t.style.display = 'block'; if (cs.opacity === '0') t.style.opacity = '1'; if (cs.visibility === 'hidden') t.style.visibility = 'visible'; }
   var st = document.createElement('style'); st.textContent = '[data-deckhand-reveal]{opacity:1!important;visibility:visible!important;transform:none!important}'; document.head.appendChild(st);
   Array.prototype.forEach.call(t.querySelectorAll('[data-step],[data-fragment-index],.fragment,.step,.build'), function (e) { var c = getComputedStyle(e); if (c.opacity === '0' || c.visibility === 'hidden') e.setAttribute('data-deckhand-reveal', ''); });
@@ -32,7 +33,7 @@ const JUMP = `(function (sel, idx) {
     host.style.transform = 'none'; host.style.translate = ''; r = t.getBoundingClientRect();
     host.style.translate = (innerWidth / 2 - (r.left + r.width / 2)) + 'px ' + (innerHeight / 2 - (r.top + r.height / 2)) + 'px';
   }
-  return true;
+  return scrolled ? 'scroll' : true;
 })`;
 const ACTIVE = `(function (sel) {
   var els = Array.prototype.slice.call(document.querySelectorAll(sel));
@@ -42,7 +43,8 @@ const ACTIVE = `(function (sel) {
 })`;
 /** Capture windows are not on screen, so CSS transitions run slowly there and a capture can catch two slides half-faded. Capture the settled state instead. */
 const settle = (wc: WebContents): Promise<unknown> => wc.insertCSS('*,*::before,*::after{transition:none!important;animation:none!important}').catch(() => undefined);
-const jumpTo = (wc: WebContents, sel: string, idx: number): Promise<boolean> => wc.executeJavaScript(`${JUMP}(${JSON.stringify(sel)}, ${idx})`, true).then((r) => r === true, () => false);
+/** false: the deck has no state the page can be moved with; 'scroll': the page was scrolled (give it time to settle). */
+const jumpTo = (wc: WebContents, sel: string, idx: number): Promise<boolean | 'scroll'> => wc.executeJavaScript(`${JUMP}(${JSON.stringify(sel)}, ${idx})`, true).then((r) => (r === 'scroll' ? 'scroll' : r === true), () => false);
 const activeIndex = (wc: WebContents, sel: string): Promise<number> => wc.executeJavaScript(`${ACTIVE}(${JSON.stringify(sel)})`, true).then((r) => (typeof r === 'number' ? r : -1), () => -1);
 
 const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -165,7 +167,8 @@ export function renderThumbs(doc: Doc, indices: number[], width: number): Promis
       const sel = slideSelector(doc);
       let at = 0;
       for (const idx of [...new Set(indices)].sort((a, b) => a - b)) {
-        if (sel && await jumpTo(win.webContents, sel, idx)) { at = idx; await delay(300); }
+        const jumped = sel ? await jumpTo(win.webContents, sel, idx) : false;
+        if (jumped) { at = idx; await delay(jumped === 'scroll' ? 800 : 300); }
         else {
           for (; at < idx; at++) { await key(win.webContents, 'Right'); await delay(120); }
           await delay(250);

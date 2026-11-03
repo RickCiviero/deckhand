@@ -332,7 +332,7 @@ export function App(): JSX.Element {
         </main>
       ) : (
         <main className="workspace">
-          <aside className="pane slides" data-testid="slide-pane">
+          <aside className="pane slides" data-testid="slide-pane" tabIndex={0} aria-label="Slides">
             {s.slides.map((sl, i) => (
               <div key={sl.id} className={`thumb ${i === s.slide ? 'on' : ''} ${sl.hidden ? 'hidden' : ''}`} draggable
                 onClick={() => session.goTo(i)} data-testid={`thumb-${i}`}
@@ -356,7 +356,7 @@ export function App(): JSX.Element {
               <button role="tab" aria-selected={dock === 'format'} className={dock === 'format' ? 'on' : ''} onClick={() => ai.setDock('format')} data-testid="dock-format">Format</button>
               {s.settings.aiEnabled && <button role="tab" aria-selected={dock === 'ai'} className={dock === 'ai' ? 'on' : ''} onClick={() => ai.setDock('ai')} data-testid="dock-ai">AI Assistant</button>}
             </div>
-            {dock === 'selection' ? <SelectionPane /> : dock === 'frames' ? <FramesPane /> : dock === 'ai' && s.settings.aiEnabled ? <aside className="pane format"><AiPane /></aside> : <FormatPane />}
+            {dock === 'selection' ? <SelectionPane /> : dock === 'frames' ? <FramesPane /> : dock === 'ai' && s.settings.aiEnabled ? <aside className="pane format" tabIndex={0} aria-label="AI Assistant"><AiPane /></aside> : <FormatPane />}
           </div>
         </main>
       )}

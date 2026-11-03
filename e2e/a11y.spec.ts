@@ -24,6 +24,7 @@ async function audit(page: Page, where: string): Promise<void> {
 
 test('welcome screen, tour and Help have no serious accessibility problems', async () => {
   c = await launch(null);
+  await c.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(1100, 640)); // small screens (CI) make more regions scroll
   await expect(c.page.getByTestId('onboarding')).toBeVisible();
   await audit(c.page, 'welcome screen');
   await c.page.getByTestId('tab-file').click();
@@ -36,6 +37,7 @@ test('welcome screen, tour and Help have no serious accessibility problems', asy
 
 test('the editor with a deck: every tab and pane', async () => {
   c = await launch('bench/dashboard.html');
+  await c.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(1100, 640));
   await ready(c.page);
   await audit(c.page, 'Home');
   for (const t of ['insert', 'design', 'show', 'view']) { await c.page.getByTestId(`tab-${t}`).click(); await audit(c.page, `${t} tab`); }

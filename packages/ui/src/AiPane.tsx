@@ -102,7 +102,7 @@ export function AiPane(): JSX.Element {
         <Button size="small" appearance="subtle" onClick={() => setManaging(true)}>Manage</Button>
         <Button size="small" appearance="subtle" onClick={() => ai.newChat()} disabled={s.busy}>New</Button>
       </div>
-      <div className="aimsgs" aria-live="polite">
+      <div className="aimsgs" aria-live="polite" tabIndex={0} role="log" aria-label="Conversation">
         {s.items.length === 0 && (
           <div className="aiempty">
             <p>Ask a question about this deck or describe a change. In Edit mode the assistant changes the deck directly; one Undo reverts everything it did.</p>

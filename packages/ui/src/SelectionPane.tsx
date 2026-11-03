@@ -29,7 +29,7 @@ export function SelectionPane(): JSX.Element {
   };
   const allHidden = tree.length > 0 && tree.every((n) => n.hidden);
   return (
-    <aside className="pane format" data-testid="selection-pane">
+    <aside className="pane format" data-testid="selection-pane" tabIndex={0} aria-label="Selection">
       <div className="row selhead">
         <Button size="small" onClick={() => session.exec(hideObjectsCommand(tree.map((n) => n.id), false))} disabled={!tree.some((n) => n.hidden)} data-testid="sel-show-all">Show All</Button>
         <Button size="small" onClick={() => session.exec(hideObjectsCommand(tree.map((n) => n.id), true))} disabled={allHidden}>Hide All</Button>

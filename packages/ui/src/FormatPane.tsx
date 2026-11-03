@@ -109,9 +109,9 @@ export function FormatPane(): JSX.Element {
     session.exec({ label: `Change ${c.name}`, build: () => [patch] });
   };
 
-  if (!s.loaded) return <aside className="pane format" />;
+  if (!s.loaded) return <aside className="pane format" tabIndex={0} aria-label="Format" />;
   return (
-    <aside className="pane format" data-testid="format-pane">
+    <aside className="pane format" data-testid="format-pane" tabIndex={0} aria-label="Format">
       <div className="tabs">
         <button className={tab === 'shape' ? 'on' : ''} onClick={() => setTab('shape')}>{r ? 'Format Shape' : 'Format'}</button>
         <button className={tab === 'theme' ? 'on' : ''} onClick={() => setTab('theme')}>Theme</button>

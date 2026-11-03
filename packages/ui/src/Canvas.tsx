@@ -264,7 +264,7 @@ export function Canvas(): JSX.Element {
   void ctxFor;
 
   return (
-    <div className="canvas-wrap" ref={wrap} onWheel={onWheel} data-testid="canvas" data-bridge-ready={s.bridgeReady ? '1' : '0'}>
+    <div className="canvas-wrap" tabIndex={0} aria-label="Slide canvas" ref={wrap} onWheel={onWheel} data-testid="canvas" data-bridge-ready={s.bridgeReady ? '1' : '0'}>
       <div className="stage" ref={stage} style={{ width: VW * z, height: VH * z }}>
         {s.src && (
           <iframe

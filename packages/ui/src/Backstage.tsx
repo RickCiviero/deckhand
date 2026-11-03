@@ -58,7 +58,7 @@ export function Backstage({ onClose, open, onOpenPath, initialPage }: { onClose:
         <button className={page === 'help' ? 'on' : ''} onClick={() => setPage('help')} data-testid="bs-help"><QuestionCircle24Regular />Help</button>
         <button className={page === 'history' ? 'on' : ''} disabled={!s.loaded} onClick={() => setPage('history')} data-testid="bs-history"><History24Regular />Version History</button>
       </nav>
-      <section className="bspage">
+      <section className="bspage" tabIndex={0} aria-label="File page">
         {page === 'open' && (
           <>
             <h2>Open</h2>
