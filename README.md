@@ -217,7 +217,7 @@ flowchart LR
 | Part | What it does |
 |---|---|
 | `packages/core` | Pure TypeScript: source model, patches, commands and undo, slide detection, layouts, find/replace, sanitiser. No DOM, no Electron; tested under Node. |
-| `packages/agent` | A script injected into the live view only. Measures elements and hosts text editing. Never saved to your file. |
+| `packages/bridge` | A script injected into the live view only. Measures elements and hosts text editing. Never saved to your file. |
 | `packages/ui` | The editor: ribbon, panes, canvas overlay, code view. |
 | `packages/ai` | AI runtime: slide projection, deck tools, agent loop, OpenAI-compatible and Anthropic streaming. No Electron or React. |
 | `apps/desktop` | Electron shell: windows, file access, the `deckhand-doc://` protocol, key storage, slide show, PDF export. |
@@ -310,12 +310,15 @@ Deckhand is **early software**. It is built milestone by milestone from [`docs/S
 | Backstage, Slide Show, PDF export, thumbnails, recovery, Options | ✅ |
 | New Slide gallery, Define Slides, pictures, links, Find and Replace, Selection pane, Code view | ✅ |
 | AI Assistant: API key / local model, tools, review and undo | ✅ — not yet tested against real provider accounts |
-| Preview in Browser, theme fonts, contextual ribbon tabs | ⬜ |
+| Preview in Browser, Replace Fonts, embedded and linked web fonts | ✅ |
 | AI: chat-plan sign-in, external agents, MCP server, attachments, history | ⬜ |
-| Group/distribute, shapes, tables, Format Painter, spell-check, Version History | ⬜ |
-| Protected View, auto-update, code signing, installers tried on macOS/Linux | ⬜ |
+| Group/distribute, shapes, tables with row and column editing, icons, Format Painter, apply to similar, picture styles and crop | ✅ |
+| Steps (build-step timeline), Frames (script-built animations), script interactions | ✅ |
+| Version History, PNG and single-file export, Protected View, spell-check (Windows and macOS), Help and first-run tour, accessibility audit in CI | ✅ |
+| Benchmark corpus of 11 complex decks, run repeatedly on all three systems | ✅ |
+| Auto-update, code signing (both need a certificate), installers tried by hand on macOS/Linux | ⬜ |
 
-**Known limits:** the code view refuses files over 2 MB of source; thumbnails and PDF export step through slides with the arrow key, so decks that do not respond to it (and reveal.js vertical stacks) can show the wrong slide; decks that build their content with JavaScript at run time are read-only where the text is not in the file.
+**Known limits:** you cannot move or restyle elements that a script creates (only their text, where the script writes it); crop is a set of percentage fields, not drag handles; spell-check is off on Linux (it would have to download dictionaries); Version History keeps the last 30 saves per file in the app's own folder.
 
 ## Contributing
 

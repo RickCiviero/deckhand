@@ -10,7 +10,7 @@ import { DOC_SCHEME, type Doc } from './docs.js';
 function slideSelector(doc: Doc): string | null {
   try {
     const det = detectDeck(parseSource(doc.text, { encoding: 'utf-8', bom: false, eol: 'none' }));
-    return (det.adapter === 'generic' || det.adapter === 'custom') && det.selector && det.slides.length > 1 ? det.selector : null;
+    return (det.adapter === 'generic' || det.adapter === 'custom' || det.adapter === 'marp') && det.selector && det.slides.length > 1 ? det.selector : null;
   } catch { return null; }
 }
 // runs in the plain page (same logic as the editor's showSlide): show slide `idx` through the deck's own state class or display, and reveal build steps
@@ -21,10 +21,17 @@ const JUMP = `(function (sel, idx) {
   var holders = els.filter(function (e) { return Array.prototype.some.call(e.classList, function (c) { return STATE.test(c); }); });
   var token = holders.length === 1 ? Array.prototype.find.call(holders[0].classList, function (c) { return STATE.test(c); }) : '';
   if (token) els.forEach(function (e) { e.classList.toggle(token, e === t); });
+  if (token) { var seen = []; els.forEach(function (e) { for (var a = e.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) { var peers = a.parentElement ? Array.prototype.filter.call(a.parentElement.children, function (x) { return x.tagName === a.tagName; }) : []; if (peers.length >= 2 && peers.some(function (x) { return x.classList.contains(token); }) && seen.indexOf(a) < 0) seen.push(a); } }); seen.forEach(function (g) { g.classList.toggle(token, g.contains(t)); }); }
   else if (els.filter(function (e) { return e !== t && getComputedStyle(e).display === 'none'; }).length >= els.length - 2) els.forEach(function (e) { e.style.display = e === t ? '' : 'none'; });
-  else return false;
+  else { document.documentElement.style.paddingBottom = '100vh'; t.scrollIntoView({ block: 'start', inline: 'start' }); }
+  if (!token) { var cs = getComputedStyle(t); if (cs.display === 'none') t.style.display = 'block'; if (cs.opacity === '0') t.style.opacity = '1'; if (cs.visibility === 'hidden') t.style.visibility = 'visible'; }
   var st = document.createElement('style'); st.textContent = '[data-deckhand-reveal]{opacity:1!important;visibility:visible!important;transform:none!important}'; document.head.appendChild(st);
   Array.prototype.forEach.call(t.querySelectorAll('[data-step],[data-fragment-index],.fragment,.step,.build'), function (e) { var c = getComputedStyle(e); if (c.opacity === '0' || c.visibility === 'hidden') e.setAttribute('data-deckhand-reveal', ''); });
+  var r = t.getBoundingClientRect(), host = t.parentElement;
+  if (host && host !== document.body && getComputedStyle(t).display !== 'none' && !(r.width > 0 && r.height > 0 && r.right > 1 && r.left < innerWidth - 1 && r.bottom > 1 && r.top < innerHeight - 1)) {
+    host.style.transform = 'none'; host.style.translate = ''; r = t.getBoundingClientRect();
+    host.style.translate = (innerWidth / 2 - (r.left + r.width / 2)) + 'px ' + (innerHeight / 2 - (r.top + r.height / 2)) + 'px';
+  }
   return true;
 })`;
 const ACTIVE = `(function (sel) {
@@ -106,6 +113,40 @@ export async function exportPdf(parent: BrowserWindow, doc: Doc, slideCount: num
     }
     await fs.writeFile(r.filePath, await pdf.save());
     return r.filePath;
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+  }
+}
+
+/** PNG export: the current slide as one file, or every slide into a folder (name-01.png …), captured at 1920×1080 like the PDF. */
+export async function exportPng(parent: BrowserWindow, doc: Doc, slideCount: number, only: number | null): Promise<string | null> {
+  const base = path.basename(doc.file).replace(/\.html?$/i, '');
+  let target: string;
+  if (only !== null) {
+    const r = await dialog.showSaveDialog(parent, { defaultPath: path.join(doc.dir, `${base}-${String(only + 1).padStart(2, '0')}.png`), filters: [{ name: 'PNG', extensions: ['png'] }] });
+    if (r.canceled || !r.filePath) return null;
+    target = r.filePath;
+  } else {
+    const r = await dialog.showOpenDialog(parent, { defaultPath: doc.dir, properties: ['openDirectory', 'createDirectory'], title: 'Choose a folder for the pictures' });
+    if (r.canceled || !r.filePaths[0]) return null;
+    target = r.filePaths[0];
+  }
+  const win = new BrowserWindow({ show: false, width: 1920, height: 1080, useContentSize: true, webPreferences: { ...WEB, offscreen: false, backgroundThrottling: false } });
+  try {
+    await win.loadURL(deckUrl(doc));
+    await delay(1200);
+    await settle(win.webContents);
+    const n = Math.max(1, Math.min(slideCount, 500));
+    const sel = slideSelector(doc);
+    let at = 0;
+    for (let i = 0; i < n; i++) {
+      const want = only ?? i;
+      if (sel && await jumpTo(win.webContents, sel, want)) { at = want; await delay(400); } else { for (; at < want; at++) { await key(win.webContents, 'Right'); await delay(150); } await delay(400); }
+      const png = (await win.webContents.capturePage()).toPNG();
+      if (only !== null) { await fs.writeFile(target, png); return target; }
+      await fs.writeFile(path.join(target, `${base}-${String(i + 1).padStart(2, '0')}.png`), png);
+    }
+    return target;
   } finally {
     if (!win.isDestroyed()) win.destroy();
   }

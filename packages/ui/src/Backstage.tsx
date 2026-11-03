@@ -1,17 +1,20 @@
 import type { JSX } from 'react';
+import { QuestionCircle24Regular, ArrowLeft24Regular, DocumentArrowRight24Regular, DocumentPdf24Regular, History24Regular, ImageMultiple24Regular, Image24Regular, FolderOpen24Regular, Info24Regular, Save24Regular, SaveCopy24Regular, Settings24Regular } from '@fluentui/react-icons';
 import { useEffect, useState } from 'react';
 import { Button } from '@fluentui/react-components';
-import { externalDomains } from '@deckhand/core';
-import { exportPdf } from './actions';
+import { externalDomains, openBytes } from '@deckhand/core';
+import { exportPdf, exportPng, exportSingle } from './actions';
+import { Help } from './Help';
 import { session, useStore, type AppSettings } from './session';
 
-type Page = 'open' | 'info' | 'options';
+type Page = 'open' | 'info' | 'options' | 'history' | 'help';
+type Version = { id: string; time: number; size: number };
 const base = (f: string): string => f.split(/[\\/]/).pop() ?? f;
 
 /** File tab (Backstage): Open + Recent, Info, Save As, Export. */
-export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; open: () => void; onOpenPath: (file: string) => void }): JSX.Element {
+export function Backstage({ onClose, open, onOpenPath, initialPage }: { onClose: () => void; open: () => void; onOpenPath: (file: string) => void; initialPage?: Page }): JSX.Element {
   const s = useStore();
-  const [page, setPage] = useState<Page>(s.loaded ? 'info' : 'open');
+  const [page, setPage] = useState<Page>(initialPage ?? (s.loaded ? 'info' : 'open'));
   const [recent, setRecent] = useState<string[]>([]);
   useEffect(() => { void window.deckhand.recent().then(setRecent).catch(() => undefined); }, []);
   useEffect(() => {
@@ -25,19 +28,35 @@ export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; 
     useStore.setState((x) => ({ settings: { ...x.settings, ...patch } }));
     useStore.setState({ settings: await window.deckhand.settings.set(patch) });
   };
+  const [versions, setVersions] = useState<Version[] | null>(null);
+  useEffect(() => {
+    if (page !== 'history' || !s.docId) return;
+    void window.deckhand.historyList(s.docId).then(setVersions).catch(() => setVersions([]));
+  }, [page, s.docId]);
+  const restore = async (v: Version): Promise<void> => {
+    if (!s.docId) return;
+    const text = openBytes(await window.deckhand.historyRead(s.docId, v.id)).text;
+    onClose();
+    session.exec({ label: 'Restore version', build: (d) => [{ start: 0, end: d.text.length, text }] });
+  };
   const doc = s.loaded ? session.doc : null;
   const domains = doc ? externalDomains(doc) : [];
   const run = (fn: () => void | Promise<unknown>) => () => { onClose(); void fn(); };
   return (
     <div className="backstage" data-testid="backstage" role="dialog" aria-label="File">
       <nav className="bsnav">
-        <button className="bsback" onClick={onClose} aria-label="Back" data-testid="bs-back">←</button>
-        <button className={page === 'open' ? 'on' : ''} onClick={() => setPage('open')}>Open</button>
-        <button className={page === 'info' ? 'on' : ''} disabled={!s.loaded} onClick={() => setPage('info')} data-testid="bs-info">Info</button>
-        <button className={page === 'options' ? 'on' : ''} onClick={() => setPage('options')} data-testid="bs-options">Options</button>
-        <button disabled={!s.loaded} onClick={run(() => session.save())} data-testid="cmd-save">Save</button>
-        <button disabled={!s.loaded} onClick={run(() => session.saveAs())}>Save As</button>
-        <button disabled={!s.loaded} onClick={run(() => exportPdf())} data-testid="cmd-pdf">Export PDF</button>
+        <button className="bsback" onClick={onClose} aria-label="Back" data-testid="bs-back"><ArrowLeft24Regular /></button>
+        <button className={page === 'open' ? 'on' : ''} onClick={() => setPage('open')}><FolderOpen24Regular />Open</button>
+        <button className={page === 'info' ? 'on' : ''} disabled={!s.loaded} onClick={() => setPage('info')} data-testid="bs-info"><Info24Regular />Info</button>
+        <button className={page === 'options' ? 'on' : ''} onClick={() => setPage('options')} data-testid="bs-options"><Settings24Regular />Options</button>
+        <button disabled={!s.loaded} onClick={run(() => session.save())} data-testid="cmd-save"><Save24Regular />Save</button>
+        <button disabled={!s.loaded} onClick={run(() => session.saveAs())}><SaveCopy24Regular />Save As</button>
+        <button disabled={!s.loaded} onClick={run(() => exportPdf())} data-testid="cmd-pdf"><DocumentPdf24Regular />Export PDF</button>
+        <button disabled={!s.loaded} onClick={run(() => exportPng(false))} data-testid="cmd-png"><Image24Regular />Export slide as PNG</button>
+        <button disabled={!s.loaded} onClick={run(() => exportPng(true))} data-testid="cmd-png-all"><ImageMultiple24Regular />Export all as PNG</button>
+        <button disabled={!s.loaded} onClick={run(() => exportSingle())} data-testid="cmd-single"><DocumentArrowRight24Regular />Export single HTML file</button>
+        <button className={page === 'help' ? 'on' : ''} onClick={() => setPage('help')} data-testid="bs-help"><QuestionCircle24Regular />Help</button>
+        <button className={page === 'history' ? 'on' : ''} disabled={!s.loaded} onClick={() => setPage('history')} data-testid="bs-history"><History24Regular />Version History</button>
       </nav>
       <section className="bspage">
         {page === 'open' && (
@@ -70,6 +89,8 @@ export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; 
             <label className="opt">Most tool calls in one AI request
               <input type="number" min={1} max={200} value={s.settings.aiMaxToolCalls} disabled={!s.settings.aiEnabled} onChange={(e) => void save({ aiMaxToolCalls: Math.max(1, Math.min(200, Number(e.target.value) || 40)) })} />
             </label>
+            <h3>Editing</h3>
+            <label className="opt"><input type="checkbox" checked={s.settings.spell} disabled={locked('spell')} data-testid="opt-spell" onChange={(e) => void save({ spell: e.target.checked })} /> Check spelling while editing text (uses the operating system's checker on Windows and macOS)</label>
             <h3>Updates</h3>
             <label className="opt">Check for a newer version
               <select value={s.settings.updates} disabled={locked('updates')} data-testid="opt-updates" onChange={(e) => void save({ updates: e.target.value as 'notify' | 'off' })}>
@@ -77,6 +98,18 @@ export function Backstage({ onClose, open, onOpenPath }: { onClose: () => void; 
               </select>
             </label>
             <p className="hint">Once per start, Deckhand asks github.com which release is newest. It never downloads or installs anything by itself.</p>
+          </>
+        )}
+        {page === 'help' && <Help />}
+        {page === 'history' && (
+          <>
+            <h2>Version History</h2>
+            <p className="hint">Each time you save, Deckhand keeps the file as it was before, in its own folder (the 30 newest). Restoring puts a version into the open presentation; Undo takes it back, and nothing changes on disk until you save.</p>
+            {versions === null && <p className="hint">Loading…</p>}
+            {versions?.length === 0 && <p className="hint" data-testid="history-empty">No earlier versions yet. They appear after you save changes.</p>}
+            <ul className="recent" data-testid="history-list">{versions?.map((v) => (
+              <li key={v.id}>{new Date(v.time).toLocaleString()} <small>{(v.size / 1024).toFixed(1)} KB</small> <Button size="small" onClick={() => void restore(v)} data-testid="history-restore">Restore</Button></li>
+            ))}</ul>
           </>
         )}
         {page === 'info' && doc && (

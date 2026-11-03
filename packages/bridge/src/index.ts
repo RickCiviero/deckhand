@@ -1,5 +1,5 @@
 /**
- * Agent: injected as the first script of the live view only (never saved). It runs in the same context as
+ * Bridge: injected as the first script of the live view only (never saved). It runs in the same context as
  * (potentially hostile) deck scripts, so it captures native APIs first and talks to the editor over a
  * private MessagePort that deck code never sees. The editor treats every message as untrusted (SEC-08).
  */
@@ -181,11 +181,16 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
       const hidden = els.filter((e) => e && e !== target && N.getComputedStyle(e).display === 'none').length;
       if (hidden >= els.length - 2 && els.length > 1) {
         for (const e of els) if (e) e.style.display = e === target ? '' : 'none';
-        if (N.getComputedStyle(target).display === 'none') target.style.display = 'block';
       } else {
+        if (els.length > 1) doc.documentElement.style.paddingBottom = '100vh'; // the last slides can then scroll to the top too (not for a single page, whose height is the viewport's)
         target.scrollIntoView({ block: 'start', inline: 'start' });
         pinScroll(target);
       }
+      // slides that the deck's own CSS hides (display, opacity, visibility) while it is not their turn must show
+      const cs = N.getComputedStyle(target);
+      if (cs.display === 'none') target.style.display = 'block';
+      if (cs.opacity === '0') target.style.opacity = '1';
+      if (cs.visibility === 'hidden') target.style.visibility = 'visible';
     }
     bringIntoView(target);
   };

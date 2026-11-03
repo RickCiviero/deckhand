@@ -31,6 +31,23 @@ const toHex = (c: string): string => {
   return m ? `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, '0')).join('')}` : '#000000';
 };
 
+/** Picture styles: plain inline declarations (they show in every browser). */
+const PICTURE_RESET: Record<string, null> = { 'border-radius': null, 'box-shadow': null, border: null, filter: null };
+const PICTURE_STYLES: { name: string; set: Record<string, string> }[] = [
+  { name: 'Plain', set: {} },
+  { name: 'Rounded', set: { 'border-radius': '16px' } },
+  { name: 'Circle', set: { 'border-radius': '50%', 'object-fit': 'cover', 'aspect-ratio': '1 / 1' } },
+  { name: 'Shadow', set: { 'box-shadow': '0 8px 24px rgba(0, 0, 0, 0.25)' } },
+  { name: 'Frame', set: { border: '6px solid #ffffff', 'box-shadow': '0 4px 14px rgba(0, 0, 0, 0.2)' } },
+  { name: 'Mono', set: { filter: 'grayscale(1)' } },
+  { name: 'Sepia', set: { filter: 'sepia(0.8)' } },
+];
+/** The crop (top, right, bottom, left, in %) written by the crop fields: clip-path: inset(...). */
+function cropOf(style: string): number[] {
+  const m = /^inset\(\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s*\)$/.exec(getStyleProp(style, 'clip-path') ?? '');
+  return m ? [1, 2, 3, 4].map((i) => Number(m[i])) : [0, 0, 0, 0];
+}
+
 function Num({ label, value, onCommit, step = 1, testid }: { label: string; value: number | null; onCommit: (v: number) => void; step?: number; testid?: string }): JSX.Element {
   const [draft, setDraft] = useState<string | null>(null);
   return (
@@ -67,6 +84,13 @@ export function FormatPane(): JSX.Element {
     session.exec(styleMultiCommand(label, s.selection.map((i) => ({ id: i, set }))));
   };
 
+  const setCrop = (side: number, v: number) => {
+    const cur = cropOf(session.styleOf(r!.id));
+    cur[side] = Math.max(0, Math.min(90, Math.round(v * 10) / 10));
+    if (cur[0]! + cur[2]! > 95 || cur[1]! + cur[3]! > 95) return;
+    setAll('Crop picture', { 'clip-path': cur.every((x) => x === 0) ? null : `inset(${cur[0]}% ${cur[1]}% ${cur[2]}% ${cur[3]}%)` });
+  };
+
   const setX = (v: number, axis: 'x' | 'y') => {
     if (!r || !slideRect) return;
     const cur = axis === 'x' ? (r.x - slideRect.x) / r.sx : (r.y - slideRect.y) / r.sy;
@@ -98,7 +122,7 @@ export function FormatPane(): JSX.Element {
           {colors.length === 0 && <p className="hint">This deck defines no colour variables (CSS custom properties).</p>}
           {colors.map((c) => (
             <label key={c.name + c.start} className="swatchrow">
-              <input type="color" value={toHex(c.value)} onChange={(e) => editThemeColor(c, e.target.value)} data-testid={`theme-${c.name}`} />
+              <input type="color" aria-label={`Theme color ${c.name}`} value={toHex(c.value)} onChange={(e) => editThemeColor(c, e.target.value)} data-testid={`theme-${c.name}`} />
               <span>{c.name.replace(/^--/, '').replace(/[-_]/g, ' ')}</span>
               <code>{c.value}</code>
             </label>
@@ -115,7 +139,7 @@ export function FormatPane(): JSX.Element {
               return (
                 <>
                   <div className="row">
-                    <input type="color" data-testid="bg-color" value={toHex(!slideRect || slideRect.background === 'rgba(0, 0, 0, 0)' ? '#ffffff' : slideRect.background)} onChange={(e) => setBg(e.target.value)} />
+                    <input type="color" aria-label="Background color" data-testid="bg-color" value={toHex(!slideRect || slideRect.background === 'rgba(0, 0, 0, 0)' ? '#ffffff' : slideRect.background)} onChange={(e) => setBg(e.target.value)} />
                     <button className="small" onClick={() => setBg(null)}>Reset</button>
                   </div>
                   {colors.length > 0 && <div className="swatches">{colors.map((c) => <button key={c.name + c.start} className="sw" title={c.name} style={{ background: c.value }} onClick={() => setBg(`var(${c.name})`)} />)}</div>}
@@ -146,12 +170,23 @@ export function FormatPane(): JSX.Element {
               <label className="num wide"><span>Alt text</span>
                 <input type="text" data-testid="fp-alt" key={r.id + session.doc.text.length} defaultValue={(session.doc.byId(r.id)?.attrs.find((a) => a.name === 'alt')?.value) ?? ''} onBlur={(e) => setAltText(e.target.value)} />
               </label>
+              <h4>Picture styles</h4>
+              <div className="row" data-testid="picture-styles">
+                {PICTURE_STYLES.map((ps) => <button key={ps.name} className="small" data-testid={`pstyle-${ps.name.toLowerCase()}`} onClick={() => setAll(`Picture style: ${ps.name}`, { ...PICTURE_RESET, ...ps.set })}>{ps.name}</button>)}
+              </div>
+              <h4>Crop (% cut off)</h4>
+              <div className="grid2" data-testid="crop">
+                {(['Top', 'Right', 'Bottom', 'Left'] as const).map((side, i) => (
+                  <Num key={side} label={side} testid={`crop-${side.toLowerCase()}`} value={cropOf(session.styleOf(r.id))[i]!} onCommit={(v) => setCrop(i, v)} />
+                ))}
+              </div>
+              <button className="small" onClick={() => setAll('Reset crop', { 'clip-path': null })}>Reset crop</button>
             </section>
           )}
           <section>
             <h4>Fill</h4>
             <div className="row">
-              <input type="color" data-testid="fp-fill" value={toHex(r.background === 'rgba(0, 0, 0, 0)' ? '#ffffff' : r.background)} onChange={(e) => setAll('Change fill', { 'background-color': e.target.value })} />
+              <input type="color" aria-label="Fill color" data-testid="fp-fill" value={toHex(r.background === 'rgba(0, 0, 0, 0)' ? '#ffffff' : r.background)} onChange={(e) => setAll('Change fill', { 'background-color': e.target.value })} />
               <button className="small" onClick={() => setAll('Remove fill', { 'background-color': 'transparent' })}>None</button>
             </div>
             {colors.length > 0 && (
@@ -166,7 +201,7 @@ export function FormatPane(): JSX.Element {
               <Num label="Width" value={parseFloat(r.borderWidth)} onCommit={(v) => setAll('Change border', { 'border-width': `${v}px`, 'border-style': r.borderStyle === 'none' ? 'solid' : r.borderStyle })} />
               <Num label="Radius" value={parseFloat(r.borderRadius) || 0} onCommit={(v) => setAll('Change corner radius', { 'border-radius': `${v}px` })} />
             </div>
-            <input type="color" value={toHex(r.borderColor)} onChange={(e) => setAll('Change border color', { 'border-color': e.target.value })} />
+            <input type="color" aria-label="Border color" value={toHex(r.borderColor)} onChange={(e) => setAll('Change border color', { 'border-color': e.target.value })} />
           </section>
           <section>
             <h4>Effects</h4>

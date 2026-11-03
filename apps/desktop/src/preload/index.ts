@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
-export interface AppSettings { scripts: boolean; remote: 'allow' | 'block' | 'ask'; aiEnabled: boolean; aiAllowExternal: boolean; aiMaxToolCalls: number; aiAskBefore: boolean; updates: 'notify' | 'off'; /** settings an administrator policy file fixes */ locked?: string[] }
+export interface AppSettings { scripts: boolean; remote: 'allow' | 'block' | 'ask'; aiEnabled: boolean; aiAllowExternal: boolean; aiMaxToolCalls: number; aiAskBefore: boolean; spell: boolean; onboarded: boolean; updates: 'notify' | 'off'; /** settings an administrator policy file fixes */ locked?: string[] }
 export interface AiConnection { id: string; name: string; kind: 'anthropic' | 'openai' | 'compatible'; baseUrl: string; model: string; hasKey: boolean }
 
 /** Minimal typed bridge. Every call is re-validated in the main process; nothing here exposes Node or ipcRenderer. */
@@ -29,6 +29,11 @@ const api = {
   previewInBrowser: (docId: string) => ipcRenderer.invoke('show:preview', { docId }),
   startShow: (docId: string, slide: number) => ipcRenderer.invoke('show:start', { docId, slide }),
   exportPdf: (docId: string, slides: number) => ipcRenderer.invoke('doc:export-pdf', { docId, slides }) as Promise<string | null>,
+  historyList: (docId: string) => ipcRenderer.invoke('history:list', { docId }) as Promise<{ id: string; time: number; size: number }[]>,
+  historyRead: (docId: string, id: string) => ipcRenderer.invoke('history:read', { docId, id }) as Promise<Uint8Array>,
+  exportPng: (docId: string, slides: number, only: number | null) => ipcRenderer.invoke('doc:export-png', { docId, slides, only }) as Promise<string | null>,
+  exportSingle: (docId: string, text: string) => ipcRenderer.invoke('doc:export-single', { docId, text }) as Promise<{ file: string; inlined: number; missing: string[] } | null>,
+  pickFont: (docId: string) => ipcRenderer.invoke('doc:pick-font', { docId }) as Promise<{ src: string; family: string; format: string } | null>,
   checkUpdate: () => ipcRenderer.invoke('app:check-update') as Promise<{ version: string; url: string } | null>,
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', url),
   ai: {

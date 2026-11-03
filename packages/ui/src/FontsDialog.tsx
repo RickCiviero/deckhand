@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import { useMemo, useState } from 'react';
 import { Button } from '@fluentui/react-components';
-import { findFonts, isSafeFontName, replaceFontCommand } from '@deckhand/core';
+import { findFonts, fontFaceCommand, fontLinkCommand, isSafeFontName, replaceFontCommand } from '@deckhand/core';
 import { session, useStore } from './session';
 
 // fonts present on most computers; a web font is not added to the file (that needs a link or an embedded copy)
@@ -14,6 +14,18 @@ export function FontsDialog({ onClose }: { onClose: () => void }): JSX.Element {
   const [from, setFrom] = useState(found[0]?.family ?? '');
   const [to, setTo] = useState('');
   const bad = to !== '' && !isSafeFontName(to);
+  const [web, setWeb] = useState('');
+  const webBad = web !== '' && (!isSafeFontName(web) || /[._]/.test(web));
+  const embed = async (): Promise<void> => {
+    if (!s.docId) return;
+    try {
+      const f = await window.deckhand.pickFont(s.docId);
+      if (!f) return;
+      session.exec(fontFaceCommand(f.family, f.src, f.format));
+      setTo(f.family);
+      session.notify('info', `Added ${f.family}: the file is in the fonts folder next to the presentation and declared in its head.`);
+    } catch (e) { session.notify('error', (e as Error).message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '')); }
+  };
   const apply = (): void => { session.exec(replaceFontCommand(from, to.trim())); onClose(); };
   return (
     <div className="linkbar definebar" role="dialog" aria-label="Replace fonts" data-testid="fonts-dialog">
@@ -29,6 +41,16 @@ export function FontsDialog({ onClose }: { onClose: () => void }): JSX.Element {
           <small>Only the name changes. If the new font is not installed on another computer, the browser falls back to the next font in the list. A web font is not downloaded or linked for you.</small>
         </>
       )}
+      <div className="defrow">
+        <Button size="small" onClick={() => void embed()} data-testid="fonts-embed">Add a font file…</Button>
+        <small>copies it next to the presentation and declares it</small>
+      </div>
+      <div className="defrow">
+        <input value={web} onChange={(e) => setWeb(e.target.value)} placeholder="Google Fonts family, e.g. Open Sans" aria-label="Google Fonts family" data-testid="fonts-web" />
+        <Button size="small" disabled={!web.trim() || webBad} onClick={() => { session.exec(fontLinkCommand(web.trim())); setTo(web.trim()); setWeb(''); }} data-testid="fonts-link">Link</Button>
+      </div>
+      {webBad && <div className="aierr" role="alert">Use letters, digits, spaces and dashes only.</div>}
+      <small>A linked web font needs the internet when the presentation is shown, and is blocked while remote content is blocked.</small>
       <div className="row">
         <Button size="small" appearance="primary" disabled={!from || !to.trim() || bad} onClick={apply} data-testid="fonts-apply">Replace</Button>
         <Button size="small" onClick={onClose}>Cancel</Button>

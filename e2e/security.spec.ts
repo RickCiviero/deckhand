@@ -155,7 +155,7 @@ test.describe('document protocol: path containment (SEC-03)', () => {
     expect(h).toEqual({ nosniff: 'nosniff', cache: 'no-store' });
   });
 
-  test('a deck that fetches its own HTML never receives the editor agent or ids', async () => {
+  test('a deck that fetches its own HTML never receives the editor bridge or ids', async () => {
     c = await launch('plain-page.html');
     await ready(c.page);
     const html = await deckFrame(c.page).evaluate(async () => (await fetch(location.pathname)).text());
@@ -191,7 +191,7 @@ test.describe('editor UI hardening (SEC-01/07)', () => {
     expect(csp).not.toMatch(/unsafe-eval|unsafe-inline.*script|script-src[^;]*unsafe-inline/);
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("object-src 'none'");
-    expect(info.bridge).toEqual(['ai', 'autoRecover', 'checkUpdate', 'closeConfirmed', 'exportPdf', 'on', 'openDialog', 'openExternal', 'openPath', 'pathForFile', 'pickImage', 'previewInBrowser', 'recent', 'readDisk', 'recoveryDiscard', 'recoveryList', 'recoveryRead', 'save', 'saveAs', 'setDirty', 'setPolicy', 'settings', 'setText', 'startShow', 'thumbs'].sort());
+    expect(info.bridge).toEqual(['ai', 'autoRecover', 'checkUpdate', 'closeConfirmed', 'exportPdf', 'exportPng', 'exportSingle', 'historyList', 'historyRead', 'pickFont', 'on', 'openDialog', 'openExternal', 'openPath', 'pathForFile', 'pickImage', 'previewInBrowser', 'recent', 'readDisk', 'recoveryDiscard', 'recoveryList', 'recoveryRead', 'save', 'saveAs', 'setDirty', 'setPolicy', 'settings', 'setText', 'startShow', 'thumbs'].sort());
 
     await c.page.evaluate(() => { location.href = 'https://example.com/'; }).catch(() => undefined);
     await c.page.waitForTimeout(1000);

@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { isObjectTag, groupCommand, groupProblem, isGroup, ungroupCommand, removeAttrPatch, PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, patchCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { applyToSimilarCommand, isObjectTag, groupCommand, groupProblem, isGroup, ungroupCommand, removeAttrPatch, PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, patchCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, distributeShifts, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -132,6 +132,15 @@ const px = (n: number): string => `${Math.round(n * 10) / 10}px`;
 const freeRect = (r: { position: string; left: number | null; top: number | null; anchors: { right: boolean; bottom: boolean } | null; transform: string | null }): boolean =>
   r.position === 'absolute' && r.left !== null && r.top !== null && !r.anchors?.right && !r.anchors?.bottom && (!r.transform || r.transform === 'none');
 
+type Rc = NonNullable<ReturnType<typeof st>['rects'][number]>;
+/** The layout box of a freely positioned object in its container's pixels. The browser reports left/top as used values, so they are right even when the deck anchors the object with right/bottom; a rotation or scale does not move the layout box. */
+function layoutBox(r: Rc): { l: number; t: number; w: number; h: number; anchoredRight: boolean; anchoredBottom: boolean } | null {
+  if (r.position !== 'absolute' || r.left === null || r.top === null) return null;
+  const w = r.width !== null ? r.width + r.extraW : r.w / r.sx;
+  const h = r.height !== null ? r.height + r.extraH : r.h / r.sy;
+  return { l: r.left, t: r.top, w, h, anchoredRight: !!r.anchors?.right, anchoredBottom: !!r.anchors?.bottom };
+}
+
 /** Group (ARR-03): wrap the selected sibling objects in a div. Free objects get a wrapper with their bounding box and are re-positioned inside it. */
 export function groupSelection(): void {
   const s = st();
@@ -140,13 +149,15 @@ export function groupSelection(): void {
   const rects = s.selection.map((id) => s.rects[id]);
   if (rects.some((r) => !r)) { session.notify('info', 'The objects have not been measured yet. Try again in a moment.'); return; }
   const rs = rects as NonNullable<(typeof rects)[number]>[];
-  const free = rs.map(freeRect);
-  if (free.every(Boolean)) {
-    const L = Math.min(...rs.map((r) => r.left!)); const T = Math.min(...rs.map((r) => r.top!));
-    const R = Math.max(...rs.map((r) => r.left! + r.w / r.sx)); const B = Math.max(...rs.map((r) => r.top! + r.h / r.sy));
-    const childSet = new Map(rs.map((r) => [r.id, { left: px(r.left! - L), top: px(r.top! - T) }] as const));
+  const boxes = rs.map(layoutBox);
+  if (boxes.every(Boolean)) {
+    const bs = boxes as NonNullable<(typeof boxes)[number]>[];
+    const L = Math.min(...bs.map((b) => b.l)); const T = Math.min(...bs.map((b) => b.t));
+    const R = Math.max(...bs.map((b) => b.l + b.w)); const B = Math.max(...bs.map((b) => b.t + b.h));
+    // an object anchored to the right or bottom is written as left/top inside the group; its old anchor is overridden (it may come from the deck's CSS)
+    const childSet = new Map(rs.map((r, i) => [r.id, { left: px(bs[i]!.l - L), top: px(bs[i]!.t - T), ...(bs[i]!.anchoredRight ? { right: 'auto' } : {}), ...(bs[i]!.anchoredBottom ? { bottom: 'auto' } : {}) }] as const));
     session.exec(groupCommand(s.selection, { position: 'absolute', left: px(L), top: px(T), width: px(R - L), height: px(B - T) }, childSet));
-  } else if (free.some(Boolean)) {
+  } else if (boxes.some(Boolean)) {
     session.notify('info', 'Group needs all the objects to be positioned freely, or none of them. Use Position > Reset on the others first.');
   } else {
     session.exec(groupCommand(s.selection, null, new Map()));
@@ -299,11 +310,11 @@ function insertFree(label: string, size: { w: number; h: number }, html: (x: num
   patches.push({ start: at2, end: at2, text });
   const nonce0 = useStore.getState().loadNonce;
   session.exec({ label, build: () => patches });
-  // Start editing only once the structural edit's reload has finished and the agent is back; otherwise the reload wipes the edit state.
+  // Start editing only once the structural edit's reload has finished and the bridge is back; otherwise the reload wipes the edit state.
   const began = Date.now();
   const tryEdit = (): void => {
     const st = useStore.getState();
-    if ((st.loadNonce === nonce0 || !st.agentReady) && Date.now() - began < 15000) { setTimeout(tryEdit, 100); return; }
+    if ((st.loadNonce === nonce0 || !st.bridgeReady) && Date.now() - began < 15000) { setTimeout(tryEdit, 100); return; }
     const n = session.doc.elements.filter((e) => e.start >= at2 && e.start < at2 + text.length && isObjectTag(e.tag)).at(0);
     if (n) { useStore.setState({ selection: [n.id] }); if (edit) setTimeout(() => session.startEdit(n.id), 150); }
   };
@@ -337,6 +348,29 @@ export async function exportPdf(): Promise<void> {
   } catch (e) { session.notify('error', (e as Error).message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '')); }
 }
 
+const clean = (e: unknown): string => (e as Error).message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
+
+/** Export the current slide, or every slide, as PNG pictures. */
+export async function exportPng(all: boolean): Promise<void> {
+  const s = st();
+  if (!s.docId) return;
+  try {
+    const out = await window.deckhand.exportPng(s.docId, s.slides.length, all ? null : s.slide);
+    if (out) session.notify('info', 'Saved ' + out);
+  } catch (e) { session.notify('error', clean(e)); }
+}
+
+/** Export one HTML file with every local picture, style, script and font written into it. */
+export async function exportSingle(): Promise<void> {
+  const s = st();
+  if (!s.docId) return;
+  try {
+    const out = await window.deckhand.exportSingle(s.docId, session.doc.text);
+    if (!out) return;
+    session.notify(out.missing.length ? 'warning' : 'info', `Saved ${out.file} with ${out.inlined} file${out.inlined === 1 ? '' : 's'} inside.${out.missing.length ? ` Not found, left as links: ${out.missing.slice(0, 3).join(', ')}${out.missing.length > 3 ? '…' : ''}` : ''}`);
+  } catch (e) { session.notify('error', clean(e)); }
+}
+
 export function installKeyboard(): () => void {
   // Format Painter applies when a different object gets selected
   const unsub = useStore.subscribe((x, prev) => {
@@ -352,6 +386,7 @@ export function installKeyboard(): () => void {
     }
     const mod = e.ctrlKey || e.metaKey;
     const s = st();
+    if (e.key === 'F1') { e.preventDefault(); window.dispatchEvent(new CustomEvent('deckhand-help')); return; }
     if (!s.loaded) return;
     if (mod && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h')) { e.preventDefault(); useStore.setState({ findOpen: true }); return; }
     if (mod && e.key.toLowerCase() === 'g' && !e.altKey) { e.preventDefault(); if (e.shiftKey) ungroupSelection(); else groupSelection(); return; }
@@ -406,7 +441,7 @@ export function installKeyboard(): () => void {
     else if (c === 'delete') deleteSelection();
     else if (c === 'reset-position' && s.selection.length) session.exec(styleMultiCommand('Reset position', s.selection.map((id) => ({ id, set: { translate: null } }))));
   };
-  const onAgentKey = (e: Event): void => {
+  const onBridgeKey = (e: Event): void => {
     const m = (e as CustomEvent<{ key: string; shift?: boolean; ctrl?: boolean; alt?: boolean; meta?: boolean; fwd?: boolean }>).detail;
     if (m.fwd) {
       // key pressed while the live view had focus (not editing): replay it as if typed in the editor
@@ -419,8 +454,8 @@ export function installKeyboard(): () => void {
   };
   window.addEventListener('keydown', onKey);
   window.addEventListener('deckhand-cmd', onCmd);
-  window.addEventListener('deckhand-key', onAgentKey);
-  return () => { unsub(); window.removeEventListener('keydown', onKey); window.removeEventListener('deckhand-cmd', onCmd); window.removeEventListener('deckhand-key', onAgentKey); };
+  window.addEventListener('deckhand-key', onBridgeKey);
+  return () => { unsub(); window.removeEventListener('keydown', onKey); window.removeEventListener('deckhand-cmd', onCmd); window.removeEventListener('deckhand-key', onBridgeKey); };
 }
 
 const errMsg = (e: unknown): string => (e as Error).message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
@@ -490,6 +525,16 @@ export function pickFormat(sticky: boolean): void {
   for (const [p, v] of styleDeclarations(session.styleOf(id))) if (PAINTABLE.test(p) && isSafeCssProp(p) && isSafeCssValue(v)) set[p] = v;
   if (!Object.keys(set).length) { session.notify('info', 'This object has no inline formatting to copy.'); return; }
   useStore.setState({ painter: { set, sticky, from: id } });
+}
+
+/** Apply the selected object's look to every object like it (same tag and classes) on all slides. */
+export function applyToSimilar(): void {
+  const s = st();
+  const id = s.selection[0];
+  if (id === undefined) return;
+  const cmd = applyToSimilarCommand(session.doc, id, s.slides.map((x) => x.id));
+  if (!cmd) { session.notify('info', 'No other objects like this one, or this object has no inline formatting to copy.'); return; }
+  session.exec(cmd);
 }
 
 export function selectAll(): void {

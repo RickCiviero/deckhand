@@ -95,6 +95,9 @@ for (const d of decks) {
       // thumbnails
       const n = d.thumbs ?? Math.min(d.slides, 8);
       for (let i = 0; i < n; i++) await expect(c.page.getByTestId(`timg-${i}`)).toBeVisible({ timeout: 45000 });
+      // each thumbnail shows its own slide: identical pictures mean the capture did not reach the slide
+      const srcs = await Promise.all(Array.from({ length: n }, (_, i) => c.page.getByTestId(`timg-${i}`).getAttribute('src')));
+      expect(new Set(srcs).size, `thumbnails of ${d.file} must all differ`).toBe(n);
 
       // build steps
       if (d.steps) {
@@ -232,9 +235,9 @@ for (const d of decks) {
       await gotoSlide(d, d.moveSlide);
       await clickObj(c.page, d.moveSel);
       await c.page.getByTestId('dock-selection').click();
-      const row = c.page.getByTestId('sel-item').filter({ has: c.page.locator('.on, [aria-selected=true]') }).first();
-      await expect(c.page.locator('[data-testid=sel-item][aria-selected=true]').first()).toBeVisible({ timeout: 8000 });
-      const sel = c.page.locator('[data-testid=sel-item][aria-selected=true]').first();
+      const row = c.page.getByTestId('sel-item').filter({ has: c.page.locator('.on, [aria-current=true]') }).first();
+      await expect(c.page.locator('[data-testid=sel-item][aria-current=true]').first()).toBeVisible({ timeout: 8000 });
+      const sel = c.page.locator('[data-testid=sel-item][aria-current=true]').first();
       void row;
       await sel.getByTestId('sel-lock').click();
       await sel.getByTestId('sel-eye').click();

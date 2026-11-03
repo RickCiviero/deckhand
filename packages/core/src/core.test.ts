@@ -5,7 +5,7 @@ import {
   Editor, detectDeck, getAttr, openBytes, parseSource, saveBytes, setPlainTextCommand, moveCommand, setStyleCommand,
   resetPositionCommand, deleteElementCommand, duplicateElementCommand, reorderCommand, sanitizePastedHtml, sanitizeRequestPath,
   isInside, setStyleProp, removeStyleProp, getStyleProp, isSafeCssValue, renderLiveHtml, assertNoArtifacts, setInnerHtmlCommand,
-  textOf, findOutsideRefs, isSimpleInlineHtml, slideSteps, setStepCommand, stepOf, scriptTextProblem, replaceScriptTextCommand, scriptInteractions,
+  textOf, findOutsideRefs, isSimpleInlineHtml, slideSteps, setStepCommand, stepOf, scriptTextProblem, replaceScriptTextCommand, scriptInteractions, addRowCommand, deleteRowCommand, addColumnCommand, deleteColumnCommand, similarObjects, applyToSimilarCommand, inlineAssets, mimeOf, fontFaceCommand, fontLinkCommand,
 } from './index.js';
 
 const DIR = join(__dirname, '../../../test-decks/decks');
@@ -220,15 +220,15 @@ describe('CSS value safety', () => {
 });
 
 describe('RT-05 artifacts', () => {
-  it('live html carries ids and agent; source never does', () => {
+  it('live html carries ids and bridge; source never does', () => {
     const doc = openBytes(load('ai-fixed-stage.html'));
     const live = renderLiveHtml(doc, 'console.log(1)');
     expect(live).toContain('data-deckhand-id=');
-    expect(live).toContain('data-deckhand-agent');
+    expect(live).toContain('data-deckhand-bridge');
     expect(() => assertNoArtifacts(live)).toThrow();
     expect(() => assertNoArtifacts(doc.text)).not.toThrow();
   });
-  it('agent script containing </script> cannot break out', () => {
+  it('bridge script containing </script> cannot break out', () => {
     const live = renderLiveHtml(openBytes(load('plain-page.html')), 'var s="</script><img>"');
     expect(live.match(/<\/script>/gi)!.length).toBe(1);
   });
@@ -351,4 +351,97 @@ describe('benchmark corpus (test-decks/decks/bench)', () => {
       expect(eq(saveBytes(doc), bytes)).toBe(true);
     });
   }
+});
+
+describe('table rows and columns', () => {
+  const html = '<!doctype html><body><section class="slide"><table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td style="x:1">1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table></section></body>';
+  const open = () => openBytes(new TextEncoder().encode(html));
+  const cellId = (doc: ReturnType<typeof open>, text: string) => doc.elements.find((e) => (e.tag === 'td' || e.tag === 'th') && textOf(doc, e) === text)!.id;
+  const run = (c: ReturnType<typeof addRowCommand>) => { const ed = new Editor(open()); return { ed, ok: ed.exec(c).length > 0 }; };
+  it('adds a row below and above with the row\'s own cell markup; header rows give data cells', () => {
+    const doc = open();
+    expect(run(addRowCommand(cellId(doc, '1'), true)).ed.doc.text).toContain('</tr><tr><td style="x:1">Text</td><td>Text</td></tr><tr><td>3</td>');
+    expect(run(addRowCommand(cellId(doc, 'A'), true)).ed.doc.text).toContain('</tr><tr><td>Text</td><td>Text</td></tr></thead>');
+  });
+  it('adds and deletes columns across every row; refuses to delete the last row or column', () => {
+    const doc = open();
+    const added = run(addColumnCommand(cellId(doc, '2'), true)).ed.doc.text;
+    expect(added).toContain('<th>B</th><th>Header</th>');
+    expect(added).toContain('<td>2</td><td>Text</td>');
+    const gone = run(deleteColumnCommand(cellId(doc, '1'))).ed.doc.text;
+    expect(gone).not.toContain('>1<');
+    expect(gone).not.toContain('>A<');
+    expect(gone).toContain('<td>2</td>');
+    const one = openBytes(new TextEncoder().encode('<body><section><table><tr><td>x</td></tr></table></section></body>'));
+    const only = one.elements.find((e) => e.tag === 'td')!.id;
+    expect(deleteRowCommand(only).build(one)).toEqual([]);
+    expect(deleteColumnCommand(only).build(one)).toEqual([]);
+    expect(run(deleteRowCommand(cellId(doc, '3'))).ed.doc.text).not.toContain('<td>3</td>');
+  });
+  it('undo restores the exact bytes', () => {
+    const doc = open();
+    const before = saveBytes(doc);
+    const ed = new Editor(doc);
+    ed.exec(addRowCommand(cellId(doc, '1'), false));
+    ed.exec(deleteColumnCommand(cellId(doc, '2')));
+    ed.undo(); ed.undo();
+    expect(eq(saveBytes(ed.doc), before)).toBe(true);
+  });
+});
+
+describe('apply to all similar', () => {
+  const html = '<body><section class="slide"><h2 class="t" style="color: red; font-size: 40px">A</h2><p class="x">p</p></section><section class="slide"><h2 class="t">B</h2><h2 class="other">C</h2></section></body>';
+  it('gives the look of one heading to the headings with the same tag and classes, on every slide, and nothing else', () => {
+    const doc = openBytes(new TextEncoder().encode(html));
+    const slides = doc.elements.filter((e) => e.tag === 'section').map((e) => e.id);
+    const a = doc.elements.find((e) => e.tag === 'h2' && textOf(doc, e) === 'A')!.id;
+    expect(similarObjects(doc, a, slides)).toHaveLength(1);
+    const ed = new Editor(doc);
+    ed.exec(applyToSimilarCommand(doc, a, slides)!);
+    expect(ed.doc.text).toContain('<h2 class="t" style="color: red; font-size: 40px;">B</h2>');
+    expect(ed.doc.text).toContain('<h2 class="other">C</h2>');
+    expect(applyToSimilarCommand(doc, doc.elements.find((e) => e.tag === 'p')!.id, slides)).toBeNull();
+  });
+});
+
+describe('single-file export', () => {
+  const files: Record<string, string> = { 'assets/a.css': 'body{background:url(bg.png)} @font-face{src:url("f.woff2")}', 'assets/bg.png': 'PNG', 'assets/f.woff2': 'WOFF', 'assets/d.js': 'console.log("</script>")', 'img/p.png': 'P' };
+  const read = (p: string) => (files[p] !== undefined ? { mime: mimeOf(p), bytes: new TextEncoder().encode(files[p]!) } : null);
+  it('writes stylesheets, scripts, pictures and css urls into the page; leaves remote and missing references alone', () => {
+    const html = '<head><link rel="stylesheet" href="assets/a.css"><script src="assets/d.js" defer></script></head><body><img src="img/p.png"><img src="https://x.test/r.png"><img src="img/none.png"><div style="background: url(img/p.png)"></div></body>';
+    const r = inlineAssets(html, read);
+    expect(r.text).not.toContain('assets/a.css');
+    expect(r.text).toContain('<style>\nbody{background:url("data:image/png;base64,');
+    expect(r.text).toContain('url("data:font/woff2;base64,');
+    expect(r.text).toContain('console.log("<' + '\\' + '/script>")');
+    expect(r.text).toContain('<img src="data:image/png;base64,UA==">');
+    expect(r.text).toContain('src="https://x.test/r.png"');
+    expect(r.text).toContain('src="img/none.png"');
+    expect(r.text).toContain('style="background: url(&quot;data:image/png;base64,UA==&quot;)"');
+    expect(r.missing).toEqual(['img/none.png']);
+    expect(r.inlined).toBe(6);
+  });
+  it('is a no-op for a page with nothing local', () => {
+    const html = '<body><p>hi</p></body>';
+    expect(inlineAssets(html, read).text).toBe(html);
+  });
+});
+
+describe('web fonts', () => {
+  const html = '<!doctype html>\n<html>\n<head>\n  <title>x</title>\n</head>\n<body><p>hi</p></body>\n</html>\n';
+  it('embeds a font file with @font-face and links a Google font in the head; refuses unsafe names and paths', () => {
+    const doc = openBytes(new TextEncoder().encode(html));
+    const a = new Editor(doc);
+    a.exec(fontFaceCommand('Fira Sans', 'fonts/fira-sans.woff2', 'woff2'));
+    expect(a.doc.text).toContain('  <title>x</title>\n  <style>@font-face { font-family: "Fira Sans"; src: url("fonts/fira-sans.woff2") format("woff2"); font-display: swap; }</style>\n</head>');
+    const b = new Editor(doc);
+    b.exec(fontLinkCommand('Open Sans'));
+    expect(b.doc.text).toContain('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&amp;display=swap">\n</head>');
+    expect(fontFaceCommand('A"B', 'fonts/a.woff2', 'woff2').build(doc)).toEqual([]);
+    expect(fontFaceCommand('Ok', '../x.woff2', 'woff2').build(doc)).toEqual([]);
+    expect(fontFaceCommand('Ok', 'fonts/a.woff2', 'exe').build(doc)).toEqual([]);
+    expect(fontLinkCommand('a.b').build(doc)).toEqual([]);
+    a.undo();
+    expect(a.doc.text).toBe(html);
+  });
 });

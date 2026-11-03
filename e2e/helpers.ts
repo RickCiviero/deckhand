@@ -38,15 +38,15 @@ export const deckFrame = (page: Page): Frame => {
   return f;
 };
 
-/** Wait until the agent handshake finished (overlay can hit-test). */
+/** Wait until the bridge handshake finished (overlay can hit-test). */
 export async function ready(page: Page): Promise<void> {
   await expect(async () => {
     const f = deckFrame(page);
-    // the agent removes its own script tag after setup; presence of the editor id attribute means live html is in place
+    // the bridge removes its own script tag after setup; presence of the editor id attribute means live html is in place
     expect(await f.evaluate(() => document.querySelectorAll('[data-deckhand-id]').length)).toBeGreaterThan(0);
   }).toPass({ timeout: 15000 });
-  // the agent handshake (private port) finishes after the page loads; interacting earlier loses clicks, and a failed handshake triggers a reload
-  await expect(page.locator('[data-testid=canvas][data-agent-ready="1"]')).toBeVisible({ timeout: 20000 });
+  // the bridge handshake (private port) finishes after the page loads; interacting earlier loses clicks, and a failed handshake triggers a reload
+  await expect(page.locator('[data-testid=canvas][data-bridge-ready="1"]')).toBeVisible({ timeout: 20000 });
   await page.waitForTimeout(600);
 }
 
@@ -66,7 +66,7 @@ export async function centreOf(page: Page, selector: string): Promise<{ x: numbe
 export const pageLog: string[] = [];
 
 export async function clickObj(page: Page, selector: string): Promise<void> {
-  // retry: the very first click can arrive before the agent finished its handshake, and a late live-view rebuild can drop the selection just after it
+  // retry: the very first click can arrive before the bridge finished its handshake, and a late live-view rebuild can drop the selection just after it
   const path = page.locator('[data-testid=path] button').first();
   for (let attempt = 0; attempt < 6; attempt++) {
     const c = await centreOf(page, selector);
@@ -104,7 +104,7 @@ export async function save(page: Page): Promise<void> {
 /** The platform's shortcut modifier (Playwright sends the literal key: Control+A is not select-all on macOS). */
 export const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
-/** Double-click to enter text editing; retries because the first click can land before the agent's hit-testing is up. */
+/** Double-click to enter text editing; retries because the first click can land before the bridge's hit-testing is up. */
 export async function editAt(page: Page, x: number, y: number): Promise<void> {
   for (let attempt = 0; attempt < 5; attempt++) {
     await page.mouse.dblclick(x, y);

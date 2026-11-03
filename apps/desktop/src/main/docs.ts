@@ -5,7 +5,7 @@ import { promises as fs, watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { assertNoArtifacts, isInside, parseSource, renderLiveHtml, sanitizeRequestPath } from '@deckhand/core';
-import agentTemplate from '../../../../packages/agent/dist/agent.js?raw';
+import bridgeTemplate from '../../../../packages/bridge/dist/bridge.js?raw';
 
 export const DOC_SCHEME = 'deckhand-doc';
 export const MAX_FILE = 64 * 1024 * 1024;
@@ -20,7 +20,7 @@ export interface Doc {
   text: string; // current source text (for live view)
   liveHtml: string;
   plainHtml: string;
-  /** Single-use key on the iframe URL: only that one navigation receives the agent-injected page. */
+  /** Single-use key on the iframe URL: only that one navigation receives the bridge-injected page. */
   liveKey: string;
   remote: 'allow' | 'block';
   lastHash: string;
@@ -52,9 +52,9 @@ export async function loadFromDisk(file: string): Promise<{ bytes: Uint8Array; r
 export function buildLive(doc: Doc, text: string): { token: string; key: string } {
   const { token, html } = (() => {
     const t = randomBytes(16).toString('hex');
-    const agent = agentTemplate.replace('__DECKHAND_TOKEN_PLACEHOLDER__', JSON.stringify(t));
+    const bridge = bridgeTemplate.replace('__DECKHAND_TOKEN_PLACEHOLDER__', JSON.stringify(t));
     // `text` is already decoded: never run it through the byte decoder again (that double-decodes windows-1252 decks)
-    return { token: t, html: renderLiveHtml(parseSource(text, { encoding: 'utf-8', bom: false, eol: 'none' }), agent) };
+    return { token: t, html: renderLiveHtml(parseSource(text, { encoding: 'utf-8', bom: false, eol: 'none' }), bridge) };
   })();
   doc.text = text;
   doc.plainHtml = text;
@@ -178,7 +178,7 @@ export function registerDocProtocol(): void {
 
       const isDeck = rel === '' || rel === path.basename(doc.file);
       if (isDeck) {
-        // Only the one navigation that presents the single-use key gets the agent; a deck fetching its own page sees plain source.
+        // Only the one navigation that presents the single-use key gets the bridge; a deck fetching its own page sees plain source.
         const live = doc.liveKey !== '' && url.searchParams.get('k') === doc.liveKey;
         if (live) doc.liveKey = '';
         const body = live ? doc.liveHtml : doc.plainHtml;

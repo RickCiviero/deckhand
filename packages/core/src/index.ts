@@ -18,3 +18,7 @@ export * from './steps.js';
 export * from './version.js';
 export * from './scripttext.js';
 export * from './interactions.js';
+export * from './table.js';
+export * from './similar.js';
+export * from './inline.js';
+export * from './webfont.js';

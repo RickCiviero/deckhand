@@ -3,6 +3,7 @@ import { app, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { applySpellCheck } from './spell.js';
 
 const fields = z.object({
   scripts: z.boolean(), // SEC-06: run deck scripts while editing
@@ -11,10 +12,12 @@ const fields = z.object({
   aiAllowExternal: z.boolean(), // AIS-04
   aiMaxToolCalls: z.number().int().min(1).max(200), // AIT-04
   aiAskBefore: z.boolean(), // AIE-05: preview changes, apply only after "Apply"
+  onboarded: z.boolean(), // the first-run tour was seen
+  spell: z.boolean(), // check spelling while editing text (operating system checker; Windows and macOS)
   updates: z.enum(['notify', 'off']), // PLT-06: notify = ask GitHub once per start which release is newest; the app never downloads or installs anything
 });
 export type Settings = z.infer<typeof fields>;
-const DEFAULTS: Settings = { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' };
+const DEFAULTS: Settings = { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, spell: true, onboarded: false, updates: 'notify' };
 // no .default() on the fields: a partial schema would fill them in and a patch would silently reset every other setting
 const patchSchema = fields.partial().strict();
 
@@ -49,6 +52,7 @@ export function registerSettings(check: (e: IpcMainInvokeEvent) => void): void {
       const next: Settings = { ...cur, ...asked };
       const stored = await fs.readFile(file(), 'utf8').then((t) => fields.partial().parse(JSON.parse(t)), () => ({}));
       await fs.writeFile(file(), JSON.stringify({ ...DEFAULTS, ...stored, ...asked }, null, 2));
+      applySpellCheck(next.spell);
       return { ...next, locked };
     };
     const p = chain.then(run, run);

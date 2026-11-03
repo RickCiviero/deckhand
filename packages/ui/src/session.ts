@@ -1,4 +1,4 @@
-/** Editing session: Editor (core) + live view bridge (agent port) + UI state. */
+/** Editing session: Editor (core) + live view bridge (bridge port) + UI state. */
 import { create } from 'zustand';
 import {
   Editor, openBytes, saveBytes, detectDeck, getAttr, moveCommand, resizeCommand, setStyleCommand, setInnerHtmlCommand, deleteElementCommand,
@@ -15,7 +15,7 @@ export interface Rect {
   borderColor: string; borderStyle: string; text: boolean; iframeLike: boolean; pdisplay: string; zIndex: number; extraW: number; extraH: number;
 }
 
-// Agent messages are untrusted (SEC-08): validate shape and size before use.
+// Bridge messages are untrusted (SEC-08): validate shape and size before use.
 const num = z.number().finite();
 const rectSchema: z.ZodType<Rect> = z.object({
   id: z.number().int(), x: num, y: num, w: num, h: num, sx: num, sy: num, position: z.string().max(40), display: z.string().max(40), tag: z.string().max(40),
@@ -25,7 +25,7 @@ const rectSchema: z.ZodType<Rect> = z.object({
   fontWeight: z.string().max(20), textAlign: z.string().max(20), borderRadius: z.string().max(80), borderWidth: z.string().max(40), borderColor: z.string().max(80),
   borderStyle: z.string().max(40), text: z.boolean(), iframeLike: z.boolean(), pdisplay: z.string().max(40), zIndex: num, extraW: num, extraH: num,
 }) as unknown as z.ZodType<Rect>;
-const agentMsg = z.discriminatedUnion('t', [
+const bridgeMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('ready'), title: z.string().max(300).optional(), url: z.string().max(600).optional() }),
   z.object({ t: z.literal('hb') }),
   z.object({ t: z.literal('changed') }),
@@ -44,7 +44,7 @@ const agentMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('texts'), req: z.number(), items: z.array(z.object({ text: z.string().max(2000), gen: z.boolean() })).max(300) }),
   z.object({ t: z.literal('viewport'), w: num, h: num, sw: num, sh: num }),
 ]);
-type AgentMsg = z.infer<typeof agentMsg>;
+type BridgeMsg = z.infer<typeof bridgeMsg>;
 
 export type AppSettings = import('../../../apps/desktop/src/preload/index').AppSettings;
 export interface Notice { id: number; kind: 'info' | 'warning' | 'error'; text: string; actions?: { label: string; run: () => void }[] }
@@ -74,7 +74,7 @@ interface State {
   origin: string | null;
   token: string | null;
   loadNonce: number;
-  agentReady: boolean;
+  bridgeReady: boolean;
   scriptsOn: boolean;
   guides: { v: number[]; h: number[] };
   showGuides: boolean;
@@ -98,13 +98,15 @@ interface State {
   frameTexts: { text: string; gen: boolean }[];
   /** Ask the code view to scroll to a source offset (n makes repeated jumps to the same place count). */
   codeJump: { pos: number; n: number } | null;
+  /** The file came from the internet: scripts and remote content are off and nothing can be edited until the user allows it. */
+  protectedView: boolean;
 }
 
 export const useStore = create<State>(() => ({
   loaded: false, name: '', docId: null, version: 0, slides: [], detection: null, slide: 0, selection: [], hover: null, rects: {}, slideObjects: [],
   zoom: 0.5, fit: true, viewport: { w: 1920, h: 1080 }, dirty: false, canUndo: false, canRedo: false, undoLabel: '', editing: null, notices: [], src: null,
-  origin: null, token: null, loadNonce: 0, agentReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false, thumbs: {},
-  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, updates: 'notify' }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null, step: null, frames: null, frameTexts: [], codeJump: null,
+  origin: null, token: null, loadNonce: 0, bridgeReady: false, scriptsOn: true, guides: { v: [], h: [] }, showGuides: true, smart: true, zoomBox: false, thumbs: {},
+  settings: { scripts: true, remote: 'allow', aiEnabled: true, aiAllowExternal: false, aiMaxToolCalls: 40, aiAskBefore: false, spell: true, onboarded: true, updates: 'notify' }, remote: true, aiBusy: false, findOpen: false, viewMode: 'normal', painter: null, step: null, frames: null, frameTexts: [], codeJump: null, protectedView: false,
 }));
 const set = useStore.setState;
 const get = useStore.getState;
@@ -121,7 +123,7 @@ class Session {
   port: MessagePort | null = null;
   iframe: HTMLIFrameElement | null = null;
   private req = 1;
-  private waiters = new Map<number, (m: AgentMsg) => void>();
+  private waiters = new Map<number, (m: BridgeMsg) => void>();
   private lastHb = 0;
   private hbTimer: number | undefined;
   private recoverTimer: number | undefined;
@@ -130,7 +132,7 @@ class Session {
   private noticeId = 1;
   clipboard: string | null = null;
   private pendingShow: number | null = null;
-  private editResolve: ((m: Extract<AgentMsg, { t: 'edit-end' }>) => void) | null = null;
+  private editResolve: ((m: Extract<BridgeMsg, { t: 'edit-end' }>) => void) | null = null;
   private refreshQueued = false;
   private thumbTimer: number | undefined;
   private retried = 0;
@@ -138,7 +140,7 @@ class Session {
   get doc(): SourceDoc { return this.editor!.doc; }
 
   // ---- opening -----------------------------------------------------------------------------------------------
-  async openResult(r: { docId: string; name: string; bytes: Uint8Array }, slide = 0): Promise<void> {
+  async openResult(r: { docId: string; name: string; bytes: Uint8Array; protectedView?: boolean }, slide = 0): Promise<void> {
     const doc = openBytes(r.bytes);
     this.editor = new Editor(doc);
     const det = detectDeck(doc);
@@ -164,6 +166,14 @@ class Session {
         ]);
       }
     }
+    set({ protectedView: !!r.protectedView });
+    if (r.protectedView) {
+      set({ scriptsOn: false, remote: false });
+      await window.deckhand.setPolicy(r.docId, 'block');
+      this.notify('warning', 'Protected View: this file came from the internet, so its scripts and remote content are off and it cannot be edited.', [
+        { label: 'Enable Editing', run: () => void this.enableEditing() },
+      ]);
+    }
     await this.reload();
     this.requestThumbs(true);
     window.clearInterval(this.hbTimer);
@@ -173,6 +183,18 @@ class Session {
     this.recoverTimer = window.setInterval(() => void this.autoRecover(), 60_000);
     const rec = (await window.deckhand.recoveryList()) as { key: string; file: string; time: number }[];
     void rec; // listing is surfaced by the welcome screen
+  }
+
+  /** Leave Protected View: the Trust Center defaults apply again. */
+  async enableEditing(): Promise<void> {
+    const s = get();
+    if (!s.docId || !this.editor) return;
+    const cfg = await window.deckhand.settings.get().catch(() => null);
+    const domains = cfg?.remote === 'ask' ? externalDomains(this.doc) : [];
+    const allow = !cfg || cfg.remote === 'allow' || (cfg.remote === 'ask' && !domains.length);
+    set({ protectedView: false, scriptsOn: cfg?.scripts ?? true, remote: allow, notices: get().notices.filter((n) => !n.text.includes('Protected View')) });
+    await window.deckhand.setPolicy(s.docId, allow ? 'allow' : 'block');
+    await this.reload();
   }
 
   /** RND-09: thumbnails come from a hidden window in the main process; all of them after a structural change, otherwise only the current slide. */
@@ -195,7 +217,7 @@ class Session {
 
   private checkHeartbeat(): void {
     const s = get();
-    if (!s.loaded || !s.agentReady || !s.scriptsOn) return;
+    if (!s.loaded || !s.bridgeReady || !s.scriptsOn) return;
     if (Date.now() - this.lastHb > 5000 && !s.notices.some((n) => n.text.startsWith("The presentation's scripts"))) {
       this.notify('warning', "The presentation's scripts aren't responding.", [
         { label: 'Reload', run: () => void this.reload() },
@@ -216,9 +238,9 @@ class Session {
     const nonce = get().loadNonce + 1;
     window.setTimeout(() => {
       const cur = get();
-      if (cur.loadNonce === nonce && !cur.agentReady && cur.scriptsOn && this.retried !== nonce) { this.retried = nonce; void this.reload(); }
+      if (cur.loadNonce === nonce && !cur.bridgeReady && cur.scriptsOn && this.retried !== nonce) { this.retried = nonce; void this.reload(); }
     }, 4000);
-    set((st) => ({ src: r.src, origin: r.origin, token: r.token, loadNonce: st.loadNonce + 1, agentReady: false, editing: null }));
+    set((st) => ({ src: r.src, origin: r.origin, token: r.token, loadNonce: st.loadNonce + 1, bridgeReady: false, editing: null }));
   }
 
   // ---- frames (script-built animations) ------------------------------------------------------------------------
@@ -253,7 +275,7 @@ class Session {
   }
 
   async loadTexts(): Promise<void> {
-    const r = await this.request<Extract<AgentMsg, { t: 'texts' }>>({ t: 'texts', index: get().slide }, 3000);
+    const r = await this.request<Extract<BridgeMsg, { t: 'texts' }>>({ t: 'texts', index: get().slide }, 3000);
     if (r && r.t === 'texts') set({ frameTexts: r.items });
   }
 
@@ -264,20 +286,20 @@ class Session {
     this.waiters.clear();
   }
 
-  /** Called from the iframe's onLoad. Establishes the private channel with the agent. */
+  /** Called from the iframe's onLoad. Establishes the private channel with the bridge. */
   onFrameLoad(): void {
     const s = get();
     if (!this.iframe?.contentWindow || !s.origin || !s.token) return;
     this.closePort();
     const ch = new MessageChannel();
     this.port = ch.port1;
-    ch.port1.onmessage = (e) => this.onAgent(e.data);
+    ch.port1.onmessage = (e) => this.onBridge(e.data);
     // exact target origin: only the document's own origin can receive the port
     this.iframe.contentWindow.postMessage({ t: 'deckhand:init', token: s.token }, s.origin, [ch.port2]);
   }
 
-  private onAgent(raw: unknown): void {
-    const p = agentMsg.safeParse(raw);
+  private onBridge(raw: unknown): void {
+    const p = bridgeMsg.safeParse(raw);
     if (!p.success) return; // untrusted: ignore anything malformed
     const m = p.data;
     this.lastHb = Date.now();
@@ -295,7 +317,7 @@ class Session {
         break;
       case 'edit-outside': void this.endEdit(true); break;
       case 'edit-end':
-        // Either we asked for the end (resolver waiting) or the agent ended the session itself (Esc inside the live view).
+        // Either we asked for the end (resolver waiting) or the bridge ended the session itself (Esc inside the live view).
         if (this.editResolve) { this.editResolve(m); this.editResolve = null; } else this.finishEdit(m);
         break;
       case 'frame':
@@ -305,16 +327,24 @@ class Session {
         void this.loadTexts();
         this.queueRefresh();
         break;
+      case 'viewport': {
+        // Page mode: the live view is as tall as the page, so all of it can be seen and edited
+        if (get().detection?.adapter !== 'page') break;
+        const h = Math.max(720, Math.min(16000, Math.ceil(m.sh)));
+        if (Math.abs(h - get().viewport.h) > 2) set((x) => ({ viewport: { ...x.viewport, h } }));
+        break;
+      }
       case 'key': window.dispatchEvent(new CustomEvent('deckhand-key', { detail: m })); break;
       default: break;
     }
   }
 
   private async afterReady(): Promise<void> {
-    set({ agentReady: true });
+    set({ bridgeReady: true });
     this.send({ t: 'slides', ids: get().slides.map((x) => x.id) });
     this.send({ t: 'show', index: get().slide });
     this.setStep(get().step);
+    if (get().detection?.adapter === 'page') this.send({ t: 'viewport' });
     if (this.framesMode) {
       this.send({ t: 'frames-start', trigger: this.framesTrigger });
       this.send({ t: 'frames-goto', n: this.framesWant });
@@ -325,7 +355,7 @@ class Session {
 
   send(m: unknown): void { this.port?.postMessage(m); }
 
-  request<T extends AgentMsg>(msg: Record<string, unknown>, timeout = 1500): Promise<T | null> {
+  request<T extends BridgeMsg>(msg: Record<string, unknown>, timeout = 1500): Promise<T | null> {
     return new Promise((resolve) => {
       if (!this.port) return resolve(null);
       const req = this.req++;
@@ -336,7 +366,7 @@ class Session {
   }
 
   async hitTest(vx: number, vy: number): Promise<number[]> {
-    const r = await this.request<Extract<AgentMsg, { t: 'hit' }>>({ t: 'hit', x: vx, y: vy }, 4000);
+    const r = await this.request<Extract<BridgeMsg, { t: 'hit' }>>({ t: 'hit', x: vx, y: vy }, 4000);
     return r?.ids ?? [];
   }
 
@@ -349,13 +379,14 @@ class Session {
 
   async refreshRects(): Promise<void> {
     const s = get();
-    if (!this.editor || !s.agentReady) return;
+    if (!this.editor || !s.bridgeReady) return;
     const slide = s.slides[s.slide];
     if (!slide) return;
     const objs = this.objectsOnSlide(slide.id).slice(0, 400);
     const ids = [slide.id, ...new Set([...objs, ...s.selection])];
     const seq = this.editSeq;
-    const r = await this.request<Extract<AgentMsg, { t: 'rects' }>>({ t: 'rects', ids });
+    if (get().detection?.adapter === 'page') this.send({ t: 'viewport' });
+    const r = await this.request<Extract<BridgeMsg, { t: 'rects' }>>({ t: 'rects', ids });
     if (!r) return;
     // measured before a later edit reached the live view: it would put stale geometry in the cache (and make the next nudge lose a pixel)
     if (seq !== this.editSeq) { this.queueRefresh(); return; }
@@ -424,6 +455,7 @@ class Session {
   // ---- editing ----------------------------------------------------------------------------------------------
   /** Manual edits wait while the AI is editing (AIE-02): navigation, zoom and selection keep working. */
   private paused(): boolean {
+    if (get().protectedView) { this.notify('warning', 'This file is in Protected View. Choose Enable Editing to change it.'); return true; }
     if (!get().aiBusy) return false;
     this.notify('info', 'The AI Assistant is editing. You can edit again when it has finished, or press Stop.');
     return true;
@@ -521,7 +553,7 @@ class Session {
     this.send({ t: 'edit', id, text: decoded, at, tags: inlineTagSequence(textOf(this.doc, el)) });
   }
 
-  private finishEdit(r: Extract<AgentMsg, { t: 'edit-end' }>): void {
+  private finishEdit(r: Extract<BridgeMsg, { t: 'edit-end' }>): void {
     set({ editing: null });
     this.iframe?.blur();
     window.focus(); // the live view must not keep keyboard focus after editing
@@ -540,7 +572,7 @@ class Session {
   }
   private ending: Promise<void> | null = null;
   private async doEndEdit(commit: boolean): Promise<void> {
-    const done = new Promise<Extract<AgentMsg, { t: 'edit-end' }>>((res) => { this.editResolve = res; });
+    const done = new Promise<Extract<BridgeMsg, { t: 'edit-end' }>>((res) => { this.editResolve = res; });
     this.send({ t: 'edit-end', commit });
     const r = await Promise.race([done, new Promise<null>((res) => setTimeout(() => res(null), 1500))]);
     this.editResolve = null;

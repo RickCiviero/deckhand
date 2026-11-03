@@ -1,5 +1,6 @@
 // Visual check helper: launches the built app directly and saves a PNG via CDP. Usage: electron scripts/screenshot.cjs <deck.html> <out.png> [js-to-run-before]
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, nativeTheme } = require('electron');
+if (process.env.DECKHAND_THEME) nativeTheme.themeSource = process.env.DECKHAND_THEME; // light | dark
 const fs = require('fs');
 const out = process.argv[3] || 'e2e-cap.png';
 require('../apps/desktop/out/main/index.js');

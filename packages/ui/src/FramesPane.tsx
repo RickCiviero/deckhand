@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { useMemo, useState } from 'react';
 import { Button } from '@fluentui/react-components';
+import { FastForward16Regular, Next16Regular, Previous16Regular, Rewind16Regular } from '@fluentui/react-icons';
 import { scriptInteractions, findScriptText, getAttr, replaceScriptTextCommand, scriptTextProblem, textOf } from '@deckhand/core';
 import { session, useStore } from './session';
 
@@ -61,10 +62,10 @@ export function FramesPane(): JSX.Element {
       ) : (
         <>
           <div className="row stepbar">
-            <Button size="small" onClick={() => session.framesGoto(0)} aria-label="First frame" disabled={f.n === 0}>⏮</Button>
-            <Button size="small" onClick={() => session.framesGoto(f.n - 1)} aria-label="Previous frame" disabled={f.n === 0} data-testid="frame-prev">◀</Button>
-            <Button size="small" onClick={() => session.framesGoto(f.n + 1)} aria-label="Next frame" disabled={f.n >= f.total} data-testid="frame-next">▶</Button>
-            <Button size="small" onClick={() => session.framesGoto(100000)} aria-label="Last frame" disabled={f.n >= f.total}>⏭</Button>
+            <Button size="small" onClick={() => session.framesGoto(0)} aria-label="First frame" disabled={f.n === 0} icon={<Rewind16Regular />} />
+            <Button size="small" onClick={() => session.framesGoto(f.n - 1)} aria-label="Previous frame" disabled={f.n === 0} data-testid="frame-prev" icon={<Previous16Regular />} />
+            <Button size="small" onClick={() => session.framesGoto(f.n + 1)} aria-label="Next frame" disabled={f.n >= f.total} data-testid="frame-next" icon={<Next16Regular />} />
+            <Button size="small" onClick={() => session.framesGoto(100000)} aria-label="Last frame" disabled={f.n >= f.total} icon={<FastForward16Regular />} />
             <Button size="small" onClick={() => session.framesStop()} data-testid="frames-stop">Close</Button>
           </div>
           <input type="range" min={0} max={Math.max(1, f.total)} value={f.n} aria-label="Frame" onChange={(e) => session.framesGoto(Number(e.target.value))} data-testid="frame-slider" style={{ width: '100%' }} />

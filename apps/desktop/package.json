@@ -9,7 +9,7 @@
     "dist": "electron-builder"
   },
   "devDependencies": {
-    "@deckhand/agent": "*",
+    "@deckhand/bridge": "*",
     "@deckhand/ai": "*",
     "@deckhand/core": "*",
     "@deckhand/ui": "*",

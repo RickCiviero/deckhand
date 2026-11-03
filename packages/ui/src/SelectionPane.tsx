@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { useMemo, useState } from 'react';
 import { Button } from '@fluentui/react-components';
+import { Eye16Regular, EyeOff16Regular, LockClosed16Regular, LockOpen16Regular } from '@fluentui/react-icons';
 import { hideObjectsCommand, lockObjectCommand, objectTree, renameObjectCommand, reorderCommand, setStepCommand, slideSteps } from '@deckhand/core';
 import { session, useStore } from './session';
 
@@ -44,9 +45,9 @@ export function SelectionPane(): JSX.Element {
         </div>
       )}
       {tree.length === 0 && <p className="hint">This slide has no objects.</p>}
-      <ul className="seltree" role="listbox" aria-label="Objects on this slide">
+      <ul className="seltree" aria-label="Objects on this slide">
         {tree.map((n) => (
-          <li key={n.id} role="option" aria-selected={s.selection.includes(n.id)} className={`${s.selection.includes(n.id) ? 'on' : ''} ${n.hidden ? 'dim' : ''}`} style={{ paddingLeft: 4 + n.depth * 14 }} data-testid="sel-item" draggable
+          <li key={n.id} aria-current={s.selection.includes(n.id) ? "true" : undefined} className={`${s.selection.includes(n.id) ? 'on' : ''} ${n.hidden ? 'dim' : ''}`} style={{ paddingLeft: 4 + n.depth * 14 }} data-testid="sel-item" draggable
             onDragStart={() => setDragId(n.id)} onDragOver={(e) => { if (dragId !== null) e.preventDefault(); }} onDrop={() => drop(n.id)} onDragEnd={() => setDragId(null)}>
             {editing === n.id ? (
               <input autoFocus defaultValue={n.custom ? n.name : ''} placeholder={n.name} aria-label="Object name" data-testid="sel-rename"
@@ -58,8 +59,8 @@ export function SelectionPane(): JSX.Element {
             <input className="selstep" type="number" min={1} max={999} key={`${n.id}-${n.step}`} defaultValue={n.step ?? ''} placeholder="–" aria-label="Appears at step" title="Appears at step (empty = always shown)" data-testid="sel-step"
               onBlur={(e) => { const v = e.target.value.trim(); const next = v === '' ? null : Number(v); if (next !== n.step && (next === null || Number.isFinite(next))) session.exec(setStepCommand([n.id], next)); }}
               onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
-            <button className="selbtn" aria-label={n.hidden ? 'Show' : 'Hide'} title={n.hidden ? 'Show' : 'Hide'} aria-pressed={n.hidden} onClick={() => session.exec(hideObjectsCommand([n.id], !n.hidden))} data-testid="sel-eye">{n.hidden ? '🚫' : '👁'}</button>
-            <button className="selbtn" aria-label={n.locked ? 'Unlock' : 'Lock'} title={n.locked ? 'Unlock' : 'Lock'} aria-pressed={n.locked} onClick={() => session.exec(lockObjectCommand(n.id, !n.locked))} data-testid="sel-lock">{n.locked ? '🔒' : '🔓'}</button>
+            <button className="selbtn" aria-label={n.hidden ? 'Show' : 'Hide'} title={n.hidden ? 'Show' : 'Hide'} aria-pressed={n.hidden} onClick={() => session.exec(hideObjectsCommand([n.id], !n.hidden))} data-testid="sel-eye">{n.hidden ? <EyeOff16Regular /> : <Eye16Regular />}</button>
+            <button className="selbtn" aria-label={n.locked ? 'Unlock' : 'Lock'} title={n.locked ? 'Unlock' : 'Lock'} aria-pressed={n.locked} onClick={() => session.exec(lockObjectCommand(n.id, !n.locked))} data-testid="sel-lock">{n.locked ? <LockClosed16Regular /> : <LockOpen16Regular />}</button>
           </li>
         ))}
       </ul>

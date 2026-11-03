@@ -8,8 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run build -w @deckhand/agent && npm run dev -w @deckhand/desktop",
-    "build": "npm run build -w @deckhand/agent && npm run build -w @deckhand/desktop",
+    "dev": "npm run build -w @deckhand/bridge && npm run dev -w @deckhand/desktop",
+    "build": "npm run build -w @deckhand/bridge && npm run build -w @deckhand/desktop",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -22,6 +22,7 @@
     "postinstall": "node scripts/ensure-electron.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",

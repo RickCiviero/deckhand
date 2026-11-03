@@ -7,7 +7,7 @@ Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 ## M0 — Foundations
 | Item | Status | Notes |
 |---|---|---|
-| Monorepo (core/agent/ui/i18n/desktop), TS strict, Vitest, Playwright | ✅ | |
+| Monorepo (core/bridge/ui/i18n/desktop), TS strict, Vitest, Playwright | ✅ | |
 | Electron shell with SEC-01 hardening, fuses | ✅ | fuse state verified from the shipped binary |
 | React + Fluent skeleton, light/dark (system) | 🟡 | native title bar; ribbon is a compact 4-tab strip (File/Home/Insert/View), not the full Office ribbon |
 | i18n scaffolding (i18next, `en.json`) | ✅ | only main labels externalised so far |
@@ -19,7 +19,7 @@ Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 | Item | Status | Notes |
 |---|---|---|
 | Source model + patch engine (SPIKE-2), RT-01/02/05 | ✅ | byte-identical no-op save on all 10 corpus decks incl. windows-1252+CRLF, BOM, malformed |
-| Document protocol, sandboxed live view, agent | ✅ | |
+| Document protocol, sandboxed live view, bridge | ✅ | |
 | Generic + reveal.js + page adapters (SPIKE-4) | 🟡 | 11/11 corpus decks detected correctly; Marp/impress/Shower ⬜ |
 | Define Slides wizard | ✅ | Design > Define Slides…: proposals from the selection and its parents, live match count, selector subset (tag, class, id, attribute, > and descendant); stored as <meta name="deckhand:slides">; Reset restores the file byte-exactly |
 | Thumbnails (RND-09) | 🟡 | hidden-window JPEGs, refreshed ≤ ~1 s after an edit; slides reached by pressing → (vertical reveal stacks and non-key decks may show the wrong slide) |
@@ -33,7 +33,7 @@ Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 | Selection (deepest, Esc parent, multi, marquee, Alt-cycle) | ✅ | |
 | Move / resize with the positioning model (Free → left/top|right/bottom, In layout → `translate`), units, scaled stages | ✅ | rotation ⬜, Make Free / Put back ⬜ |
 | Smart guides, snapping, nudge | 🟡 | edges/centres ✅; equal-spacing markers ⬜ |
-| Text editing (dbl-click word, click caret, F2/Enter, Esc, IME-safe default editing), B/I/U | ✅ | range-level font/size/colour via agent `fmt` exists; UI exposes B/I/U |
+| Text editing (dbl-click word, click caret, F2/Enter, Esc, IME-safe default editing), B/I/U | ✅ | range-level font/size/colour via bridge `fmt` exists; UI exposes B/I/U |
 | Undo/redo with coalescing | ✅ | |
 | Clipboard (object copy/paste/cut/duplicate) | 🟡 | within one deck; cross-deck/Paste Options ⬜ |
 | Format pane: size & position, fill, border, effects, text | ✅ | |
@@ -62,7 +62,7 @@ Full ribbon & Backstage, layout gallery, pictures (insert/change), links dialog,
 | Admin policy (AIS-06), TST-10, TST-11 evaluation set, SPIKE-5 token/cost measurement | ⬜ | needs real accounts |
 
 ## Still not started
-M3 (full ribbon, Backstage, layout gallery, pictures, links, Format Background, Slide Show, PDF export, Document Recovery UI), M1 gaps (Define Slides wizard, thumbnails, viewport presets), M5 (everything under "Not started" above), `agent` → `bridge` rename (ADR-011). Marp/impress/Shower are detected (core) but live-view slide navigation for them is not wired.
+M3 (full ribbon, Backstage, layout gallery, pictures, links, Format Background, Slide Show, PDF export, Document Recovery UI), M1 gaps (Define Slides wizard, thumbnails, viewport presets), M5 (everything under "Not started" above), `bridge` → `bridge` rename (ADR-011). Marp/impress/Shower are detected (core) but live-view slide navigation for them is not wired.
 
 ## M3 progress
 Done and e2e-tested: Slide Show (F5 / Shift+F5, Esc exits, link confirmation), PDF export (image-based, pdf-lib), Document Recovery UI, thumbnails, Slide Show tab. Preview in Browser, Backstage, full ribbon, layout gallery, pictures, links, Format Background are still open.
@@ -92,7 +92,8 @@ Insert > Shapes (rectangle, rounded, ellipse, line), Table (fixed sizes, cells e
 Not done in the Selection Pane: "generated" markers.
 States (Steps bar, Selection tab): done. Build steps (`data-step`, `data-fragment-index`) are listed per slide; a step can be previewed (later objects are dimmed) and an object retimed (one attribute patch, undoable). Classes without a number are not understood.
 Frames tab: done. A slide built by timed scripts (typed prompts, chat lines, terminal output) is expanded: the live view is opened with the deck's timers on a virtual clock (`#deckhand-frames`), the deck's own button starts it, and frames are fired one by one (going back re-runs the deck). Text seen in a frame is edited where the script writes it (`scripttext.ts`: unique one-line string literal, quote-escaped, HTML-escaped form handled; markup, newlines and computed text are refused). The tab also lists what the script reacts to (keys, clicks) with a jump to the source. Not editable: moving or styling script-generated elements, text typed letter by letter or joined from pieces.
-Still open in M5: picture styles, apply-to-all-similar, spell-check, Version History, PNG and single-file export, Protected View, page mode polish, accessibility pass, help and onboarding, code signing, the `agent` → `bridge` rename, a full crop tool, table row/column editing, web-font linking and embedding, grouping of right/bottom-anchored or transformed objects.
+Still open: auto-update and code signing (both need a signing certificate), a drag-handle crop tool, a Version History diff view, grouping of objects inside transformed parents.
+Done since: apply to similar (tag + classes, all slides), picture styles and percentage crop, table row/column editing, Group of right/bottom-anchored and rotated objects, Replace Fonts with embedded font files and Google Fonts links, Version History (30 saves, restore as an undoable edit), PNG export (slide or all) and single-file HTML export (local pictures, styles, scripts, fonts inlined; files outside the folder never read), Protected View (Mark of the Web / quarantine), spell-check through the OS checker (Windows, macOS), Help (F1) and first-run tour, axe-core accessibility audit of every tab and pane, the `agent` to `bridge` rename, a quiet modern interface (soft neutrals, one indigo accent, icons, dark theme).
 Format Painter (STY-04): done. Copies inline visual declarations (colour, background, border, shadow, opacity, font, text) of the selected object to the next one selected; click once or double-click to keep painting, Esc stops. Not copied: size, position, and character formatting inside text runs.
 Distribute horizontally/vertically: done (three or more objects, outer two stay). Group and Ungroup (ARR-03): done for contiguous siblings; Free objects keep their visual position, in-layout groups warn. Objects anchored with right/bottom or transformed cannot be grouped yet.
 

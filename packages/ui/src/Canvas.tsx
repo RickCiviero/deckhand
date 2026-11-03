@@ -45,7 +45,9 @@ export function Canvas(): JSX.Element {
     if (!el) return;
     const ro = new ResizeObserver(() => {
       if (!useStore.getState().fit) return;
-      const k = Math.max(0.1, Math.min(4, Math.min((el.clientWidth - 48) / VW, (el.clientHeight - 48) / VH)));
+      // Page mode (a page without slides): fit the width and let the page scroll
+      const page = useStore.getState().detection?.adapter === 'page';
+      const k = Math.max(0.1, Math.min(4, page ? (el.clientWidth - 48) / VW : Math.min((el.clientWidth - 48) / VW, (el.clientHeight - 48) / VH)));
       useStore.setState({ zoom: k });
     });
     ro.observe(el);
@@ -262,7 +264,7 @@ export function Canvas(): JSX.Element {
   void ctxFor;
 
   return (
-    <div className="canvas-wrap" ref={wrap} onWheel={onWheel} data-testid="canvas" data-agent-ready={s.agentReady ? '1' : '0'}>
+    <div className="canvas-wrap" ref={wrap} onWheel={onWheel} data-testid="canvas" data-bridge-ready={s.bridgeReady ? '1' : '0'}>
       <div className="stage" ref={stage} style={{ width: VW * z, height: VH * z }}>
         {s.src && (
           <iframe

@@ -6,7 +6,11 @@ import { z } from 'zod';
 import { isInside, sanitizeRequestPath } from '@deckhand/core';
 import { registerAi } from './ai.js';
 import { loadSettings, registerSettings } from './settings.js';
-import { exportPdf, renderThumbs, startShow } from './show.js';
+import { exportPdf, exportPng, renderThumbs, startShow } from './show.js';
+import { keepVersion, listVersions, readVersion } from './history.js';
+import { exportSingleFile } from './exporters.js';
+import { fromInternet } from './protected.js';
+import { applySpellCheck, attachSpellMenu } from './spell.js';
 import { checkForUpdate } from './updates.js';
 import { previewInBrowser, stopAllPreviews, stopPreview } from './preview.js';
 import {
@@ -65,13 +69,14 @@ function createWindow(): Win {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true, sandbox: true, nodeIntegration: false, nodeIntegrationInWorker: false, nodeIntegrationInSubFrames: false,
-      webSecurity: true, allowRunningInsecureContent: false, webviewTag: false, safeDialogs: true, spellcheck: false,
+      webSecurity: true, allowRunningInsecureContent: false, webviewTag: false, safeDialogs: true, spellcheck: true,
     },
   });
   const w: Win = { win, doc: null, dirty: false, closing: false };
   const id = win.webContents.id;
   wins.set(id, w);
   win.once('ready-to-show', () => win.show());
+  attachSpellMenu(win.webContents);
   win.on('page-title-updated', (e) => e.preventDefault());
   win.on('close', (e) => {
     if (!w.dirty || w.closing) return;
@@ -196,7 +201,7 @@ function registerIpc(): void {
     w.win.setTitle(`${path.basename(realFile)} - Deckhand`);
     watchDoc(doc, () => { if (!e.sender.isDestroyed()) e.sender.send('doc-event', { type: 'external-change', docId: doc.id }); });
     void remember(realFile);
-    return { docId: doc.id, name: path.basename(realFile), dir: path.dirname(realFile), bytes };
+    return { docId: doc.id, name: path.basename(realFile), dir: path.dirname(realFile), bytes, protectedView: await fromInternet(realFile) };
   };
 
   registerAi((e) => { senderWin(e); });
@@ -217,6 +222,7 @@ function registerIpc(): void {
   ipcMain.handle('doc:save', async (e, a: unknown) => {
     const { docId, bytes } = z.object({ docId: idSchema, bytes: bytesSchema }).parse(a);
     const doc = ownedDoc(e, docId);
+    try { const prev = (await loadFromDisk(doc.file)).bytes; await keepVersion(doc.file, prev, bytes); } catch { /* a missing history must never block a save */ }
     await saveDoc(doc, bytes);
     await clearRecovery(doc);
     senderWin(e).dirty = false;
@@ -300,6 +306,44 @@ function registerIpc(): void {
     const { docId, slides } = z.object({ docId: idSchema, slides: z.number().int().min(1).max(5000) }).parse(a);
     return exportPdf(senderWin(e).win, ownedDoc(e, docId), slides);
   });
+  ipcMain.handle('history:list', async (e, a: unknown) => {
+    const { docId } = z.object({ docId: idSchema }).parse(a);
+    return listVersions(ownedDoc(e, docId).file);
+  });
+  ipcMain.handle('history:read', async (e, a: unknown) => {
+    const { docId, id } = z.object({ docId: idSchema, id: z.string().max(20) }).parse(a);
+    return readVersion(ownedDoc(e, docId).file, id);
+  });
+  ipcMain.handle('doc:export-png', async (e, a: unknown) => {
+    const { docId, slides, only } = z.object({ docId: idSchema, slides: z.number().int().min(1).max(5000), only: z.number().int().min(0).max(5000).nullable() }).parse(a);
+    return exportPng(senderWin(e).win, ownedDoc(e, docId), slides, only);
+  });
+  ipcMain.handle('doc:export-single', async (e, a: unknown) => {
+    const { docId, text } = z.object({ docId: idSchema, text: z.string().max(MAX_FILE) }).parse(a);
+    return exportSingleFile(senderWin(e).win, ownedDoc(e, docId), text);
+  });
+  ipcMain.handle('doc:pick-font', async (e, a: unknown) => {
+    const { docId } = z.object({ docId: idSchema }).parse(a);
+    const doc = ownedDoc(e, docId);
+    const r = await dialog.showOpenDialog(senderWin(e).win, { properties: ['openFile'], filters: [{ name: 'Fonts', extensions: ['woff2', 'woff', 'ttf', 'otf'] }] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const real = await fs.realpath(r.filePaths[0]);
+    const ext = path.extname(real).toLowerCase();
+    if (!['.woff2', '.woff', '.ttf', '.otf'].includes(ext)) throw new Error('That is not a supported font type.');
+    const st = await fs.stat(real);
+    if (!st.isFile() || st.size > 15 * 1024 * 1024) throw new Error('Fonts can be up to 15 MB.');
+    const dir = path.join(doc.dir, 'fonts');
+    await fs.mkdir(dir, { recursive: true });
+    const base = path.basename(real, ext).replace(/[^\w.-]+/g, '-').slice(0, 60) || 'font';
+    let name = base + ext;
+    for (let n = 2; ; n++) {
+      try { await fs.copyFile(real, path.join(dir, name), fs.constants.COPYFILE_EXCL); break; } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+        name = `${base}-${n}${ext}`;
+      }
+    }
+    return { src: 'fonts/' + encodeURIComponent(name), family: base.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 40), format: ext === '.woff2' ? 'woff2' : ext === '.woff' ? 'woff' : ext === '.ttf' ? 'truetype' : 'opentype' };
+  });
   let updateChecked = false; // once per start
   ipcMain.handle('app:check-update', async (e) => {
     senderWin(e);
@@ -347,6 +391,7 @@ if (!app.requestSingleInstanceLock()) {
     registerDocProtocol();
     if (!isDev) registerAppProtocol();
     registerIpc();
+    void loadSettings().then((c) => applySpellCheck(c.spell)).catch(() => applySpellCheck(true));
     Menu.setApplicationMenu(null);
     setBlockedHandler((doc, ev) => { if (!doc.owner.isDestroyed()) doc.owner.send('doc-event', { type: 'blocked', ...ev }); });
     const { file, slide } = parseArgv(process.argv);

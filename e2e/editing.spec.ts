@@ -331,7 +331,7 @@ test('Insert > Link wraps the selected text in an anchor; unsafe addresses are r
   await ready(c.page);
   const t = await centreOf(c.page, '.slide.active .body');
   await editAt(c.page, t.x - t.w / 2 + 30, t.y); // selects the word "Revenue"
-  await c.page.waitForTimeout(1700); // the agent's refocus guard covers the first 1.5 s of an edit
+  await c.page.waitForTimeout(1700); // the bridge's refocus guard covers the first 1.5 s of an edit
   await c.page.getByTestId('tab-insert').click();
   await c.page.getByTestId('cmd-link').click();
   await c.page.getByTestId('link-url').fill('javascript:alert(1)');
