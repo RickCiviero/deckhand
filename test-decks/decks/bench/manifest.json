@@ -1,0 +1,252 @@
+[
+  {
+    "file": "bench/reveal-full.html",
+    "slides": 8,
+    "slideSelector": ".slides section:not(.stack)",
+    "exclusive": true,
+    "navKey": "ArrowRight",
+    "navProbe": "location.hash + '|' + document.querySelectorAll('.fragment.visible').length",
+    "navPresses": 6,
+    "editText": "#title h1",
+    "moveSel": "#a2 img.art",
+    "moveSlide": 2,
+    "steps": true,
+    "find": "debounce",
+    "tags": [
+      "nested-sections",
+      "fragments",
+      "speaker-notes",
+      "code-highlight",
+      "table",
+      "hash-routing",
+      "backgrounds"
+    ]
+  },
+  {
+    "file": "bench/impress-3d.html",
+    "slides": 8,
+    "slideSelector": "#impress > .step",
+    "exclusive": false,
+    "navKey": "ArrowRight",
+    "navProbe": "location.hash",
+    "navPresses": 5,
+    "editText": "#step-1 h1",
+    "moveSel": "#step-3 img",
+    "moveSlide": 2,
+    "find": "Overview",
+    "tags": [
+      "3d-transforms",
+      "free-form-steps",
+      "camera-transform",
+      "rotation",
+      "scale",
+      "svg"
+    ]
+  },
+  {
+    "file": "bench/css-only.html",
+    "slides": 7,
+    "slideSelector": "main > .slide",
+    "exclusive": true,
+    "navKey": null,
+    "editText": ".p1 h1",
+    "moveSel": ".p4 .box",
+    "moveSlide": 3,
+    "find": "Selectors",
+    "tags": [
+      "no-javascript",
+      "radio-hack",
+      "css-transitions",
+      "hover",
+      "display-none-slides"
+    ]
+  },
+  {
+    "file": "bench/scroll-story.html",
+    "slides": 9,
+    "slideSelector": "section.chap",
+    "exclusive": false,
+    "navKey": "ArrowDown",
+    "navProbe": "Math.round(scrollY)",
+    "navPresses": 3,
+    "navWait": 1200,
+    "editText": "#c1 h2",
+    "moveSel": "#c5 img.shot",
+    "moveSlide": 4,
+    "find": "The Numbers",
+    "tags": [
+      "scroll-snap",
+      "intersection-observer",
+      "reveal-on-scroll",
+      "sticky-header",
+      "counters-raf",
+      "parallax",
+      "hidden-until-visible"
+    ]
+  },
+  {
+    "file": "bench/canvas-stage.html",
+    "slides": 8,
+    "slideSelector": "#stage > .slide",
+    "exclusive": true,
+    "navKey": "ArrowRight",
+    "navProbe": "document.querySelector('.slide.is-active').dataset.n",
+    "navPresses": 4,
+    "editText": ".slide[data-n=\"1\"] h1",
+    "moveSel": ".slide[data-n=\"5\"] .card",
+    "moveSlide": 4,
+    "find": "Particles",
+    "tags": [
+      "fixed-stage-scale",
+      "canvas-raf",
+      "svg-smil",
+      "css-keyframes",
+      "video-audio-elements",
+      "absolute-layout",
+      "rotation",
+      "infinite-animations"
+    ]
+  },
+  {
+    "file": "bench/timeline-demo.html",
+    "slides": 5,
+    "slideSelector": "article.slide",
+    "exclusive": true,
+    "navKey": "ArrowRight",
+    "navProbe": "document.getElementById('pos').textContent",
+    "navPresses": 4,
+    "editText": ".slide[data-i=\"1\"] h1",
+    "moveSel": ".slide[data-i=\"1\"] p.lead",
+    "moveSlide": 0,
+    "find": "Git session",
+    "frames": {
+      "slide": 1,
+      "trigger": "replay",
+      "literal": "[main 3f2a1c9] Add the login form",
+      "replacement": "[main 3f2a1c9] Fix the signup bug"
+    },
+    "tags": [
+      "timers-settimeout",
+      "setinterval",
+      "svg-built-by-script",
+      "hidden-attribute-slides",
+      "replay-button",
+      "typed-text"
+    ]
+  },
+  {
+    "file": "bench/dashboard.html",
+    "slides": 6,
+    "slideSelector": ".bespoke-slide",
+    "exclusive": true,
+    "navKey": "ArrowRight",
+    "navProbe": "document.getElementById('pg').textContent",
+    "navPresses": 5,
+    "editText": ".bespoke-slide:nth-child(1) h1",
+    "moveSel": ".bespoke-slide:nth-child(1) .kpi",
+    "moveSlide": 0,
+    "find": "Retention",
+    "tags": [
+      "custom-active-class",
+      "svg-charts",
+      "table",
+      "tabs",
+      "details-summary",
+      "form-controls",
+      "css-grid"
+    ]
+  },
+  {
+    "file": "bench/media-carousel.html",
+    "slides": 6,
+    "slideSelector": ".pane",
+    "exclusive": false,
+    "navKey": "ArrowRight",
+    "navProbe": "document.getElementById('track').style.transform",
+    "navPresses": 4,
+    "editText": "#p1 h2",
+    "moveSel": "#p1 figure",
+    "moveSlide": 0,
+    "find": "Embedded document",
+    "tags": [
+      "translate-carousel",
+      "picture-srcset",
+      "video-audio",
+      "iframe-srcdoc",
+      "svg-image",
+      "image-map",
+      "touch-swipe",
+      "figure-figcaption"
+    ]
+  },
+  {
+    "file": "bench/marp-svg.html",
+    "slides": 8,
+    "slideSelector": "svg.s section",
+    "exclusive": false,
+    "navKey": null,
+    "editText": "section[id=\"1\"] h1",
+    "moveSel": "section[id=\"6\"] img",
+    "moveSlide": 5,
+    "find": "Slidev",
+    "tags": [
+      "svg-foreignobject",
+      "markdown-output",
+      "header-footer-pagination",
+      "no-javascript",
+      "code",
+      "table",
+      "blockquote",
+      "invert-theme"
+    ]
+  },
+  {
+    "file": "bench/i18n-typography.html",
+    "slides": 7,
+    "slideSelector": "section.slide",
+    "exclusive": true,
+    "navKey": "ArrowRight",
+    "navProbe": "location.hash",
+    "navPresses": 4,
+    "editText": "#s1 h1",
+    "moveSel": "#s4 .big",
+    "moveSlide": 3,
+    "find": "Bonjour",
+    "tags": [
+      "rtl-bidi",
+      "cjk",
+      "ruby",
+      "emoji-zwj",
+      "combining-marks",
+      "mathml",
+      "vertical-writing",
+      "entities",
+      "hash-routing"
+    ]
+  },
+  {
+    "file": "bench/long-deck.html",
+    "slides": 60,
+    "slideSelector": "section.slide",
+    "exclusive": true,
+    "navKey": "ArrowRight",
+    "navProbe": "document.querySelector('.slide.active').dataset.n + '/' + document.querySelectorAll('.build.on').length",
+    "navPresses": 8,
+    "editText": ".slide[data-n=\"1\"] h1",
+    "moveSel": ".slide[data-n=\"4\"] img",
+    "moveSlide": 3,
+    "steps": true,
+    "stepsSlide": 1,
+    "find": "Section 31",
+    "thumbs": 8,
+    "tags": [
+      "60-slides",
+      "ten-layouts",
+      "build-steps",
+      "svg-charts",
+      "tables",
+      "code",
+      "thumbnail-throughput"
+    ]
+  }
+]

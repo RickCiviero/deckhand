@@ -14,6 +14,8 @@ npm run test:coverage
 npm run e2e                 # builds, then Playwright-on-Electron (e2e/*.spec.ts)
 npm run dist                # electron-builder for the current OS (apps/desktop/release)
 npm run gen:decks           # regenerate test-decks/ (committed; fixtures are byte-exact, see .gitattributes)
+npm run gen:bench           # regenerate the benchmark corpus test-decks/decks/bench (scripts/bench/*.mjs → html + manifest.json)
+npm run bench               # build, then e2e/benchmark.spec.ts x3 on every benchmark deck (BENCH_ONLY=<name> narrows it)
 npm run screenshot -- <deck.html> <out.png>   # launches the built app, saves a PNG (Playwright screenshots work too)
 ```
 Run the e2e suite against a packaged test build: `electron-builder --win --dir -c.directories.output=release-test -c.electronFuses.enableNodeCliInspectArguments=true`, then `DECKHAND_EXE=<…/Deckhand.exe> npx playwright test`.

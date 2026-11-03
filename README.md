@@ -293,6 +293,8 @@ npm run dist                    # apps/desktop/release/*.AppImage and *.deb
 | `npm run e2e` | builds, then drives the real app with Playwright |
 | `npm run dist` | installer for the current system |
 | `npm run gen:decks` | regenerates the test decks in `test-decks/` |
+| `npm run gen:bench` | regenerates the benchmark corpus (`test-decks/decks/bench`) |
+| `npm run bench` | runs the benchmark checks three times on every benchmark deck |
 | `node scripts/readme-shots.mjs` | regenerates the screenshots in this README (after `npm run build`) |
 
 To publish installers for all three systems, push a tag: `git tag v0.1.0 && git push origin v0.1.0`. The *Release* workflow builds them and attaches them to a **draft** release for you to review.

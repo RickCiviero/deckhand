@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reveal Full</title>
+<style>
+
+html,body{margin:0;height:100%;overflow:hidden;background:#191919;font-family:"Helvetica Neue",Arial,sans-serif;color:#eee}
+.reveal{position:absolute;inset:0}
+.reveal .slides{position:absolute;inset:0}
+.reveal .slides>section,.reveal .slides>section>section{position:absolute;inset:0;display:none;box-sizing:border-box;padding:60px 90px;text-align:left}
+.reveal .slides>section.present,.reveal .slides>section>section.present{display:block}
+.reveal .slides>section.stack{padding:0}
+.reveal h1{font-size:64px;margin:0 0 24px;text-transform:uppercase;letter-spacing:2px}
+.reveal h2{font-size:44px;margin:0 0 20px;color:#42affa}
+.reveal p,.reveal li{font-size:28px;line-height:1.4}
+.reveal ul{margin:0;padding-left:1.1em}
+.reveal .fragment{opacity:0;visibility:hidden;transition:all .3s}
+.reveal .fragment.visible{opacity:1;visibility:visible}
+.reveal .fragment.grow.visible{transform:scale(1.15)}
+.reveal pre{background:#0d1117;border-radius:8px;padding:18px;font-size:22px;line-height:1.5;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.5)}
+.reveal pre code .k{color:#ff7b72}.reveal pre code .s{color:#a5d6ff}.reveal pre code .c{color:#8b949e}.reveal pre code .f{color:#d2a8ff}
+.reveal .cols{display:flex;gap:40px}.reveal .cols>div{flex:1}
+.reveal img.art{border-radius:10px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.reveal aside.notes{display:none}
+.reveal .progress{position:absolute;left:0;bottom:0;height:5px;background:#42affa;width:0;transition:width .2s}
+.reveal .slide-number{position:absolute;right:16px;bottom:12px;font-size:16px;color:#aaa}
+.reveal table{border-collapse:collapse;font-size:24px}.reveal th,.reveal td{border:1px solid #555;padding:8px 18px}
+.reveal blockquote{border-left:6px solid #42affa;margin:0;padding:8px 24px;font-size:34px;font-style:italic}
+.reveal .big{font-size:150px;font-weight:700;color:#e7ad52;line-height:1}
+
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+  <section data-background="#2b3a55" id="title">
+    <h1>Reveal Full</h1>
+    <p>A benchmark deck: stacks, fragments, notes, code, tables.</p>
+    <p class="fragment" data-fragment-index="1">Press <b>space</b> to go on</p>
+    <aside class="notes">Welcome everybody. Mention the agenda.</aside>
+  </section>
+  <section class="stack" id="stack-a">
+    <section id="a1"><h2>Agenda</h2><ul>
+      <li class="fragment" data-fragment-index="1">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+      <li class="fragment" data-fragment-index="2">Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</li>
+      <li class="fragment grow" data-fragment-index="3">Ut enim ad minim veniam, quis nostrud exercitation ullamco.</li>
+      <li class="fragment" data-fragment-index="4">Duis aute irure dolor in reprehenderit in voluptate velit esse.</li></ul>
+      <aside class="notes">Walk through each item.</aside></section>
+    <section id="a2"><h2>Details A</h2><div class="cols"><div><p>Excepteur sint occaecat cupidatat non proident, sunt in culpa.</p><p>Curabitur pretium tincidunt lacus, nulla gravida orci a odio.</p></div><div><img class="art" alt="Art A" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NDAiIGhlaWdodD0iMzYwIiB2aWV3Qm94PSIwIDAgNjQwIDM2MCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjM2E3YmQ1Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDBkMmZmIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSIzNjAiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSI0NDgiIGN5PSIxMjUuOTk5OTk5OTk5OTk5OTkiIHI9Ijc5LjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsLjI1KSIvPjx0ZXh0IHg9IjUxLjIiIHk9IjMyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjQzLjE5OTk5OTk5OTk5OTk5NiIgZmlsbD0iI2ZmZiI+QTwvdGV4dD48L3N2Zz4="></div></div></section>
+    <section id="a3"><h2>Details B</h2><table><tr><th>Quarter</th><th>Revenue</th><th>Growth</th></tr><tr><td>Q1</td><td>1.2M</td><td>+4%</td></tr><tr><td>Q2</td><td>1.5M</td><td>+11%</td></tr><tr><td>Q3</td><td>1.9M</td><td>+27%</td></tr></table></section>
+  </section>
+  <section id="code"><h2>Code</h2><pre><code><span class="c">// debounce: run fn after the calls stop</span>
+<span class="k">function</span> <span class="f">debounce</span>(fn, wait) {
+  <span class="k">let</span> t;
+  <span class="k">return</span> (...args) =&gt; {
+    <span class="f">clearTimeout</span>(t);
+    t = <span class="f">setTimeout</span>(() =&gt; fn(...args), wait);
+  };
+}</code></pre><p class="fragment" data-fragment-index="1">Trailing edge only.</p></section>
+  <section class="stack" id="stack-b">
+    <section id="b1"><h2>Quote</h2><blockquote>Simplicity is prerequisite for reliability.<br><small>— E. W. Dijkstra</small></blockquote></section>
+    <section id="b2" data-background="#552b3a"><h2>Big number</h2><div class="big">42%</div><p>of users never open the settings.</p></section>
+  </section>
+  <section id="end"><h1>Thank you</h1><p>Questions? <a href="#/0">Back to start</a></p></section>
+</div><div class="progress"></div><div class="slide-number"></div></div><script>
+
+(function () {
+  var root = document.querySelector('.slides');
+  var cols = Array.prototype.slice.call(root.children);
+  var h = 0, v = 0, f = -1;
+  function stackOf(i) { return Array.prototype.slice.call(cols[i].querySelectorAll(':scope > section')); }
+  function frags(sec) { return Array.prototype.slice.call(sec.querySelectorAll('.fragment')).sort(function (a, b) { return (+a.dataset.fragmentIndex || 0) - (+b.dataset.fragmentIndex || 0); }); }
+  function cur() { var st = stackOf(h); return st.length ? st[v] : cols[h]; }
+  function render() {
+    cols.forEach(function (c, i) { c.classList.toggle('present', i === h); stackOf(i).forEach(function (s, j) { s.classList.toggle('present', i === h && j === v); }); });
+    var sec = cur();
+    var bg = sec.getAttribute('data-background') || '#191919';
+    document.body.style.background = bg;
+    frags(sec).forEach(function (el, i) { el.classList.toggle('visible', i <= f); });
+    var total = cols.reduce(function (n, c, i) { return n + Math.max(1, stackOf(i).length); }, 0);
+    var idx = 0; for (var i = 0; i < h; i++) idx += Math.max(1, stackOf(i).length); idx += v;
+    document.querySelector('.progress').style.width = (idx / (total - 1) * 100) + '%';
+    document.querySelector('.slide-number').textContent = (idx + 1) + ' / ' + total;
+    location.hash = '#/' + h + (stackOf(h).length ? '/' + v : '');
+  }
+  function next() { var fr = frags(cur()); if (f < fr.length - 1) { f++; return render(); } f = -1; var st = stackOf(h); if (st.length && v < st.length - 1) v++; else if (h < cols.length - 1) { h++; v = 0; } render(); }
+  function prev() { if (f >= 0) { f--; return render(); } var st = stackOf(h); if (v > 0) v--; else if (h > 0) { h--; v = Math.max(0, stackOf(h).length - 1); } f = frags(cur()).length - 1; render(); }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>

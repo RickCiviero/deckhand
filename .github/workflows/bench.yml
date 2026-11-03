@@ -1,0 +1,35 @@
+name: Benchmark
+# The benchmark corpus (test-decks/decks/bench) run three times on every OS: any test that passes only on some repeats is a flake to chase.
+# The normal CI run already executes it once; this one runs weekly and on demand.
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  bench:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Benchmark x3 (Linux needs a virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx playwright test e2e/benchmark.spec.ts --repeat-each=3 --retries=0 --reporter=github,list
+      - name: Benchmark x3
+        if: runner.os != 'Linux'
+        run: npx playwright test e2e/benchmark.spec.ts --repeat-each=3 --retries=0 --reporter=github,list
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: bench-results-${{ matrix.os }}
+          path: test-results/

@@ -382,7 +382,7 @@ class Session {
   /** SEL-02: deepest object within the current slide under the pointer. */
   pickObject(hitIds: number[], slideId: number): number | null {
     for (const id of hitIds) {
-      if (id === slideId) return null;
+      if (id === slideId) continue; // the slide's own decoration (a ::before overlay) can be on top of its content: select through it
       const el = this.doc.byId(id);
       if (!el || !isObject(el)) continue;
       if (!this.isDescendant(id, slideId)) continue;
@@ -580,7 +580,13 @@ class Session {
   }
 
   // ---- helpers for commands -------------------------------------------------------------------------------------
-  slideRoot(): ElementInfo | undefined { const s = get(); return this.doc.byId(s.slides[s.slide]?.id ?? -1); }
+  /** Where new content for the current slide goes. An SVG slide (Marp) holds its HTML in a <section> inside <foreignObject>: HTML placed directly in the <svg> would not render. */
+  slideRoot(): ElementInfo | undefined {
+    const s = get();
+    const top = this.doc.byId(s.slides[s.slide]?.id ?? -1);
+    if (!top || top.tag !== 'svg') return top;
+    return this.doc.elements.find((e) => e.tag === 'section' && e.start >= top.start && e.end <= top.end) ?? top;
+  }
 }
 
 export const session = new Session();

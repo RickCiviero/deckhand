@@ -16,6 +16,8 @@
     "e2e": "npm run build && playwright test",
     "dist": "npm run build && npm run dist -w @deckhand/desktop",
     "gen:decks": "node scripts/gen-test-decks.mjs",
+    "gen:bench": "node scripts/gen-benchmark.mjs",
+    "bench": "npm run build && playwright test e2e/benchmark.spec.ts --repeat-each=3",
     "screenshot": "electron scripts/screenshot.cjs",
     "postinstall": "node scripts/ensure-electron.mjs"
   },

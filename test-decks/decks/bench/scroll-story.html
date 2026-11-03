@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scroll Story</title>
+<style>
+
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{margin:0;font-family:Georgia,serif;background:#0f1b24;color:#eef}
+header.bar{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(10,20,28,.85);z-index:5;font:600 16px/1 system-ui}
+header.bar nav a{color:#9cd;margin-left:18px;text-decoration:none;font-weight:400}
+#prog{position:fixed;top:52px;left:0;height:3px;width:0;background:#f7b32b;z-index:5}
+.chap{height:100vh;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.chap:nth-of-type(even){background:#16293a}.chap:nth-of-type(3n){background:#21304a}
+.inner{width:min(900px,80vw)}
+.chap h2{font-size:64px;margin:0 0 24px;color:#f7b32b}
+.chap p{font-size:30px;line-height:1.5}
+.rv{opacity:0;transform:translateY(40px);transition:opacity .7s,transform .7s}
+.rv.in{opacity:1;transform:none}
+.stats{display:flex;gap:32px}.stat{flex:1;background:#102030;border-radius:12px;padding:24px;text-align:center}
+.stat b{display:block;font-size:64px;color:#7fdbca}.stat span{font-size:20px;color:#9ab}
+.shot{width:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.chap::before{content:"";position:absolute;inset:-20%;background:radial-gradient(circle at 20% 30%,rgba(247,179,43,.12),transparent 40%);transform:translateY(var(--py,0px))}
+
+</style>
+</head>
+<body>
+<header class="bar"><span>Scroll Story</span><nav><a href="#c1">The Story</a><a href="#c2">The Problem</a><a href="#c3">The Idea</a><a href="#c4">The Numbers</a><a href="#c5">The Product</a></nav></header>
+<div id="prog"></div>
+<section class="chap" id="c1"><div class="inner"><h2 class="rv">The Story</h2><p class="rv">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></div></section>
+<section class="chap" id="c2"><div class="inner"><h2 class="rv">The Problem</h2><p class="rv">Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></div></section>
+<section class="chap" id="c3"><div class="inner"><h2 class="rv">The Idea</h2><p class="rv">Ut enim ad minim veniam, quis nostrud exercitation ullamco.</p></div></section>
+<section class="chap" id="c4"><div class="inner"><h2 class="rv">The Numbers</h2><div class="stats"><div class="stat rv"><b data-count="1200">0</b><span>customers</span></div><div class="stat rv"><b data-count="87">0</b><span>% retention</span></div><div class="stat rv"><b data-count="14">0</b><span>countries</span></div></div></div></section>
+<section class="chap" id="c5"><div class="inner"><h2 class="rv">The Product</h2><img class="shot rv" alt="screenshot" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDAwIiB2aWV3Qm94PSIwIDAgNzIwIDQwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMTM0ZTVlIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzFiMjgwIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSI1MDMuOTk5OTk5OTk5OTk5OTQiIGN5PSIxNDAiIHI9Ijg4IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4yNSkiLz48dGV4dCB4PSI1Ny42IiB5PSIzNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0OCIgZmlsbD0iI2ZmZiI+cHJvZHVjdDwvdGV4dD48L3N2Zz4="></div></section>
+<section class="chap" id="c6"><div class="inner"><h2 class="rv">The Team</h2><p class="rv">Curabitur pretium tincidunt lacus, nulla gravida orci a odio.</p></div></section>
+<section class="chap" id="c7"><div class="inner"><h2 class="rv">The Plan</h2><p class="rv">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></div></section>
+<section class="chap" id="c8"><div class="inner"><h2 class="rv">The Ask</h2><p class="rv">Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></div></section>
+<section class="chap" id="c9"><div class="inner"><h2 class="rv">Thank You</h2><p class="rv">Ut enim ad minim veniam, quis nostrud exercitation ullamco.</p></div></section>
+<script>
+
+(function () {
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      if (e.target.querySelector && e.target.querySelector('[data-count]')) count(e.target.parentNode);
+    });
+  }, { threshold: 0.3 });
+  Array.prototype.forEach.call(document.querySelectorAll('.rv'), function (el) { io.observe(el); });
+  var counted = false;
+  function count(scope) {
+    if (counted) return; counted = true;
+    Array.prototype.forEach.call(scope.querySelectorAll('[data-count]'), function (b) {
+      var to = +b.dataset.count, t0 = null;
+      function tick(t) { if (t0 === null) t0 = t; var k = Math.min(1, (t - t0) / 900); b.textContent = Math.round(to * k); if (k < 1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    });
+  }
+  addEventListener('scroll', function () {
+    var max = document.documentElement.scrollHeight - innerHeight;
+    document.getElementById('prog').style.width = (max > 0 ? scrollY / max * 100 : 0) + '%';
+    document.documentElement.style.setProperty('--py', (scrollY * -0.08) + 'px');
+  }, { passive: true });
+  document.addEventListener('keydown', function (e) {
+    var i = Math.round(scrollY / innerHeight);
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); scrollTo({ top: Math.min(8, i + 1) * innerHeight }); }
+    if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); scrollTo({ top: Math.max(0, i - 1) * innerHeight }); }
+  });
+})();
+</script>
+</body>
+</html>

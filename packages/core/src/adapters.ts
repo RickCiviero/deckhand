@@ -18,7 +18,7 @@ export interface Detection {
 }
 
 const classes = (e: ElementInfo): string[] => (getAttr(e, 'class') ?? '').split(/\s+/).filter(Boolean);
-const SLIDE_CLASS = /(^|[-_])(slide|page|step|frame|scene)s?($|[-_])/i;
+const SLIDE_CLASS = /(^|[-_])(slide|page|step|frame|scene|chapter|chap|screen|pane|fullpage)s?($|[-_])/i;
 const CHROME = /(nav|progress|counter|controls?|hint|pagination|dots|arrow|prev|next|button|btn)/i;
 
 function label(doc: SourceDoc, e: ElementInfo, i: number): string {
@@ -79,6 +79,15 @@ const sharesStepNumbers = (kids: ElementInfo[]): boolean => {
   return false;
 };
 
+/** ids like c1, c2, c3… (same prefix, consecutive numbers) are the numbering of a deck's slides. */
+const sequentialIds = (kids: ElementInfo[]): boolean => {
+  if (kids.length < 3) return false;
+  const parts = kids.map((k) => /^(\D*)(\d+)$/.exec(getAttr(k, 'id') ?? ''));
+  if (parts.some((m) => !m)) return false;
+  const prefix = parts[0]![1]!;
+  return parts.every((m, i) => m![1] === prefix && Number(m![2]) === Number(parts[0]![2]) + i);
+};
+
 function detectGeneric(doc: SourceDoc): Detection | null {
   type Cand = { parent: ElementInfo; kids: ElementInfo[]; score: number };
   const cands: Cand[] = [];
@@ -100,6 +109,7 @@ function detectGeneric(doc: SourceDoc): Detection | null {
       else if (kids.filter((k) => classes(k).some((c) => SLIDE_CLASS.test(c))).length >= 2) score += 2;
       if (['section', 'div', 'article'].includes(kids[0]!.tag)) score += 2;
       if (kids.every((k) => k.attrs.some((a) => /^data-(slide|index|step)/.test(a.name) || (a.name === 'id' && /slide|page|step/i.test(a.value))))) score += 2;
+      if (sequentialIds(kids)) score += 2;
       if (kids.some((k) => classes(k).some((c) => /^(active|current|present|visible|is-active)$/.test(c)))) score += 3;
       if (kids.every((k) => classes(k).some((c) => CHROME.test(c)))) score -= 5;
       if (kids.length >= 3) score += 1;

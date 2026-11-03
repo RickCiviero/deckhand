@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSS Only</title>
+<style>
+
+html,body{margin:0;height:100%;font-family:system-ui,Arial,sans-serif;background:#12202e;color:#f3f3f3}
+.nav{position:absolute;opacity:0;pointer-events:none}
+main{position:absolute;inset:0}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:0 12vw;opacity:0;transition:opacity .4s}
+.slide h1{font-size:6vw;margin:0 0 2vw;color:#7fdbca}.slide p{font-size:2.6vw;max-width:60vw;line-height:1.4}
+.slide ul{font-size:2.6vw}
+#s1:checked ~ main .p1,
+#s2:checked ~ main .p2,
+#s3:checked ~ main .p3,
+#s4:checked ~ main .p4,
+#s5:checked ~ main .p5,
+#s6:checked ~ main .p6,
+#s7:checked ~ main .p7{display:flex;opacity:1}
+.dots{position:fixed;left:0;right:0;bottom:3vh;display:flex;justify-content:center;gap:14px}
+.dot{width:16px;height:16px;border-radius:50%;background:#456;cursor:pointer}
+#s1:checked ~ .dots label[for=s1],#s2:checked ~ .dots label[for=s2],#s3:checked ~ .dots label[for=s3],#s4:checked ~ .dots label[for=s4],#s5:checked ~ .dots label[for=s5],#s6:checked ~ .dots label[for=s6],#s7:checked ~ .dots label[for=s7]{background:#7fdbca}
+.box{width:12vw;height:12vw;background:#f78c6c;border-radius:1vw;margin-top:2vw;transition:transform .8s}
+.p4 .box{transform:rotate(0)}.p4:hover .box{transform:rotate(180deg) scale(1.2)}
+
+</style>
+</head>
+<body>
+<input type="radio" name="s" id="s1" class="nav" checked>
+<input type="radio" name="s" id="s2" class="nav">
+<input type="radio" name="s" id="s3" class="nav">
+<input type="radio" name="s" id="s4" class="nav">
+<input type="radio" name="s" id="s5" class="nav">
+<input type="radio" name="s" id="s6" class="nav">
+<input type="radio" name="s" id="s7" class="nav">
+<main>
+<section class="slide p1"><h1>CSS Only</h1><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></section>
+<section class="slide p2"><h1>How it works</h1><p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></section>
+<section class="slide p3"><h1>Selectors</h1><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco.</p></section>
+<section class="slide p4"><h1>Transitions</h1><p>Duis aute irure dolor in reprehenderit in voluptate velit esse.</p><div class="box"></div></section>
+<section class="slide p5"><h1>Limits</h1><p>Excepteur sint occaecat cupidatat non proident, sunt in culpa.</p><ul><li>No state</li><li>No timing</li><li>No logic</li></ul></section>
+<section class="slide p6"><h1>Accessibility</h1><p>Curabitur pretium tincidunt lacus, nulla gravida orci a odio.</p></section>
+<section class="slide p7"><h1>Wrap up</h1><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></section>
+</main>
+<div class="dots"><label for="s1" class="dot" title="CSS Only"></label><label for="s2" class="dot" title="How it works"></label><label for="s3" class="dot" title="Selectors"></label><label for="s4" class="dot" title="Transitions"></label><label for="s5" class="dot" title="Limits"></label><label for="s6" class="dot" title="Accessibility"></label><label for="s7" class="dot" title="Wrap up"></label></div>
+</body>
+</html>

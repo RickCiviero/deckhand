@@ -339,3 +339,16 @@ describe('interactions the deck script listens for', () => {
     expect(found.some((i) => i.event === 'click' && i.target === '#replay')).toBe(true);
   });
 });
+
+describe('benchmark corpus (test-decks/decks/bench)', () => {
+  const dir = join(__dirname, '../../../test-decks/decks/bench');
+  const manifest = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')) as { file: string; slides: number }[];
+  for (const m of manifest) {
+    it(`${m.file}: ${m.slides} slides found, a no-op save is byte-identical`, () => {
+      const bytes = new Uint8Array(readFileSync(join(dir, '..', m.file)));
+      const doc = openBytes(bytes);
+      expect(detectDeck(doc).slides).toHaveLength(m.slides);
+      expect(eq(saveBytes(doc), bytes)).toBe(true);
+    });
+  }
+});

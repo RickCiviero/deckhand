@@ -165,6 +165,17 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
     }
     if (stateToken) {
       for (const e of els) if (e) e.classList.toggle(stateToken, e === target);
+      // groups of slides (reveal.js vertical stacks) carry the state class too: the stack of the shown slide must show
+      if (groupAnc === null) {
+        groupAnc = [];
+        for (const e of els) {
+          for (let a = e?.parentElement ?? null; a && a !== doc.body && a !== doc.documentElement; a = a.parentElement) {
+            const peers = a.parentElement ? (N.from(a.parentElement.children) as Element[]).filter((x) => x.tagName === a!.tagName) : [];
+            if (peers.length >= 2 && peers.some((x) => x.classList.contains(stateToken!)) && !groupAnc.includes(a)) groupAnc.push(a);
+          }
+        }
+      }
+      for (const g of groupAnc) g.classList.toggle(stateToken, g.contains(target));
     } else {
       // no class mechanism: if slides are hidden via display/visibility/opacity, force the target visible and others hidden
       const hidden = els.filter((e) => e && e !== target && N.getComputedStyle(e).display === 'none').length;
@@ -173,8 +184,40 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
         if (N.getComputedStyle(target).display === 'none') target.style.display = 'block';
       } else {
         target.scrollIntoView({ block: 'start', inline: 'start' });
+        pinScroll(target);
       }
     }
+    bringIntoView(target);
+  };
+  // Free-form decks (impress.js, carousels) move a camera or a track to show a slide; the editor has no camera, so a slide that is
+  // off screen is brought in by shifting its container (live view only; restored on the next call).
+  // scroll-snap containers can snap back to the slide that was snapped before right after a programmatic scroll: hold the position for half a second
+  let pin = 0;
+  const pinScroll = (target: HTMLElement): void => {
+    const mine = ++pin;
+    for (const ms of [60, 200, 500]) {
+      N.setTimeout(() => {
+        if (pin !== mine) return;
+        const r = N.gbcr.call(target) as DOMRect;
+        if (Math.abs(r.top) > 2 || Math.abs(r.left) > 2) target.scrollIntoView({ block: 'start', inline: 'start' });
+      }, ms);
+    }
+  };
+  let groupAnc: Element[] | null = null;
+  let shifted: { host: HTMLElement; transform: string; translate: string } | null = null;
+  const inView = (e: Element): boolean => {
+    const r = N.gbcr.call(e) as DOMRect;
+    return r.width > 0 && r.height > 0 && r.right > 1 && r.left < win.innerWidth - 1 && r.bottom > 1 && r.top < win.innerHeight - 1;
+  };
+  const bringIntoView = (target: HTMLElement): void => {
+    if (shifted) { shifted.host.style.transform = shifted.transform; shifted.host.style.translate = shifted.translate; shifted = null; }
+    const host = target.parentElement;
+    if (!host || host === doc.body || N.getComputedStyle(target).display === 'none' || inView(target)) return;
+    shifted = { host, transform: host.style.transform, translate: host.style.translate };
+    host.style.transform = 'none';
+    host.style.translate = '';
+    const r = N.gbcr.call(target) as DOMRect;
+    host.style.translate = `${win.innerWidth / 2 - (r.left + r.width / 2)}px ${win.innerHeight / 2 - (r.top + r.height / 2)}px`;
   };
 
   // --- text editing ---------------------------------------------------------------------------------
@@ -454,7 +497,7 @@ a{pointer-events:auto}html{scroll-behavior:auto!important}[data-deckhand-editing
         break;
       }
       case 'slides': {
-        if (Array.isArray(m.ids) && m.ids.length < 5000) { slideIds = m.ids.filter(Number.isInteger); stateToken = null; }
+        if (Array.isArray(m.ids) && m.ids.length < 5000) { slideIds = m.ids.filter(Number.isInteger); stateToken = null; groupAnc = null; }
         break;
       }
       case 'frames-start': {

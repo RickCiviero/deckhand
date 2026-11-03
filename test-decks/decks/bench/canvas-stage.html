@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas Stage</title>
+<style>
+
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Segoe UI",Arial,sans-serif}
+#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
+.slide{position:absolute;inset:0;display:none;background:#fff;overflow:hidden}
+.slide.is-active{display:block}
+.t{position:absolute;margin:0;color:#14213d}
+.h{left:80px;top:60px;font-size:60px;font-weight:700}
+.p{left:80px;top:170px;width:600px;font-size:28px;line-height:1.4}
+.card{position:absolute;border-radius:18px;background:#fca311;color:#14213d;padding:24px;box-sizing:border-box;font-size:26px}
+.spin{position:absolute;left:900px;top:300px;width:90px;height:90px;border:10px solid #e5e5e5;border-top-color:#fca311;border-radius:50%;animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.marquee{position:absolute;left:0;right:0;bottom:30px;height:50px;overflow:hidden;background:#14213d;color:#fff;font-size:26px;line-height:50px}
+.marquee span{display:inline-block;white-space:nowrap;padding-left:100%;animation:mq 14s linear infinite}
+@keyframes mq{to{transform:translateX(-100%)}}
+.pulse{position:absolute;left:760px;top:120px;width:240px;height:240px;border-radius:50%;background:#fca311;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.25);opacity:.6}}
+.counter{position:absolute;left:80px;top:300px;font-size:120px;font-weight:700;color:#14213d}
+#cv{position:absolute;left:640px;top:120px;border-radius:12px;background:#0b132b}
+.dark{background:#0b132b}.dark .t{color:#fff}
+.nav{position:absolute;left:0;right:0;bottom:6px;text-align:center;color:#999;font-size:14px;z-index:3}
+
+</style>
+</head>
+<body>
+<div id="stage">
+<section class="slide is-active" data-n="1"><h1 class="t h">Canvas Stage</h1><p class="t p">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p><div class="pulse"></div><div class="spin"></div><div class="marquee"><span>Breaking: animated slides are still slides — Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</span></div></section>
+<section class="slide dark" data-n="2"><h2 class="t h">Particles (canvas)</h2><canvas id="cv" width="560" height="360"></canvas><p class="t p">Ut enim ad minim veniam, quis nostrud exercitation ullamco.</p></section>
+<section class="slide" data-n="3"><h2 class="t h">SVG animation</h2><svg class="t" style="left:80px;top:200px" width="520" height="320" viewBox="0 0 520 320"><circle cx="80" cy="160" r="30" fill="#fca311"><animate attributeName="cx" values="80;440;80" dur="4s" repeatCount="indefinite"/></circle><rect x="40" y="260" width="440" height="8" rx="4" fill="#ccc"/><path d="M40 60 Q 260 0 480 60" stroke="#14213d" stroke-width="6" fill="none" stroke-dasharray="500" stroke-dashoffset="500"><animate attributeName="stroke-dashoffset" from="500" to="0" dur="3s" repeatCount="indefinite"/></path></svg><p class="t p" style="left:700px;top:240px;width:480px">Duis aute irure dolor in reprehenderit in voluptate velit esse.</p></section>
+<section class="slide" data-n="4"><h2 class="t h">Counter</h2><div class="counter" id="ctr">0</div><p class="t p" style="top:480px">Updated by requestAnimationFrame</p></section>
+<section class="slide" data-n="5"><h2 class="t h">Cards</h2><div class="card" style="left:80px;top:220px;width:340px;height:300px"><b>Card 1</b><br>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div><div class="card" style="left:460px;top:220px;width:340px;height:300px"><b>Card 2</b><br>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div><div class="card" style="left:840px;top:220px;width:340px;height:300px"><b>Card 3</b><br>Ut enim ad minim veniam, quis nostrud exercitation ullamco.</div></section>
+<section class="slide" data-n="6"><h2 class="t h">Media</h2><video controls width="480" height="270" poster="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0ODAiIGhlaWdodD0iMjcwIiB2aWV3Qm94PSIwIDAgNDgwIDI3MCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMzU1YzdkIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjYzA2Yzg0Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjQ4MCIgaGVpZ2h0PSIyNzAiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSIzMzYiIGN5PSI5NC41IiByPSI1OS40IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4yNSkiLz48dGV4dCB4PSIzOC40IiB5PSIyNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMi40IiBmaWxsPSIjZmZmIj52aWRlbyBwb3N0ZXI8L3RleHQ+PC9zdmc+" style="position:absolute;left:80px;top:180px"></video><audio controls style="position:absolute;left:640px;top:200px"></audio><img alt="pic" style="position:absolute;left:640px;top:300px;width:480px;border-radius:12px" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0ODAiIGhlaWdodD0iMjcwIiB2aWV3Qm94PSIwIDAgNDgwIDI3MCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZjhiMTk1Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNmM1YjdiIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjQ4MCIgaGVpZ2h0PSIyNzAiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSIzMzYiIGN5PSI5NC41IiByPSI1OS40IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4yNSkiLz48dGV4dCB4PSIzOC40IiB5PSIyNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMi40IiBmaWxsPSIjZmZmIj5waWM8L3RleHQ+PC9zdmc+"></section>
+<section class="slide" data-n="7"><h2 class="t h">Layered shapes</h2><div class="card" style="left:200px;top:200px;width:400px;height:300px;transform:rotate(-6deg);background:#14213d;color:#fff">Back</div><div class="card" style="left:360px;top:260px;width:400px;height:300px;transform:rotate(4deg);opacity:.92">Front</div><div class="card" style="left:760px;top:180px;width:320px;height:200px;border-radius:50%;background:#e5e5e5;text-align:center;padding-top:70px">Oval</div></section>
+<section class="slide dark" data-n="8"><h1 class="t h" style="top:260px;left:0;right:0;text-align:center">Thank you</h1></section>
+</div>
+<div class="nav">Arrow keys</div>
+<script>
+
+(function () {
+  var stage = document.getElementById('stage');
+  var all = Array.prototype.slice.call(stage.querySelectorAll('.slide'));
+  var cur = 0;
+  function fit() { var k = Math.min(innerWidth / 1280, innerHeight / 720); stage.style.transform = 'scale(' + k + ')'; stage.style.left = ((innerWidth - 1280 * k) / 2) + 'px'; stage.style.top = ((innerHeight - 720 * k) / 2) + 'px'; }
+  addEventListener('resize', fit); fit();
+  function go(i) { cur = Math.max(0, Math.min(all.length - 1, i)); all.forEach(function (s, k) { s.classList.toggle('is-active', k === cur); }); }
+  document.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight' || e.key === ' ') go(cur + 1); else if (e.key === 'ArrowLeft') go(cur - 1); });
+  var cv = document.getElementById('cv'), cx = cv.getContext('2d'), ps = [];
+  for (var i = 0; i < 40; i++) ps.push({ x: Math.random() * 560, y: Math.random() * 360, vx: Math.random() * 2 - 1, vy: Math.random() * 2 - 1 });
+  var ctr = document.getElementById('ctr'), n = 0;
+  (function loop() {
+    cx.fillStyle = '#0b132b'; cx.fillRect(0, 0, 560, 360); cx.fillStyle = '#fca311';
+    ps.forEach(function (p) { p.x = (p.x + p.vx + 560) % 560; p.y = (p.y + p.vy + 360) % 360; cx.beginPath(); cx.arc(p.x, p.y, 4, 0, 6.3); cx.fill(); });
+    n++; if (n % 6 === 0) ctr.textContent = String(n / 6);
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>
