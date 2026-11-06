@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt, expectEditing } from './helpers';
+import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt, expectEditing, typeOver } from './helpers';
 
 let c: Ctx;
 // app.close() would block on the "Save changes?" dialog for dirty documents, so force-exit
@@ -132,8 +132,7 @@ test('text editing: double-click, replace text, Esc commits; only the text chang
   await ready(c.page);
   const t = await centreOf(c.page, '.slide.active .title');
   await editAt(c.page, t.x, t.y);
-  await c.page.keyboard.press(`${MOD}+a`);
-  await c.page.keyboard.type('Annual Review');
+  await typeOver(c.page, 'Annual Review');
   await c.page.keyboard.press('Escape');
   await expect(c.page.locator('.outline.edit')).toHaveCount(0);
   await save(c.page);
@@ -199,8 +198,7 @@ test('insert a text box: Free div inside the current slide', async () => {
   await c.page.getByTestId('tab-insert').click();
   await c.page.getByTestId('cmd-textbox').click();
   await expectEditing(c.page);
-  await c.page.keyboard.press(`${MOD}+a`);
-  await c.page.keyboard.type('Hello box');
+  await typeOver(c.page, 'Hello box');
   await c.page.keyboard.press('Escape');
   await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes'); // the Esc commit is asynchronous: saving before it lands would save nothing
   await save(c.page);
@@ -222,8 +220,7 @@ test('windows-1252 + CRLF deck: edit keeps encoding and line endings', async () 
   await expect(c.page.locator('[data-testid=slide-counter]')).toHaveText('Slide 1 of 2');
   const t = await centreOf(c.page, 'section.slide h1');
   await editAt(c.page, t.x, t.y);
-  await c.page.keyboard.press(`${MOD}+a`);
-  await c.page.keyboard.type('Crème brûlée 日本');
+  await typeOver(c.page, 'Crème brûlée 日本');
   await c.page.keyboard.press('Escape');
   await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes'); // the Esc commit is asynchronous: saving before it lands would save nothing
   await save(c.page);
@@ -612,8 +609,7 @@ test('Insert > Table adds a Free table; a cell can be edited; one Undo removes e
   await ready(c.page);
   const t = await centreOf(c.page, '.slide.active table td');
   await editAt(c.page, t.x, t.y);
-  await c.page.keyboard.press(`${MOD}+a`);
-  await c.page.keyboard.type('Q3');
+  await typeOver(c.page, 'Q3');
   await c.page.keyboard.press('Escape');
   await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
   await save(c.page);

@@ -133,3 +133,14 @@ export async function expectEditing(page: Page, timeout = 8000): Promise<void> {
 }
 
 export const norm =(s: string): string => s.replace(/\r\n/g, '\n');
+
+/** Replaces the text being edited. Keys sent right after edit mode starts can be lost on a loaded runner, so check what landed and retry (select-all makes a retry idempotent). */
+export async function typeOver(page: Page, text: string): Promise<void> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await page.keyboard.press(`${MOD}+a`);
+    await page.keyboard.type(text);
+    const got = await deckFrame(page).evaluate(() => (document.activeElement as HTMLElement | null)?.innerText ?? '').catch(() => '');
+    if (got.replace(/\s+/g, ' ').trim() === text.replace(/\s+/g, ' ').trim()) return;
+    await page.waitForTimeout(500);
+  }
+}

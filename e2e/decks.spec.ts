@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt } from './helpers';
+import { centreOf, clickObj, deckFrame, DECKS, dragObj, launch, ready, save, type Ctx, MOD, editAt, typeOver } from './helpers';
 
 let c: Ctx;
 test.afterEach(async () => { await c?.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined); });
@@ -61,8 +61,7 @@ test('reveal-style deck: vertical stacks are separate slides, hidden slide is di
   await expect(c.page.locator('[data-testid=path]')).toHaveText('');
   const t = await centreOf(c.page, '.slides > section:first-child h1');
   await editAt(c.page, t.x, t.y);
-  await c.page.keyboard.press(`${MOD}+a`);
-  await c.page.keyboard.type('Hello again');
+  await typeOver(c.page, 'Hello again');
   await c.page.keyboard.press('Escape');
   await save(c.page);
   expect(c.text()).toBe(original('reveal-style.html').toString('latin1').replace('>Hello reveal<', '>Hello again<'));
@@ -75,8 +74,7 @@ test('malformed HTML opens and is edited without being "fixed"', async () => {
   await c.page.waitForTimeout(800);
   const t = await centreOf(c.page, '.slide:nth-of-type(2) h1');
   await editAt(c.page, t.x, t.y);
-  await c.page.keyboard.press(`${MOD}+a`);
-  await c.page.keyboard.type('Second!');
+  await typeOver(c.page, 'Second!');
   await c.page.keyboard.press('Escape');
   await save(c.page);
   expect(c.text()).toBe(original('malformed.html').toString('latin1').replace('<h1>Second</h1>', '<h1>Second!</h1>'));
@@ -87,8 +85,7 @@ test('UTF-8 BOM deck: BOM, mixed indentation, comments and odd quoting survive a
   await ready(c.page);
   const t = await centreOf(c.page, 'section.slide h1');
   await editAt(c.page, t.x, t.y);
-  await c.page.keyboard.press(`${MOD}+a`);
-  await c.page.keyboard.type('Nuevo título 🎉');
+  await typeOver(c.page, 'Nuevo título 🎉');
   await c.page.keyboard.press('Escape');
   await save(c.page);
   const buf = c.read();

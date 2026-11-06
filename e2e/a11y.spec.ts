@@ -19,7 +19,7 @@ async function audit(page: Page, where: string): Promise<void> {
     return r.violations;
   }) as Violation[];
   const bad = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-  expect(bad.map((v) => `${v.id}: ${v.help} — ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`), `accessibility problems in ${where}`).toEqual([]);
+  expect(bad.map((v) => `${v.id}: ${v.help} — ${v.nodes.slice(0, 3).map((n) => n.target.join(' ') + ' ' + (n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 200)).join(' | ')}`), `accessibility problems in ${where}`).toEqual([]);
 }
 
 test('welcome screen, tour and Help have no serious accessibility problems', async () => {
@@ -35,9 +35,9 @@ test('welcome screen, tour and Help have no serious accessibility problems', asy
   await audit(c.page, 'Options');
 });
 
-test('the editor with a deck: every tab and pane', async () => {
+for (const theme of ['light', 'dark'] as const) test(`the editor with a deck, ${theme} theme: every tab and pane`, async () => {
   c = await launch('bench/dashboard.html');
-  await c.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(1100, 640));
+  await c.app.evaluate(({ BrowserWindow, nativeTheme }, th) => { nativeTheme.themeSource = th; BrowserWindow.getAllWindows()[0]!.setSize(1100, 640); }, theme);
   await ready(c.page);
   await audit(c.page, 'Home');
   for (const t of ['insert', 'design', 'show', 'view']) { await c.page.getByTestId(`tab-${t}`).click(); await audit(c.page, `${t} tab`); }

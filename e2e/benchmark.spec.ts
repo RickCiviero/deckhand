@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { PDFDocument } from 'pdf-lib';
-import { DECKS, MOD, centreOf, clickObj, deckFrame, dragObj, editAt, launch, ready, save, type Ctx } from './helpers';
+import { DECKS, MOD, centreOf, clickObj, deckFrame, dragObj, editAt, typeOver, launch, ready, save, type Ctx } from './helpers';
 
 interface Entry {
   file: string; slides: number; slideSelector: string; exclusive: boolean; navKey: string | null; navProbe?: string; navPresses?: number; navWait?: number;
@@ -150,8 +150,7 @@ for (const d of decks) {
       await gotoSlide(d, d.editSlide ?? 0);
       const t = await centreOf(c.page, d.editText);
       await editAt(c.page, t.x, t.y);
-      await c.page.keyboard.press(`${MOD}+a`);
-      await c.page.keyboard.type('BENCH EDIT');
+      await typeOver(c.page, 'BENCH EDIT');
       await c.page.keyboard.press('Escape');
       await c.page.waitForTimeout(500);
       await save(c.page);
