@@ -1,5 +1,5 @@
 /** User-level actions shared by ribbon, shortcuts and context menu. */
-import { applyToSimilarCommand, isObjectTag, groupCommand, groupProblem, isGroup, ungroupCommand, removeAttrPatch, PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, patchCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
+import { applyToSimilarCommand, isObjectTag, groupCommand, groupProblem, isGroup, ungroupCommand, removeAttrPatch, PAINTABLE, isLocked, isSafeCssProp, isSafeCssValue, styleDeclarations, newSlideCommand, newSectionCommand, deleteElementCommand, duplicateElementCommand, getAttr, reorderCommand, setAttrPatch, patchCommand, styleMultiCommand, type ElementInfo, type Patch } from '@deckhand/core';
 import { detectUnitMode, distributeShifts, moveEdit } from './geometry';
 import { session, useStore } from './session';
 import { ai, useAi } from './ai';
@@ -214,6 +214,24 @@ export function newSlide(from: number | 'blank'): void {
   const idx = st().slide;
   session.exec(newSlideCommand(from, el.id, el.id));
   session.goTo(idx + 1);
+}
+
+export const isWebsite = (): boolean => st().detection?.adapter === 'website';
+
+/** New Section gallery (website mode): a ready-made block after the current section. */
+export function newSection(kindId: string): void {
+  const el = slideElement();
+  if (!el) return;
+  const idx = st().slide;
+  session.exec(newSectionCommand(kindId, el.id, el.id));
+  session.goTo(idx + 1);
+}
+
+/** Preview width of a web page (desktop, tablet, phone): media queries react because the live view really is that wide. */
+export const VIEWPORTS = [{ id: 'desktop', name: 'Desktop', w: 1280 }, { id: 'tablet', name: 'Tablet', w: 768 }, { id: 'mobile', name: 'Phone', w: 390 }] as const;
+export function setViewportWidth(w: number): void {
+  useStore.setState((x) => ({ viewport: { ...x.viewport, w }, fit: true }));
+  void session.reload();
 }
 
 /** Hide Slide (SLD-02): only where the format has a hide marker, which is reveal.js `data-visibility="hidden"`. */

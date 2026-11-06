@@ -103,3 +103,7 @@ Known limits of the Code view: files over 2 MB of source are refused (no folding
 Find and Replace limits: no regular expressions, no Replace Fonts, searches slide text only (not notes or attributes).
 
 Updates (PLT-06, notify only): done. The app asks GitHub for the newest release once per start (after 4 s), shows a message bar, and opens the release page after confirmation. No automatic download or install: that needs signed builds on macOS and a tested updater, and is not started.
+
+### Web pages (website mode)
+A page with landmarks (header, nav, main/section, footer) and no solid slide pattern is detected as `website`: its top-level blocks are listed as Sections. New Section gallery (Hero, Three features, Text and picture, Call to action, Footer: inline styles only), Duplicate/Delete Section, View > Desktop/Tablet/Phone width (the live view really is 1280/768/390 px wide, so media queries react), Format > Page layout (Stack/Row/Column/Grid, gap, padding, max width centred, align, spread). Section thumbnails are not drawn (the whole page would repeat). Not done: per-breakpoint styles (edits are inline, so they apply at every width), sticky/fixed headers, anchor-link picker, SEO/meta panel.
+Skin replaced: flat hairline-divided panels on warm paper neutrals, one marine accent, underline tabs, no gradients.

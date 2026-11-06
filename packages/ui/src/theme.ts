@@ -1,4 +1,4 @@
-/** Deckhand's look: quiet neutrals, one soft indigo accent, rounded corners, low contrast between surfaces. */
+/** Deckhand's look: warm paper neutrals, one marine accent, tight corners, hairline separation. */
 import { createDarkTheme, createLightTheme, type BrandVariants, type Theme } from '@fluentui/react-components';
 
 const hsl = (h: number, s: number, l: number): string => {
@@ -10,23 +10,23 @@ const hsl = (h: number, s: number, l: number): string => {
   };
   return `#${f(0)}${f(8)}${f(4)}`;
 };
-const L = [8, 12, 17, 22, 28, 34, 40, 47, 53, 58, 64, 70, 78, 86, 93, 97];
-const brand = Object.fromEntries(L.map((l, i) => [(i + 1) * 10, hsl(233, 52, l)])) as unknown as BrandVariants;
+const L = [6, 10, 14, 18, 22, 26, 30, 33, 38, 43, 50, 58, 68, 80, 90, 96];
+const brand = Object.fromEntries(L.map((l, i) => [(i + 1) * 10, hsl(190, 78, l)])) as unknown as BrandVariants;
 
-const shape = { borderRadiusSmall: '6px', borderRadiusMedium: '8px', borderRadiusLarge: '12px', borderRadiusXLarge: '16px' };
+const shape = { borderRadiusSmall: '3px', borderRadiusMedium: '4px', borderRadiusLarge: '6px', borderRadiusXLarge: '8px' };
 
 export const lightTheme: Theme = {
   ...createLightTheme(brand), ...shape,
-  colorNeutralBackground1: '#ffffff', colorNeutralBackground2: '#f6f7fa', colorNeutralBackground3: '#eff1f6',
-  colorNeutralForeground1: '#2b3240', colorNeutralForeground2: '#4a5365', colorNeutralForeground3: '#5d6678',
-  colorNeutralStroke1: '#dde1e9', colorNeutralStroke2: '#e7eaf0', colorNeutralStroke3: '#eef0f5',
-  colorSubtleBackgroundHover: '#eef0fa', colorSubtleBackgroundPressed: '#e3e6f6',
+  colorNeutralBackground1: '#fbfaf8', colorNeutralBackground2: '#f4f2ee', colorNeutralBackground3: '#f0eee9',
+  colorNeutralForeground1: '#1d2124', colorNeutralForeground2: '#3b4147', colorNeutralForeground3: '#5a6068',
+  colorNeutralStroke1: '#cfcac1', colorNeutralStroke2: '#dcd8d0', colorNeutralStroke3: '#e6e2db',
+  colorSubtleBackgroundHover: '#ebe8e1', colorSubtleBackgroundPressed: '#e1ded6',
 };
 
 export const darkTheme: Theme = {
   ...createDarkTheme(brand), ...shape,
-  colorNeutralBackground1: '#1f232b', colorNeutralBackground2: '#1a1d24', colorNeutralBackground3: '#15181e',
-  colorNeutralForeground1: '#dde1ea', colorNeutralForeground2: '#b7bdca', colorNeutralForeground3: '#a0a8ba',
-  colorNeutralStroke1: '#323846', colorNeutralStroke2: '#2a303c', colorNeutralStroke3: '#252a35',
-  colorSubtleBackgroundHover: '#2a2f3d', colorSubtleBackgroundPressed: '#323849',
+  colorNeutralBackground1: '#181b1e', colorNeutralBackground2: '#121416', colorNeutralBackground3: '#0e1011',
+  colorNeutralForeground1: '#e4e6e3', colorNeutralForeground2: '#c3c8c9', colorNeutralForeground3: '#a2a9ae',
+  colorNeutralStroke1: '#3a4146', colorNeutralStroke2: '#2c3236', colorNeutralStroke3: '#242a2e',
+  colorSubtleBackgroundHover: '#242a2e', colorSubtleBackgroundPressed: '#2c3338',
 };

@@ -238,3 +238,26 @@ test('page mode: a page without slides is as tall as the page, fits its width, a
   expect(out).not.toBe(original.toString('utf8'));
   void MOD;
 });
+
+test('website mode: sections are listed, a ready-made section is added, the phone width applies, one Undo restores every byte', async () => {
+  c = await launch('website.html');
+  await ready(c.page);
+  const original = fs.readFileSync(c.file);
+  await expect(c.page.getByTestId('adapter-chip')).toHaveText('website');
+  await expect(c.page.locator('[data-testid=slide-pane] .thumb')).toHaveCount(5);
+  await c.page.getByTestId('tab-view').click();
+  await c.page.getByTestId('vp-mobile').click();
+  await ready(c.page);
+  await expect.poll(async () => deckFrame(c.page).evaluate(() => innerWidth)).toBe(390);
+  await c.page.getByTestId('vp-desktop').click();
+  await ready(c.page);
+  await c.page.getByTestId('tab-home').click();
+  await c.page.getByTestId('cmd-new-slide').click();
+  await c.page.getByTestId('section-item').first().click();
+  await expect(c.page.locator('[data-testid=slide-pane] .thumb')).toHaveCount(6);
+  await expect(c.page.getByTestId('savestate')).toHaveText('Unsaved changes');
+  await c.page.getByTestId('qat-undo').click();
+  await expect(c.page.locator('[data-testid=slide-pane] .thumb')).toHaveCount(5);
+  await save(c.page).catch(() => undefined);
+  expect(fs.readFileSync(c.file).equals(original)).toBe(true);
+});

@@ -140,6 +140,56 @@ w(
 // 7. plain page
 w('plain-page.html', '<!doctype html><html><head><meta charset="utf-8"><title>Plain</title></head><body><h1>Just a page</h1><p>No slides here.</p></body></html>\n');
 
+// 7b. landing page: header, hero, features, call to action, footer
+w(
+  'website.html',
+  `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Harbor Coffee</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root { --brand: #7a3e1d; --ink: #1f1a17; --paper: #faf6f1; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Georgia, serif; color: var(--ink); background: var(--paper); }
+header { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; }
+header a { margin-left: 24px; color: var(--ink); text-decoration: none; }
+.hero { padding: 96px 48px; text-align: center; background: #efe3d3; }
+.hero h1 { font-size: 56px; margin: 0 0 16px; }
+.features { display: flex; gap: 24px; padding: 64px 48px; }
+.features article { flex: 1; padding: 24px; background: #fff; }
+.cta { padding: 64px 48px; text-align: center; background: var(--brand); color: #fff; }
+footer { padding: 32px 48px; font-size: 14px; }
+@media (max-width: 700px) { .features { flex-direction: column; } header { flex-direction: column; } }
+</style>
+</head>
+<body>
+<header>
+  <strong>Harbor Coffee</strong>
+  <nav><a href="#menu">Menu</a><a href="#visit">Visit</a></nav>
+</header>
+<main>
+  <section class="hero">
+    <h1>Coffee roasted by the sea</h1>
+    <p>Small batches, every morning.</p>
+  </section>
+  <section class="features" id="menu">
+    <article><h2>Espresso</h2><p>Dark and sweet.</p></article>
+    <article><h2>Filter</h2><p>Bright and clean.</p></article>
+    <article><h2>Cold brew</h2><p>Slow and smooth.</p></article>
+  </section>
+  <section class="cta" id="visit">
+    <h2>Come by</h2>
+    <p>12 Dock Street, open 7 to 5.</p>
+  </section>
+</main>
+<footer><p>&copy; 2026 Harbor Coffee</p></footer>
+</body>
+</html>
+`,
+);
+
 // 8. base64 + local image
 const px = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 w(

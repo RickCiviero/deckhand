@@ -21,7 +21,7 @@ export async function launch(deck: string | null, exeArg?: string, userDataDir?:
   if (deck) args.push(file);
   const env = { ...process.env, DECKHAND_NO_BROWSER: '1', DECKHAND_UPDATE_URL: process.env['DECKHAND_UPDATE_URL'] ?? 'http://127.0.0.1:9/' } as Record<string, string>; // Preview in Browser must not start a real browser during tests
   const app = await electron.launch(exe ? { executablePath: exe, args, env } : { args, env });
-  const page = await app.firstWindow();
+  const page = app.windows()[0] ?? await app.waitForEvent('window', { timeout: 75_000 }); // a loaded macOS runner can take over 30 s to show the first window
   pageLog.length = 0;
   page.on('console', (m) => pageLog.push(`${m.type()}: ${m.text().slice(0, 200)}`));
   page.on('pageerror', (e) => pageLog.push(`pageerror: ${e.message.slice(0, 200)}`));
@@ -54,13 +54,25 @@ export async function ready(page: Page): Promise<void> {
 /** Centre of an element of the deck, in page coordinates (accounts for canvas zoom). */
 export async function centreOf(page: Page, selector: string): Promise<{ x: number; y: number; w: number; h: number; z: number }> {
   // the live view is rebuilt after structural edits (rename, hide…), so the frame can be briefly missing or navigating
-  let r!: { x: number; y: number; w: number; h: number; vw: number };
-  await expect(async () => {
-    r = await deckFrame(page).evaluate((sel) => { const b = document.querySelector(sel)!.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height, vw: innerWidth }; }, selector);
-  }).toPass({ timeout: 15000 });
-  const ov = (await page.locator('[data-testid=overlay]').boundingBox())!;
-  const z = ov.width / r.vw;
-  return { x: ov.x + (r.x + r.w / 2) * z, y: ov.y + (r.y + r.h / 2) * z, w: r.w * z, h: r.h * z, z };
+  const measure = async () => {
+    let r!: { x: number; y: number; w: number; h: number; vw: number };
+    await expect(async () => {
+      r = await deckFrame(page).evaluate((sel) => { const b = document.querySelector(sel)!.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height, vw: innerWidth }; }, selector);
+    }).toPass({ timeout: 15000 });
+    const ov = (await page.locator('[data-testid=overlay]').boundingBox())!;
+    const z = ov.width / r.vw;
+    return { x: ov.x + (r.x + r.w / 2) * z, y: ov.y + (r.y + r.h / 2) * z, w: r.w * z, h: r.h * z, z };
+  };
+  // macOS runners resize the window a beat after setSize: wait until two readings agree, or the click lands on a neighbour (header cell instead of body cell)
+  let prev = await measure();
+  for (let i = 0; i < 10; i++) {
+    await page.waitForTimeout(150);
+    const cur = await measure();
+    const same = Math.abs(cur.x - prev.x) < 1 && Math.abs(cur.y - prev.y) < 1 && Math.abs(cur.z - prev.z) < 0.001;
+    prev = cur;
+    if (same) break;
+  }
+  return prev;
 }
 
 /** Last console lines and page errors of the editor window, for failure messages. */

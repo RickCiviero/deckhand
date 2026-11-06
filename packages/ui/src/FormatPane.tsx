@@ -164,6 +164,39 @@ export function FormatPane(): JSX.Element {
             </div>
             <button className="small" onClick={() => setAll('Reset position', { translate: null })}>Reset position</button>
           </section>
+          {s.detection?.adapter === 'website' && (() => {
+            const st = session.styleOf(r.id);
+            const px = (p: string): number | null => { const m = /^(-?[\d.]+)px$/.exec(getStyleProp(st, p) ?? ''); return m ? Number(m[1]) : null; };
+            const disp = getStyleProp(st, 'display') ?? '';
+            const dir = getStyleProp(st, 'flex-direction') ?? 'row';
+            const mode = disp === 'flex' ? (dir.startsWith('column') ? 'column' : 'row') : disp === 'grid' ? 'grid' : 'block';
+            const arrange = (m: string) => setAll('Change layout', m === 'block' ? { display: null, 'flex-direction': null, 'flex-wrap': null, 'grid-template-columns': null }
+              : m === 'grid' ? { display: 'grid', 'grid-template-columns': 'repeat(auto-fit, minmax(240px, 1fr))', 'flex-direction': null, 'flex-wrap': null }
+              : { display: 'flex', 'flex-direction': m, 'flex-wrap': 'wrap', 'grid-template-columns': null });
+            const choose = (label: string, prop: string, opts: string[]) => (
+              <label className="num wide"><span>{label}</span>
+                <select value={getStyleProp(st, prop) ?? ''} onChange={(e) => setAll(`Change ${label.toLowerCase()}`, { [prop]: e.target.value || null })}>
+                  <option value="">Default</option>
+                  {opts.map((o) => <option key={o} value={o}>{o.replace('flex-', '').replace('space-', 'space ')}</option>)}
+                </select>
+              </label>
+            );
+            return (
+              <section data-testid="web-layout">
+                <h4>Page layout</h4>
+                <div className="row" role="group" aria-label="Arrange children">
+                  {(['block', 'row', 'column', 'grid'] as const).map((m) => <button key={m} className={`small ${mode === m ? 'on' : ''}`} aria-pressed={mode === m} data-testid={`lay-${m}`} onClick={() => arrange(m)}>{m === 'block' ? 'Stack' : m === 'row' ? 'Row' : m === 'column' ? 'Column' : 'Grid'}</button>)}
+                </div>
+                <div className="grid2">
+                  <Num label="Gap" testid="lay-gap" value={px('gap')} onCommit={(v) => setAll('Change gap', { gap: `${Math.max(0, v)}px` })} />
+                  <Num label="Pad" testid="lay-pad" value={px('padding')} onCommit={(v) => setAll('Change padding', { padding: `${Math.max(0, v)}px` })} />
+                  <Num label="Max W" testid="lay-maxw" value={px('max-width')} onCommit={(v) => setAll('Change maximum width', v > 0 ? { 'max-width': `${v}px`, 'margin-left': 'auto', 'margin-right': 'auto' } : { 'max-width': null })} />
+                </div>
+                {mode !== 'block' && choose('Align', 'align-items', ['flex-start', 'center', 'flex-end', 'stretch'])}
+                {mode !== 'block' && choose('Spread', 'justify-content', ['flex-start', 'center', 'flex-end', 'space-between', 'space-around'])}
+              </section>
+            );
+          })()}
           {r.tag === 'img' && (
             <section>
               <h4>Picture</h4>

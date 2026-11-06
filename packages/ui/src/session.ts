@@ -151,6 +151,7 @@ class Session {
     const outside = findOutsideRefs(doc.text);
     if (outside.length) this.notify('warning', `This presentation uses files outside its folder (${outside.slice(0, 2).join(', ')}${outside.length > 2 ? '…' : ''}). They were blocked for your safety.`);
     if (det.confidence >= 0.8) this.notify('info', `Found ${det.slides.length} slides (${det.adapter}).`);
+    else if (det.adapter === 'website') { this.notify('info', `Web page with ${det.slides.length} sections.`); set({ viewport: { w: 1280, h: 900 } }); }
     else if (det.adapter === 'page') this.notify('warning', 'No slides found: editing as a single page.');
     else this.notify('warning', `Not sure how this deck is organised — assuming ${det.slides.length} slides (${Math.round(det.confidence * 100)}% confident).`);
     set({ thumbs: {} });
@@ -329,7 +330,7 @@ class Session {
         break;
       case 'viewport': {
         // Page mode: the live view is as tall as the page, so all of it can be seen and edited
-        if (get().detection?.adapter !== 'page') break;
+        if (!['page', 'website'].includes(get().detection?.adapter ?? '')) break;
         const h = Math.max(720, Math.min(16000, Math.ceil(m.sh)));
         if (Math.abs(h - get().viewport.h) > 2) set((x) => ({ viewport: { ...x.viewport, h } }));
         break;
@@ -344,7 +345,7 @@ class Session {
     this.send({ t: 'slides', ids: get().slides.map((x) => x.id) });
     this.send({ t: 'show', index: get().slide });
     this.setStep(get().step);
-    if (get().detection?.adapter === 'page') this.send({ t: 'viewport' });
+    if (['page', 'website'].includes(get().detection?.adapter ?? '')) this.send({ t: 'viewport' });
     if (this.framesMode) {
       this.send({ t: 'frames-start', trigger: this.framesTrigger });
       this.send({ t: 'frames-goto', n: this.framesWant });
@@ -385,7 +386,7 @@ class Session {
     const objs = this.objectsOnSlide(slide.id).slice(0, 400);
     const ids = [slide.id, ...new Set([...objs, ...s.selection])];
     const seq = this.editSeq;
-    if (get().detection?.adapter === 'page') this.send({ t: 'viewport' });
+    if (['page', 'website'].includes(get().detection?.adapter ?? '')) this.send({ t: 'viewport' });
     const r = await this.request<Extract<BridgeMsg, { t: 'rects' }>>({ t: 'rects', ids });
     if (!r) return;
     // measured before a later edit reached the live view: it would put stale geometry in the cache (and make the next nudge lose a pixel)

@@ -46,7 +46,7 @@ export function Canvas(): JSX.Element {
     const ro = new ResizeObserver(() => {
       if (!useStore.getState().fit) return;
       // Page mode (a page without slides): fit the width and let the page scroll
-      const page = useStore.getState().detection?.adapter === 'page';
+      const page = ['page', 'website'].includes(useStore.getState().detection?.adapter ?? '');
       const k = Math.max(0.1, Math.min(4, page ? (el.clientWidth - 48) / VW : Math.min((el.clientWidth - 48) / VW, (el.clientHeight - 48) / VH)));
       useStore.setState({ zoom: k });
     });

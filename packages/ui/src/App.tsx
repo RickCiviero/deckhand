@@ -2,7 +2,7 @@ import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { Button, FluentProvider, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, MessageBar, MessageBarActions, MessageBarBody, Tooltip } from '@fluentui/react-components';
 import { t } from '@deckhand/i18n';
-import { AlignCenterHorizontal24Regular, AlignLeft24Regular, AlignRight24Regular, AlignSpaceEvenlyHorizontal24Regular, AlignSpaceEvenlyVertical24Regular, AlignStraighten24Regular, ArrowRedo24Regular, ArrowUndo24Regular, ChevronDown16Regular, ClipboardPaste24Regular, Code24Regular, Color24Regular, Copy24Regular, Crop24Regular, Cut24Regular, Delete24Regular, EyeOff24Regular, Flash24Regular, Globe24Regular, Group24Regular, GroupReturn24Regular, Image24Regular, ImageEdit24Regular, Link24Regular, PaintBrush24Regular, PaintBucket24Regular, Play24Regular, PositionToBack24Regular, PositionToFront24Regular, Save24Regular, Search24Regular, SelectAllOn24Regular, Shapes24Regular, SlideAdd24Regular, SlideLayout24Regular, SlideMultiple24Regular, SlideText24Regular, Sparkle24Regular, SplitHorizontal24Regular, Symbols24Regular, Table24Regular, TextAlignCenter24Regular, TextAlignJustify24Regular, TextAlignLeft24Regular, TextAlignRight24Regular, TextBold24Regular, TextFont24Regular, TextItalic24Regular, TextUnderline24Regular, Textbox24Regular, Window24Regular, ZoomFit24Regular , TableDeleteColumn24Regular, TableDeleteRow24Regular, TableInsertColumn24Regular, TableInsertRow24Regular , TextEditStyle24Regular } from '@fluentui/react-icons';
+import { AlignCenterHorizontal24Regular, Laptop24Regular, Tablet24Regular, Phone24Regular, AlignLeft24Regular, AlignRight24Regular, AlignSpaceEvenlyHorizontal24Regular, AlignSpaceEvenlyVertical24Regular, AlignStraighten24Regular, ArrowRedo24Regular, ArrowUndo24Regular, ChevronDown16Regular, ClipboardPaste24Regular, Code24Regular, Color24Regular, Copy24Regular, Crop24Regular, Cut24Regular, Delete24Regular, EyeOff24Regular, Flash24Regular, Globe24Regular, Group24Regular, GroupReturn24Regular, Image24Regular, ImageEdit24Regular, Link24Regular, PaintBrush24Regular, PaintBucket24Regular, Play24Regular, PositionToBack24Regular, PositionToFront24Regular, Save24Regular, Search24Regular, SelectAllOn24Regular, Shapes24Regular, SlideAdd24Regular, SlideLayout24Regular, SlideMultiple24Regular, SlideText24Regular, Sparkle24Regular, SplitHorizontal24Regular, Symbols24Regular, Table24Regular, TextAlignCenter24Regular, TextAlignJustify24Regular, TextAlignLeft24Regular, TextAlignRight24Regular, TextBold24Regular, TextFont24Regular, TextItalic24Regular, TextUnderline24Regular, Textbox24Regular, Window24Regular, ZoomFit24Regular , TableDeleteColumn24Regular, TableDeleteRow24Regular, TableInsertColumn24Regular, TableInsertRow24Regular , TextEditStyle24Regular } from '@fluentui/react-icons';
 import { darkTheme, lightTheme } from './theme';
 import { Canvas } from './Canvas';
 import { FormatPane } from './FormatPane';
@@ -16,8 +16,8 @@ import { Onboarding } from './Help';
 import { FindBar } from './FindBar';
 import { CodeView } from './CodeView';
 import { ai, useAi } from './ai';
-import { addColumnCommand, addRowCommand, deckLayouts, deleteColumnCommand, deleteRowCommand, tableContext } from '@deckhand/core';
-import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, align, arrange, deleteSlide, duplicateSlide, installKeyboard, ICONS, insertIcon, insertShape, insertTable, groupSelection, ungroupSelection, canHideSlides, toggleHideSlide, distribute, pickFormat, applyToSimilar, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
+import { addColumnCommand, addRowCommand, deckLayouts, SECTION_KINDS, deleteColumnCommand, deleteRowCommand, tableContext } from '@deckhand/core';
+import { copySelection, paste, selectAll, setSelectionStyle, changePicture, insertPicture, newSlide, newSection, isWebsite, VIEWPORTS, setViewportWidth, align, arrange, deleteSlide, duplicateSlide, installKeyboard, ICONS, insertIcon, insertShape, insertTable, groupSelection, ungroupSelection, canHideSlides, toggleHideSlide, distribute, pickFormat, applyToSimilar, insertTextBox, moveSlide, previewInBrowser, startShow } from './actions';
 import { session, useStore } from './session';
 
 type Tab = 'file' | 'home' | 'insert' | 'design' | 'show' | 'view';
@@ -33,17 +33,19 @@ function Cmd({ label, tip, onClick, onDouble, disabled, on, testid, icon, iconOn
 
 function NewSlideMenu({ disabled }: { disabled: boolean }): JSX.Element {
   const version = useStore((x) => x.version);
-  const layouts = !disabled ? deckLayouts(session.doc) : [];
+  const web = useStore((x) => x.detection?.adapter === 'website');
+  const layouts = !disabled && !web ? deckLayouts(session.doc) : [];
   void version;
   return (
     <Menu>
       <MenuTrigger disableButtonEnhancement>
-        <Button size="small" appearance="subtle" disabled={disabled} onMouseDown={(e) => e.preventDefault()} data-testid="cmd-new-slide" icon={<SlideAdd24Regular />} iconPosition="before" className="cmd">{t('home.newSlideMenu')} <ChevronDown16Regular /></Button>
+        <Button size="small" appearance="subtle" disabled={disabled} onMouseDown={(e) => e.preventDefault()} data-testid="cmd-new-slide" icon={<SlideAdd24Regular />} iconPosition="before" className="cmd">{web ? 'New Section' : t('home.newSlideMenu')} <ChevronDown16Regular /></Button>
       </MenuTrigger>
       <MenuPopover>
         <MenuList>
-          {layouts.map((l) => <MenuItem key={l.id} onClick={() => newSlide(l.slideId)} data-testid="layout-item">{l.name} <small>({l.count})</small></MenuItem>)}
-          <MenuItem onClick={() => newSlide('blank')} data-testid="layout-blank">Blank</MenuItem>
+          {web && SECTION_KINDS.map((k) => <MenuItem key={k.id} onClick={() => newSection(k.id)} data-testid="section-item">{k.name}</MenuItem>)}
+          {!web && layouts.map((l) => <MenuItem key={l.id} onClick={() => newSlide(l.slideId)} data-testid="layout-item">{l.name} <small>({l.count})</small></MenuItem>)}
+          {!web && <MenuItem onClick={() => newSlide('blank')} data-testid="layout-blank">Blank</MenuItem>}
         </MenuList>
       </MenuPopover>
     </Menu>
@@ -231,8 +233,8 @@ export function App(): JSX.Element {
             <Cmd icon={<TextAlignJustify24Regular />} iconOnly label="☰" tip="Justify" disabled={!s.selection.length} onClick={() => setSelectionStyle('Align text', { 'text-align': 'justify' })} />
             <span className="sep" />
             <NewSlideMenu disabled={!s.loaded} />
-            <Cmd icon={<SlideMultiple24Regular />} label={t('home.newSlide')} tip="Duplicate the current slide (Ctrl+D)" disabled={!s.loaded} onClick={duplicateSlide} testid="cmd-dup-slide" />
-            <Cmd icon={<Delete24Regular />} label={t('home.deleteSlide')} tip="Delete the current slide" disabled={!s.loaded || s.slides.length <= 1} onClick={deleteSlide} testid="cmd-del-slide" />
+            <Cmd icon={<SlideMultiple24Regular />} label={s.detection?.adapter === 'website' ? 'Duplicate Section' : t('home.newSlide')} tip="Duplicate the current slide or section (Ctrl+D)" disabled={!s.loaded} onClick={duplicateSlide} testid="cmd-dup-slide" />
+            <Cmd icon={<Delete24Regular />} label={s.detection?.adapter === 'website' ? 'Delete Section' : t('home.deleteSlide')} tip="Delete the current slide or section" disabled={!s.loaded || s.slides.length <= 1} onClick={deleteSlide} testid="cmd-del-slide" />
             <span className="sep" />
             <Cmd icon={<Search24Regular />} label={t('home.find')} tip="Find text on the slides (Ctrl+F)" disabled={!s.loaded} onClick={() => useStore.setState({ findOpen: true })} testid="cmd-find" />
             <Cmd icon={<SelectAllOn24Regular />} label={t('home.selectAll')} tip="Select all objects on the slide (Ctrl+A)" disabled={!s.loaded} onClick={() => selectAll()} />
@@ -285,6 +287,10 @@ export function App(): JSX.Element {
             <Cmd icon={<Window24Regular />} label={t('view.normal')} tip="Slide editing" on={s.viewMode === 'normal'} disabled={!s.loaded} onClick={() => useStore.setState({ viewMode: 'normal' })} testid="view-normal" />
             <Cmd icon={<Code24Regular />} label={t('view.code')} tip="Edit the HTML source" on={s.viewMode === 'code'} disabled={!s.loaded} onClick={() => useStore.setState({ viewMode: 'code' })} testid="view-code" />
             <Cmd icon={<SplitHorizontal24Regular />} label={t('view.split')} tip="Slide and source side by side" on={s.viewMode === 'split'} disabled={!s.loaded} onClick={() => useStore.setState({ viewMode: 'split' })} testid="view-split" />
+            {s.detection?.adapter === 'website' && VIEWPORTS.map((v) => (
+              <Cmd key={v.id} icon={v.id === 'desktop' ? <Laptop24Regular /> : v.id === 'tablet' ? <Tablet24Regular /> : <Phone24Regular />} label={v.name} tip={`Show the page ${v.w}px wide, as on a ${v.name.toLowerCase()}`}
+                on={s.viewport.w === v.w} onClick={() => setViewportWidth(v.w)} testid={`vp-${v.id}`} />
+            ))}
             <span className="sep" />
             <Cmd icon={<ZoomFit24Regular />} label={t('view.fit')} tip="Fit to window (Ctrl+0)" disabled={!s.loaded} onClick={() => useStore.setState({ fit: true })} />
             <Cmd icon={<AlignStraighten24Regular />} label={t('view.smart')} tip="Smart guides while dragging" on={s.smart} onClick={() => useStore.setState({ smart: !s.smart })} />
@@ -332,14 +338,14 @@ export function App(): JSX.Element {
         </main>
       ) : (
         <main className="workspace">
-          <aside className="pane slides" data-testid="slide-pane" tabIndex={0} aria-label="Slides">
+          <aside className="pane slides" data-testid="slide-pane" tabIndex={0} aria-label={s.detection?.adapter === 'website' ? 'Sections' : 'Slides'}>
             {s.slides.map((sl, i) => (
               <div key={sl.id} className={`thumb ${i === s.slide ? 'on' : ''} ${sl.hidden ? 'hidden' : ''}`} draggable
                 onClick={() => session.goTo(i)} data-testid={`thumb-${i}`}
                 onDragStart={(e) => e.dataTransfer.setData('text/x-slide', String(i))}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const from = Number(e.dataTransfer.getData('text/x-slide')); if (Number.isInteger(from)) moveSlide(from, i); }}>
-                {s.thumbs[i] && <img className="timg" src={s.thumbs[i]} alt="" draggable={false} data-testid={`timg-${i}`} />}
+                {s.thumbs[i] && s.detection?.adapter !== 'website' && <img className="timg" src={s.thumbs[i]} alt="" draggable={false} data-testid={`timg-${i}`} />}
                 <span className="num">{i + 1}</span>
                 <span className="lab">{sl.label}</span>
               </div>
@@ -362,7 +368,7 @@ export function App(): JSX.Element {
       )}
 
       <footer className="statusbar">
-        <span data-testid="slide-counter">{s.loaded ? t('status.slide', { n: s.slide + 1, total: s.slides.length }) : ''}</span>
+        <span data-testid="slide-counter">{s.loaded ? (s.detection?.adapter === 'website' ? `Section ${s.slide + 1} of ${s.slides.length}` : t('status.slide', { n: s.slide + 1, total: s.slides.length })) : ''}</span>
         <span className="path" data-testid="path">
           {pathEls.map((e, i) => (
             <button key={e.id} className="crumb" onClick={() => useStore.setState({ selection: [e.id] })}>{i > 0 ? ' › ' : ''}{e.tag}{(() => { const c = (e.attrs.find((a) => a.name === 'class')?.value ?? '').split(/\s+/)[0]; return c ? `.${c}` : ''; })()}</button>

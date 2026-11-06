@@ -10,7 +10,7 @@ export interface SlideRef {
 }
 
 export interface Detection {
-  adapter: 'custom' | 'revealjs' | 'marp' | 'impress' | 'shower' | 'generic' | 'page';
+  adapter: 'custom' | 'revealjs' | 'marp' | 'impress' | 'shower' | 'generic' | 'page' | 'website';
   confidence: number;
   slides: SlideRef[];
   /** Suggested CSS-like selector for the Define Slides wizard. */
@@ -136,6 +136,33 @@ function detectGeneric(doc: SourceDoc): Detection | null {
   };
 }
 
+const LANDMARKS = new Set(['header', 'nav', 'main', 'section', 'article', 'aside', 'footer']);
+const NOT_CONTENT = new Set(['script', 'style', 'link', 'meta', 'template', 'noscript']);
+const sectionName = (doc: SourceDoc, e: ElementInfo, i: number): string => {
+  if (e.tag === 'header') return 'Header';
+  if (e.tag === 'nav') return 'Navigation';
+  if (e.tag === 'footer') return 'Footer';
+  const l = label(doc, e, i);
+  if (!l.startsWith('Slide ')) return l;
+  const cls = classes(e)[0];
+  return cls ? cls.replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase()).slice(0, 40) : `Section ${i + 1}`;
+};
+
+/** A web page: its top-level blocks (header, nav, sections, footer) are the units the editor lists, like slides in a deck. */
+function detectWebsite(doc: SourceDoc): Detection | null {
+  const body = doc.elements.find((e) => e.tag === 'body');
+  if (!body) return null;
+  const content = (p: ElementInfo): ElementInfo[] => p.children.map((c) => doc.byId(c)!).filter((c) => !NOT_CONTENT.has(c.tag));
+  let kids = content(body);
+  // a lone wrapper (div#app, div.page) holds the real blocks
+  while (kids.length === 1 && (kids[0]!.tag === 'div' || kids[0]!.tag === 'main') && content(kids[0]!).length > 1) kids = content(kids[0]!);
+  // <main> with several sections inside: the sections are the units
+  kids = kids.flatMap((k) => (k.tag === 'main' && content(k).length > 1 ? content(k) : [k]));
+  const blocks = kids.filter((k) => LANDMARKS.has(k.tag) || (k.tag === 'div' && content(k).length > 0));
+  if (blocks.length < 2 || !blocks.some((k) => LANDMARKS.has(k.tag))) return null;
+  return { adapter: 'website', confidence: 0.7, slides: blocks.map((k, i) => ({ id: k.id, label: sectionName(doc, k, i) })) };
+}
+
 export function detectDeck(doc: SourceDoc): Detection {
   // a definition the user made (Define Slides) wins over every heuristic
   const stored = storedSlideSelector(doc);
@@ -150,6 +177,10 @@ export function detectDeck(doc: SourceDoc): Detection {
   const framework = detectMarp(doc) ?? detectImpress(doc) ?? detectShower(doc);
   if (framework) return framework;
   const generic = detectGeneric(doc);
+  // a solid generic match is a deck; a weak one on a page with landmarks (header, footer, sections) is a website
+  if (generic && generic.confidence >= 5 / 9) return generic;
+  const site = detectWebsite(doc);
+  if (site) return site;
   if (generic) return generic;
   const body = doc.elements.find((e) => e.tag === 'body');
   return { adapter: 'page', confidence: 0.3, slides: body ? [{ id: body.id, label: 'Page' }] : [] };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { Editor, deckLayouts, detectDeck, newSlideCommand, openBytes, saveBytes } from './index.js';
+import { Editor, deckLayouts, detectDeck, newSlideCommand, newSectionCommand, openBytes, saveBytes } from './index.js';
 
 const load = (n: string) => new Editor(openBytes(readFileSync(new URL(`../../../test-decks/decks/${n}`, import.meta.url))));
 const text = (e: Editor) => new TextDecoder('latin1').decode(saveBytes(e.doc));
@@ -54,5 +54,23 @@ describe('externalDomains (File > Info)', () => {
     expect(externalDomains(e.doc)).toEqual(['cdn.tailwindcss.com', 'fonts.googleapis.com']);
     expect(externalDomains(load('ai-fixed-stage.html').doc)).toEqual([]);
     expect(externalDomains(load('chart-svg-icons.html').doc)).toEqual([]);
+  });
+});
+
+describe('website mode: sections', () => {
+  it('lists header, the sections inside <main>, and footer, with readable names', () => {
+    const d = detectDeck(load('website.html').doc);
+    expect(d.adapter).toBe('website');
+    expect(d.slides.map((s) => s.label)).toEqual(['Header', 'Coffee roasted by the sea', 'Features', 'Come by', 'Footer']);
+  });
+  it('a new section lands after the chosen one, indented, and undo restores the file exactly', () => {
+    const e = load('website.html');
+    const before = text(e);
+    const s = detectDeck(e.doc).slides;
+    e.exec(newSectionCommand('cta', s[1]!.id, s[1]!.id));
+    expect(detectDeck(e.doc).slides).toHaveLength(6);
+    expect(text(e)).toContain('</section>\n  <section style="padding: 64px 24px; text-align: center; background: #1f2937; color: #fff;">\n    <h2');
+    e.undo();
+    expect(text(e)).toBe(before);
   });
 });

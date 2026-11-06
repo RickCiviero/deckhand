@@ -22,3 +22,4 @@ export * from './table.js';
 export * from './similar.js';
 export * from './inline.js';
 export * from './webfont.js';
+export * from './sections.js';
